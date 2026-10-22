@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/*
+ * Back-room card game under one lamp.
+ * Baize is the field, brass marks what's active, chip red is reserved for calling BS and busting.
+ */
+@theme {
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-shoulders), "Arial Narrow", sans-serif;
+
+  --color-baize: #0e5c3a;
+  --color-baize-deep: #093f27;
+  --color-baize-lit: #146a45;
+  --color-smoke: #14100e;
+  --color-smoke-raised: #1f1916;
+  --color-leather: #3a1f16;
+  --color-leather-lit: #54301f;
+  --color-bone: #f2ebdd;
+  --color-parchment: #d3cab9;
+  --color-ash: #a59c8c;
+  --color-brass: #b08d57;
+  --color-brass-lit: #d6b67f;
+  --color-brass-deep: #7a5c2e;
+  --color-chip: #c8102e;
+  --color-chip-lit: #ff7a8a;
+  --color-card-red: #b3122b;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background-color: var(--color-smoke);
+  /* One overhead lamp. */
+  background-image: radial-gradient(ellipse 70% 55% at 50% 0%, rgba(214, 182, 127, 0.1), transparent 70%);
+  background-attachment: fixed;
+  color: var(--color-bone);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brass-lit);
+  outline-offset: 3px;
+}
+
+/* The table: lamp-lit baize inside a leather rail. */
+.felt {
+  background: radial-gradient(ellipse at 50% 38%, var(--color-baize-lit) 0%, var(--color-baize) 42%, var(--color-baize-deep) 100%);
+  box-shadow:
+    inset 0 0 90px rgba(0, 0, 0, 0.5),
+    0 0 0 14px var(--color-leather),
+    0 0 0 16px #22120c,
+    0 40px 90px rgba(0, 0, 0, 0.6);
+}
+
+.card-back {
+  background-color: var(--color-leather-lit);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(242, 235, 221, 0.12) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(-45deg, rgba(242, 235, 221, 0.12) 0 1px, transparent 1px 6px);
+}
+
+/* A clay poker chip: spotted edge, inner ring, solid face. */
+.poker-chip {
+  background: repeating-conic-gradient(var(--color-bone) 0deg 14deg, var(--color-chip) 14deg 45deg);
+}
+.poker-chip::before {
+  content: "";
+  position: absolute;
+  inset: 11%;
+  border-radius: 9999px;
+  background: var(--color-chip);
+  box-shadow: inset 0 0 0 3px rgba(242, 235, 221, 0.85), inset 0 0 0 7px var(--color-chip), inset 0 0 0 8px rgba(242, 235, 221, 0.45);
+}
+.poker-chip:disabled {
+  background: repeating-conic-gradient(var(--color-ash) 0deg 14deg, var(--color-leather-lit) 14deg 45deg);
+}
+.poker-chip:disabled::before {
+  background: var(--color-leather);
+  box-shadow: inset 0 0 0 3px rgba(165, 156, 140, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+.env*.local
+.DS_Store
+
+# Local Claude Code preview config (machine-specific paths)
+.claude/
