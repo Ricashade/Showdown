@@ -61,7 +61,6 @@ export default function LocalHoldem() {
           ? undefined
           : { label: "End game", confirm: "End this game?", onExit: () => dispatch({ type: "RETURN_TO_LOBBY", playerId: state.hostId }) }
       }
-      autoNextHandSeconds={6}
       error={error}
       lobby={{
         canRename: () => true,

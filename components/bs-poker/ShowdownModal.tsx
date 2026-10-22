@@ -15,14 +15,12 @@ interface ShowdownModalProps {
   continueLabel: string;
   /** Online guests wait for the host to deal; this explains who they're waiting for. */
   waitingText?: string;
-  /** Continue by itself after this many seconds, unless the player asks to wait. */
-  autoContinueSeconds?: number;
 }
 
 const FLIP_MS = 600;
 
 /** The game's single orchestrated moment: stamp, flip every hand, then the verdict. */
-export function ShowdownModal({ view, onContinue, continueLabel, waitingText, autoContinueSeconds }: ShowdownModalProps) {
+export function ShowdownModal({ view, onContinue, continueLabel, waitingText }: ShowdownModalProps) {
   const sd = view.showdown!;
   const [flipped, setFlipped] = useState(false);
   const [verdict, setVerdict] = useState(false);
@@ -44,19 +42,6 @@ export function ShowdownModal({ view, onContinue, continueLabel, waitingText, au
     if (verdict) continueRef.current?.focus();
   }, [verdict]);
 
-  // Local play: count down to the next hand once the verdict is showing.
-  const [countdown, setCountdown] = useState<number | null>(null);
-  useEffect(() => {
-    if (verdict && autoContinueSeconds) setCountdown(autoContinueSeconds);
-  }, [verdict, autoContinueSeconds]);
-  useEffect(() => {
-    if (countdown === null) return;
-    if (countdown <= 0) return onContinue();
-    const t = setTimeout(() => setCountdown((n) => (n === null ? null : n - 1)), 1000);
-    return () => clearTimeout(t);
-    // onContinue is recreated each render; the countdown alone drives this.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [countdown]);
 
   const name = (id: string) => view.players.find((p) => p.id === id)?.name ?? "?";
   const { evaluation: ev } = sd;
@@ -168,23 +153,13 @@ export function ShowdownModal({ view, onContinue, continueLabel, waitingText, au
               {waitingText ? (
                 <p className="mt-6 text-base text-ash">{waitingText}</p>
               ) : (
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                  <button
-                    ref={continueRef}
-                    onClick={onContinue}
-                    className="min-h-12 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
-                  >
-                    {countdown !== null ? `${continueLabel} in ${countdown}` : continueLabel}
-                  </button>
-                  {countdown !== null && (
-                    <button
-                      onClick={() => setCountdown(null)}
-                      className="min-h-12 rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone"
-                    >
-                      Wait
-                    </button>
-                  )}
-                </div>
+                <button
+                  ref={continueRef}
+                  onClick={onContinue}
+                  className="mt-6 min-h-12 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
+                >
+                  {continueLabel}
+                </button>
               )}
             </motion.div>
           )}

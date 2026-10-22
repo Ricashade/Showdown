@@ -23,8 +23,6 @@ export interface HoldemTableScreenProps {
   exit?: HeaderExit;
   connectedIds?: Set<string>;
   error?: { message: string; id: number } | null;
-  /** Local play: deal the next hand by itself this many seconds after a hand ends. */
-  autoNextHandSeconds?: number;
   topBar?: React.ReactNode;
 }
 
@@ -63,7 +61,6 @@ export function HoldemTableScreen({
   exit,
   connectedIds,
   error,
-  autoNextHandSeconds,
   topBar,
 }: HoldemTableScreenProps) {
   const [announcement, setAnnouncement] = useState("");
@@ -176,7 +173,6 @@ export function HoldemTableScreen({
               view.phase === "game_over" ? setDismissedHand(view.result!.handNumber) : onAction({ type: "NEXT_HAND", playerId: view.hostId })
             }
             waitingText={view.phase === "hand_over" && !isHost ? `Waiting for ${hostName} to deal.` : undefined}
-            autoContinueSeconds={view.phase === "hand_over" ? autoNextHandSeconds : undefined}
           />
         )}
         {showGameOver && (

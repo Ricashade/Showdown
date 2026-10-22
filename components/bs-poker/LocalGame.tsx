@@ -75,7 +75,6 @@ export default function LocalGame() {
             }
       }
       canDealNextRound
-      autoNextHandSeconds={6}
       onViewAs={setViewer}
       lobby={{
         canRename: () => true,

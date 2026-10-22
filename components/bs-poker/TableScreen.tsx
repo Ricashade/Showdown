@@ -34,8 +34,6 @@ export interface TableScreenProps {
   error?: { message: string; id: number } | null;
   /** Online guests can't deal the next round; the host does. */
   canDealNextRound: boolean;
-  /** Local simulator: deal the next hand by itself this many seconds after a showdown. */
-  autoNextHandSeconds?: number;
   /** Extra controls above the table (the dev POV switcher, connection notices). */
   topBar?: React.ReactNode;
   /** Local simulator: who to switch to when it's someone else's turn. */
@@ -66,7 +64,6 @@ export function TableScreen({
   connectedIds,
   error,
   canDealNextRound,
-  autoNextHandSeconds,
   topBar,
   onViewAs,
 }: TableScreenProps) {
@@ -197,8 +194,7 @@ export function TableScreen({
               waitingText={
                 view.phase === "showdown" && !canDealNextRound ? `Waiting for ${hostName} to start the next hand.` : undefined
               }
-              autoContinueSeconds={view.phase === "showdown" ? autoNextHandSeconds : undefined}
-              onContinue={() =>
+                onContinue={() =>
                 view.phase === "game_over"
                   ? setDismissedShowdownRound(view.showdown!.round)
                   : onAction({ type: "NEXT_ROUND", playerId: actingId ?? view.hostId })

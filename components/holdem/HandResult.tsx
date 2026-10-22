@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import type { HoldemView } from "@/lib/holdem-game";
@@ -19,24 +19,14 @@ interface HandResultProps {
   onContinue: () => void;
   /** Guests online: who they're waiting on to deal. */
   waitingText?: string;
-  /** Local play: continue by itself after this many seconds. */
-  autoContinueSeconds?: number;
 }
 
-export function HandResult({ view, winningCardIds, continueLabel, onContinue, waitingText, autoContinueSeconds }: HandResultProps) {
+export function HandResult({ view, winningCardIds, continueLabel, onContinue, waitingText }: HandResultProps) {
   const result = view.result!;
   const name = (id: string) => view.players.find((p) => p.id === id)?.name ?? "?";
   const continueRef = useRef<HTMLButtonElement>(null);
-  const [countdown, setCountdown] = useState<number | null>(autoContinueSeconds ?? null);
 
   useEffect(() => continueRef.current?.focus(), []);
-  useEffect(() => {
-    if (countdown === null) return;
-    if (countdown <= 0) return onContinue();
-    const t = setTimeout(() => setCountdown((n) => (n === null ? null : n - 1)), 1000);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [countdown]);
 
   const busted = view.players.filter((p) => p.bustedInHand === result.handNumber);
   const shown = view.players.filter((p) => result.revealed[p.id]);
@@ -106,20 +96,13 @@ export function HandResult({ view, winningCardIds, continueLabel, onContinue, wa
           {waitingText ? (
             <p className="text-base text-ash">{waitingText}</p>
           ) : (
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                ref={continueRef}
-                onClick={onContinue}
-                className="min-h-12 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
-              >
-                {countdown !== null ? `${continueLabel} in ${countdown}` : continueLabel}
-              </button>
-              {countdown !== null && (
-                <button onClick={() => setCountdown(null)} className="min-h-12 rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
-                  Wait
-                </button>
-              )}
-            </div>
+            <button
+              ref={continueRef}
+              onClick={onContinue}
+              className="min-h-12 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
+            >
+              {continueLabel}
+            </button>
           )}
         </div>
       </div>
