@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * Shuffle-and-deal animation. Purely visual: the new hand already exists in state; every
- * screen replays the deal when a new round arrives — the deck riffles, then each card flies
- * from the deck to its seat, the burn pile, or the table, in real dealing order.
+ * Shuffle-and-deal animation, shared by both games. Purely visual: the cards already exist
+ * in state; every screen replays the deal when new cards arrive — the deck riffles (for a new
+ * hand), then each card flies from the deck to its seat, the burn pile, or the table, in real
+ * dealing order.
  */
-import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import type { BsPokerView } from "@/lib/bs-poker-game";
-import { burnSlot, planDeal, type DealPlan } from "@/lib/deal-plan";
+import { burnSlot, type DealPlan } from "@/lib/deal-plan";
 import { PlayingCard } from "@/components/ui/PlayingCard";
 
 const SHUFFLE_MS = 1300;
@@ -17,9 +17,9 @@ const FLIGHT_MS = 420;
 const DEAL_BUDGET_MS = 2600;
 
 export interface DealClock {
-  round: number;
-  /** ms timestamp the shuffle began; -Infinity when there's nothing to animate. */
+  /** ms timestamp the deal began; -Infinity when there's nothing to animate. */
   startedAt: number;
+  /** 0 when the cards come straight off the deck (a new street). */
   shuffleMs: number;
   staggerMs: number;
   flightMs: number;
@@ -32,36 +32,46 @@ const DealContext = createContext<DealClock | null>(null);
 export const DealProvider = DealContext.Provider;
 export const useDeal = () => useContext(DealContext);
 
-/**
- * Starts a deal whenever a new round shows up. Opening a table mid-round (a refresh, or
- * joining late) skips the animation once bidding has begun.
- */
-export function useDealClock(view: BsPokerView): DealClock {
+export interface DealSpec {
+  /** Changes whenever new cards come off the deck; null while nothing is being dealt. */
+  key: string | null;
+  /** The order of the cards in this deal (read once per key). */
+  plan: () => DealPlan;
+  /** Shuffle first (a new hand), or deal straight off the deck (a new street). */
+  shuffle: boolean;
+  /** Animate a deal already under way when the table first opens (else show it as dealt). */
+  animateOnMount: boolean;
+}
+
+const EMPTY_PLAN: DealPlan = { order: new Map(), count: 0 };
+
+/** Starts a deal each time `spec.key` changes. */
+export function useDealClock(spec: DealSpec): DealClock {
   const reduceMotion = useReducedMotion();
-  const tracked = useRef<{ round: number; startedAt: number } | null>(null);
+  const tracked = useRef<{ key: string; startedAt: number; plan: DealPlan; shuffleMs: number } | null>(null);
 
   // Decided during render so the new cards mount already knowing they should fly in.
-  if (view.phase === "bidding" && tracked.current?.round !== view.round) {
-    const fresh = tracked.current !== null || view.bidHistory.length === 0;
-    tracked.current = { round: view.round, startedAt: fresh && !reduceMotion ? Date.now() : -Infinity };
+  if (spec.key !== null && tracked.current?.key !== spec.key) {
+    const animate = (tracked.current !== null || spec.animateOnMount) && !reduceMotion;
+    tracked.current = {
+      key: spec.key,
+      startedAt: animate ? Date.now() : -Infinity,
+      plan: spec.plan(),
+      shuffleMs: spec.shuffle ? SHUFFLE_MS : 0,
+    };
   }
-  const startedAt = tracked.current?.startedAt ?? -Infinity;
-
-  const plan = useMemo(
-    () => planDeal(view.players, view.roundStarterId),
-    // Only the deal's shape matters, and it's fixed for the round.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view.round, view.roundStarterId],
-  );
+  const t = tracked.current;
+  const plan = t?.plan ?? EMPTY_PLAN;
+  const startedAt = t?.startedAt ?? -Infinity;
+  const shuffleMs = t?.shuffleMs ?? 0;
   const staggerMs = Math.min(150, Math.max(70, DEAL_BUDGET_MS / Math.max(plan.count, 1)));
   return {
-    round: view.round,
     startedAt,
-    shuffleMs: SHUFFLE_MS,
+    shuffleMs,
     staggerMs,
     flightMs: FLIGHT_MS,
     plan,
-    endsAt: startedAt + SHUFFLE_MS + Math.max(plan.count - 1, 0) * staggerMs + FLIGHT_MS,
+    endsAt: startedAt + shuffleMs + Math.max(plan.count - 1, 0) * staggerMs + FLIGHT_MS,
   };
 }
 

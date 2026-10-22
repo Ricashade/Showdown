@@ -1,6 +1,6 @@
 # Showdown
 
-Multiplayer card games on Next.js (App Router): **BS Poker** now, **Texas Hold'em** in Phase 2.
+Multiplayer card games on Next.js (App Router): **BS Poker** and **Texas Hold'em** (no-limit), online or on one screen.
 
 ```bash
 npm install
@@ -18,7 +18,7 @@ app/
   bs-poker/room/[code]/     Online room (host or guest)
   bs-poker/local/           Local simulator (every seat on one screen)
   rules/, rules/demo/       How to play + guided 30-second demo
-  texas-holdem/page.tsx     Placeholder
+  texas-holdem/              Hold'em: chooser, room/[code]/ (online), local/ (simulator)
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -26,6 +26,9 @@ types/
 lib/
   cards.ts                  Deck, seeded PRNG (mulberry32), shuffle, labels
   bs-poker-engine.ts        isBidHigher, evaluateBid / doesHandExistInPool, hand rules, bid ladder
+  holdem-hand.ts            Best 5 of 7 cards, full kicker comparison
+  holdem-pots.ts            Side pots (layered by contribution) and split pots with odd chips
+  holdem-game.ts            Hold'em reducer: blinds, betting rules, streets, runouts, showdown
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
                             nextRound, applyAction; getPlayerView (hidden info), getLegalActions
   turn-controller.ts        BotController interface + registry (no AI yet)
@@ -66,6 +69,18 @@ player holds a set number of cards. Banned hands drop out of the bid ladder for 
 Flushes are bid by top card only, not suit, so the bid ladder stays strictly ordered. As with
 straights, a higher flush doesn't make a lower one exist. Wilds (Jokers, plus 2s when deuces
 are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild.
+
+## Texas Hold'em (as implemented)
+
+- **Defaults:** 1,000 chips, blinds 10/20; the host can change both, and switch on blinds that
+  multiply (×1.5 or ×2) every N hands. Blinds never rise by default.
+- **Betting:** no-limit. Minimum raise is the last full raise; a short all-in doesn't reopen
+  betting for players who already acted. Heads-up, the button posts the small blind.
+- **Pots:** side pots are layered from what each player put in; folded chips stay in but can't
+  win, unmatched bets are returned. Ties split the pot; odd chips go to the first winner left of
+  the button. All-in hands run the board out automatically.
+- **Online:** the host deals each new hand with *Next hand*; hole cards, the unturned board and
+  the burns never leave the host.
 
 ## Online play (Supabase Realtime)
 

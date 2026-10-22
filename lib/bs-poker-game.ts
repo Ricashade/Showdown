@@ -17,6 +17,7 @@ import type {
   ShowdownResult,
 } from "@/types/bs-poker";
 import { createDeck, deckSize, nextRandom, shuffle } from "./cards";
+import type { GameDefinition } from "./multiplayer/room";
 import {
   DEFAULT_SETTINGS,
   HAND_TYPE_PLURAL,
@@ -404,3 +405,12 @@ export function getLegalActions(state: TurnInfo, playerId: string | null): Legal
     legalBids,
   };
 }
+
+/** BS Poker as a game the online room can host. */
+export const bsPokerGame: GameDefinition<BsPokerState, BsPokerAction, BsPokerView> = {
+  applyAction,
+  getPlayerView,
+  join: (player) => ({ type: "JOIN_ROOM", player }),
+  leave: (playerId) => ({ type: "LEAVE_ROOM", playerId }),
+  maxPlayers: MAX_PLAYERS,
+};

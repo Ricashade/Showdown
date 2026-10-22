@@ -1,25 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import type { BsPokerAction, BsPokerSettings } from "@/types/bs-poker";
 import { getLegalActions, type BsPokerView } from "@/lib/bs-poker-game";
 import { bidPhrase } from "@/lib/bs-poker-engine";
+import { ScreenHeader, Toast, type HeaderExit } from "@/components/table/chrome";
 import { Lobby, type LobbyOptions } from "./Lobby";
 import { GameTable } from "./GameTable";
 import { BidBuilder } from "./BidBuilder";
 import { ShowdownModal } from "./ShowdownModal";
 import { GameOver } from "./GameOver";
 import type { SeatHighlights } from "./PlayerSeat";
-import { DealProvider, useDealClock } from "./deal";
+import { DealProvider, useDealClock } from "@/components/table/deal";
+import { planDeal } from "@/lib/deal-plan";
 
-export interface HeaderExit {
-  label: string;
-  /** Ask before leaving, e.g. "End this game and go back to the lobby?" */
-  confirm?: string;
-  onExit: () => void;
-}
+export type { HeaderExit };
 
 export interface TableScreenProps {
   /** Everything this screen is allowed to see (one player's view, or everyone's in dev mode). */
@@ -74,7 +70,12 @@ export function TableScreen({
   topBar,
   onViewAs,
 }: TableScreenProps) {
-  const deal = useDealClock(view);
+  const deal = useDealClock({
+    key: view.phase === "bidding" ? `round-${view.round}` : null,
+    plan: () => planDeal(view.players, view.roundStarterId),
+    shuffle: true,
+    animateOnMount: view.bidHistory.length === 0,
+  });
   const [, setTick] = useState(0);
   const dealing = view.phase === "bidding" && Date.now() < deal.endsAt;
   const shuffling = dealing && Date.now() < deal.startedAt + deal.shuffleMs;
@@ -88,8 +89,6 @@ export function TableScreen({
     return () => timers.forEach(clearTimeout);
   }, [dealing, deal.startedAt, deal.shuffleMs, deal.endsAt]);
 
-  const [confirming, setConfirming] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [dismissedShowdownRound, setDismissedShowdownRound] = useState<number | null>(null);
   const prevViewRef = useRef(view);
@@ -101,13 +100,6 @@ export function TableScreen({
     const msg = describeChange(prev, view);
     if (msg) setAnnouncement(msg);
   }, [view]);
-
-  useEffect(() => {
-    if (!error) return;
-    setToast(error.message);
-    const t = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(t);
-  }, [error]);
 
   const acting = view.players.find((p) => p.id === actingId);
   const legal = getLegalActions(view, actingId);
@@ -131,49 +123,12 @@ export function TableScreen({
   const showGameOver = view.phase === "game_over" && !showShowdown;
   const dialogOpen = showShowdown || showGameOver;
 
-  const leave = () => {
-    setConfirming(false);
-    exit?.onExit();
-  };
-
   return (
     <DealProvider value={deal}>
       <div className="min-h-screen pb-16">
         {/* Everything behind an open dialog is inert, so focus can't wander under it. */}
         <div inert={dialogOpen}>
-          <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 pt-5 sm:px-8">
-            <h1 className="font-display text-4xl font-extrabold text-bone">BS Poker</h1>
-            {!exit ? (
-              <Link href="/" className="flex min-h-11 items-center px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline">
-                Main menu
-              </Link>
-            ) : confirming && exit.confirm ? (
-              <div role="group" aria-label={exit.confirm} className="flex flex-wrap items-center gap-2">
-                <span className="text-base text-parchment">{exit.confirm}</span>
-                <button onClick={leave} className="min-h-11 rounded-full border border-bone/50 px-4 text-sm font-bold text-bone hover:border-bone">
-                  {exit.label}
-                </button>
-                <button
-                  autoFocus
-                  onClick={() => {
-                    setConfirming(false);
-                    requestAnimationFrame(() => document.getElementById("header-exit")?.focus());
-                  }}
-                  className="min-h-11 rounded-full bg-brass px-4 text-sm font-bold text-smoke hover:bg-brass-lit"
-                >
-                  Stay
-                </button>
-              </div>
-            ) : (
-              <button
-                id="header-exit"
-                onClick={() => (exit.confirm ? setConfirming(true) : exit.onExit())}
-                className="min-h-11 px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline"
-              >
-                {exit.label}
-              </button>
-            )}
-          </header>
+          <ScreenHeader title="BS Poker" exit={exit} />
 
           {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
@@ -260,19 +215,7 @@ export function TableScreen({
           />
         )}
 
-        <AnimatePresence>
-          {toast && (
-            <motion.div
-              role="alert"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="fixed bottom-5 left-1/2 z-[60] w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl bg-bone px-5 py-3 text-base font-bold text-smoke shadow-xl"
-            >
-              {toast}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <Toast error={error} />
       </div>
     </DealProvider>
   );

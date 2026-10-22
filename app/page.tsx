@@ -28,9 +28,16 @@ export default function MainMenu() {
             </Link>
           </div>
         </li>
-        <li className="rounded-[2rem] border border-leather-lit px-7 py-6 sm:px-9">
-          <h2 className="font-display text-4xl font-bold text-parchment">Texas Hold&apos;em</h2>
-          <p className="mt-2 text-base text-ash">Coming in phase 2.</p>
+        <li className="felt rounded-[2rem] px-7 py-6 sm:px-9 sm:py-7">
+          <h2 className="font-display text-4xl font-bold text-bone">Texas Hold&apos;em</h2>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              href="/texas-holdem"
+              className="flex min-h-12 items-center rounded-full bg-brass px-7 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
+            >
+              Open a table
+            </Link>
+          </div>
         </li>
       </ul>
     </main>

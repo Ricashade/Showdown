@@ -6,7 +6,7 @@ import { applyAction, createRoom, getPlayerView } from "@/lib/bs-poker-game";
 import { createLocalTransport } from "@/lib/multiplayer/transport";
 import { useGameRoom } from "@/lib/hooks/use-game-room";
 import { useBotTurns } from "@/lib/hooks/use-bot-turns";
-import { PovSwitcher } from "./PovSwitcher";
+import { PovSwitcher } from "@/components/table/PovSwitcher";
 import { TableScreen } from "./TableScreen";
 
 function initialRoom(): BsPokerState {

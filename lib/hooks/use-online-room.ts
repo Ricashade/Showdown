@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { BsPokerAction } from "@/types/bs-poker";
-import { createRoom, getPlayerView, type BsPokerView } from "@/lib/bs-poker-game";
-import { RoomGuest, RoomHost, type GuestStatus } from "@/lib/multiplayer/room";
+import { RoomGuest, RoomHost, type GameDefinition, type GuestStatus, type RoomAction, type RoomState } from "@/lib/multiplayer/room";
 import {
   clearSession,
   getTransport,
@@ -15,7 +13,7 @@ import {
   type TransportKind,
 } from "@/lib/multiplayer/session";
 
-export type OnlineRoom =
+export type OnlineRoom<V> =
   | { phase: "needs-name" }
   | { phase: "connecting" }
   | { phase: "failed"; message: string }
@@ -24,7 +22,7 @@ export type OnlineRoom =
       role: "host" | "guest";
       me: string;
       status: GuestStatus | "hosting";
-      view: BsPokerView | null;
+      view: V | null;
       connectedIds: Set<string>;
       hostName: string | null;
       error: { message: string; id: number } | null;
@@ -33,19 +31,33 @@ export type OnlineRoom =
 /** How long a new host listens for an existing host before claiming the code. */
 const CLAIM_WAIT_MS = 1200;
 
-export function useOnlineRoom(code: string) {
+export interface OnlineRoomOptions<S> {
+  /** Names the room across games (see session.ts). */
+  roomKey: string;
+  code: string;
+  /** A fresh game state for a new host. */
+  createState: (host: { id: string; name: string }) => S;
+}
+
+/** Run an online room as its host or as a guest, for any game the room protocol can host. */
+export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
+  game: GameDefinition<S, A, V>,
+  { roomKey, code, createState }: OnlineRoomOptions<S>,
+) {
   const [session, setSession] = useState<RoomSession | null | undefined>(undefined);
-  const [room, setRoom] = useState<OnlineRoom>({ phase: "connecting" });
+  const [room, setRoom] = useState<OnlineRoom<V>>({ phase: "connecting" });
   const [transport, setTransport] = useState<TransportKind>("supabase");
-  const hostRef = useRef<RoomHost | null>(null);
-  const guestRef = useRef<RoomGuest | null>(null);
+  const hostRef = useRef<RoomHost<S, A, V> | null>(null);
+  const guestRef = useRef<RoomGuest<A, V> | null>(null);
   const errorId = useRef(0);
+  const createRef = useRef(createState);
+  createRef.current = createState;
 
   // Read this tab's seat once we're in the browser.
   useEffect(() => {
     setTransport(getTransport().kind);
-    setSession(loadSession(code));
-  }, [code]);
+    setSession(loadSession(roomKey));
+  }, [roomKey]);
 
   useEffect(() => {
     if (session === undefined) return;
@@ -60,26 +72,21 @@ export function useOnlineRoom(code: string) {
     (async () => {
       const identity = await sessionIdentity(session);
       if (cancelled) return;
-      const channel = getTransport().factory(code);
+      const channel = getTransport().factory(roomKey);
       const meta = { playerId: session.playerId, name: session.name, role: session.role, publicKey: identity.publicKey, joinedAt: session.joinedAt };
 
       if (session.role === "host") {
-        const snapshot = loadHostSnapshot(code);
-        const host = new RoomHost(
-          channel,
-          identity,
-          meta,
-          snapshot ?? createRoom({ roomId: code, host: { id: session.playerId, name: session.name } }),
-        );
+        const snapshot = loadHostSnapshot<S>(roomKey);
+        const host = new RoomHost(game, channel, identity, meta, snapshot ?? createRef.current({ id: session.playerId, name: session.name }));
         hostRef.current = host;
         const publish = () => {
-          saveHostSnapshot(code, host.snapshot());
+          saveHostSnapshot(roomKey, host.snapshot());
           setRoom((prev) => ({
             phase: "ready",
             role: "host",
             me: session.playerId,
             status: "hosting",
-            view: getPlayerView(host.getState(), session.playerId),
+            view: game.getPlayerView(host.getState(), session.playerId),
             connectedIds: new Set(host.getConnectedIds()),
             hostName: session.name,
             error: prev.phase === "ready" ? prev.error : null,
@@ -97,14 +104,14 @@ export function useOnlineRoom(code: string) {
           if (cancelled) return;
           if (host.isRoomTaken()) {
             cleanup();
-            clearSession(code);
+            clearSession(roomKey);
             if (!cancelled) setRoom({ phase: "failed", message: `Room ${code} is already in use. Go back and create a new room.` });
             return;
           }
         }
         if (!cancelled) publish();
       } else {
-        const guest = new RoomGuest(channel, identity, meta);
+        const guest = new RoomGuest<A, V>(channel, identity, meta);
         guestRef.current = guest;
         const publish = () => {
           const snap = guest.getSnapshot();
@@ -137,10 +144,10 @@ export function useOnlineRoom(code: string) {
       hostRef.current = null;
       guestRef.current = null;
     };
-  }, [code, session]);
+  }, [game, roomKey, code, session]);
 
   /** Send a move as this player. The host applies its own moves directly. */
-  const act = useCallback((action: BsPokerAction) => {
+  const act = useCallback((action: A) => {
     const host = hostRef.current;
     if (host) {
       const result = host.act(action);
@@ -159,8 +166,8 @@ export function useOnlineRoom(code: string) {
   const leave = useCallback(async () => {
     if (hostRef.current) await hostRef.current.close();
     else await guestRef.current?.stop();
-    clearSession(code);
-  }, [code]);
+    clearSession(roomKey);
+  }, [roomKey]);
 
   return { room, transport, setSession, act, removePlayer, leave };
 }

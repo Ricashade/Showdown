@@ -121,3 +121,47 @@ export function Segmented<T extends string>({
     </div>
   );
 }
+
+/** Steps through a fixed list of values (chip amounts, blind levels…). */
+export function ChoiceStepper({
+  value,
+  options,
+  onChange,
+  label,
+  format = (v) => v.toLocaleString("en-US"),
+  disabled,
+}: {
+  value: number;
+  options: readonly number[];
+  onChange: (v: number) => void;
+  label: string;
+  format?: (v: number) => string;
+  disabled?: boolean;
+}) {
+  // If the value isn't one of the choices, step from the nearest one.
+  const index = options.reduce((best, o, i) => (Math.abs(o - value) < Math.abs(options[best] - value) ? i : best), 0);
+  const btn =
+    "grid size-10 place-items-center rounded-full border border-leather-lit text-parchment transition hover:border-brass hover:text-bone disabled:opacity-35 disabled:hover:border-leather-lit";
+  return (
+    <div className={clsx("flex items-center justify-between gap-4", disabled && "opacity-50")}>
+      <span className="text-base text-bone">{label}</span>
+      <div className="flex items-center gap-2" role="group" aria-label={label}>
+        <button type="button" className={btn} disabled={disabled || index <= 0} onClick={() => onChange(options[index - 1])} aria-label={`Lower ${label.toLowerCase()}`}>
+          <Minus className="size-4" />
+        </button>
+        <output className="min-w-16 text-center font-display text-2xl font-bold text-bone tabular-nums" aria-live="polite">
+          {format(value)}
+        </output>
+        <button
+          type="button"
+          className={btn}
+          disabled={disabled || index >= options.length - 1}
+          onClick={() => onChange(options[index + 1])}
+          aria-label={`Raise ${label.toLowerCase()}`}
+        >
+          <Plus className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}

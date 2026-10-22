@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { BsPokerAction } from "@/types/bs-poker";
-import { createRoom } from "@/lib/bs-poker-game";
+import type { HoldemAction } from "@/types/holdem";
+import { bsPokerGame, createRoom, type BsPokerView } from "@/lib/bs-poker-game";
+import { createHoldemRoom, holdemGame, type HoldemView } from "@/lib/holdem-game";
 import { createMemoryHub } from "@/lib/multiplayer/memory-channel";
 import { generateIdentity, seal } from "@/lib/multiplayer/crypto";
 import { RoomGuest, RoomHost } from "@/lib/multiplayer/room";
@@ -12,14 +14,14 @@ const settle = async () => {
 async function makeHost(hub: ReturnType<typeof createMemoryHub>, code = "ABCD") {
   const identity = await generateIdentity();
   const meta = { playerId: "host", name: "Hana", role: "host" as const, publicKey: identity.publicKey, joinedAt: 1 };
-  const host = new RoomHost(hub.factory(code), identity, meta, createRoom({ roomId: code, host: { id: "host", name: "Hana" } }));
+  const host = new RoomHost(bsPokerGame, hub.factory(code), identity, meta, createRoom({ roomId: code, host: { id: "host", name: "Hana" } }));
   await host.start();
   return host;
 }
 
 async function makeGuest(hub: ReturnType<typeof createMemoryHub>, id: string, name: string, code = "ABCD") {
   const identity = await generateIdentity();
-  const guest = new RoomGuest(hub.factory(code), identity, { playerId: id, name, role: "guest", publicKey: identity.publicKey, joinedAt: 2 });
+  const guest = new RoomGuest<BsPokerAction, BsPokerView>(hub.factory(code), identity, { playerId: id, name, role: "guest", publicKey: identity.publicKey, joinedAt: 2 });
   await guest.start();
   return { guest, identity };
 }
@@ -187,7 +189,7 @@ describe("online room", () => {
     const hub = createMemoryHub();
     const identity = await generateIdentity();
     const meta = { playerId: "host", name: "Hana", role: "host" as const, publicKey: identity.publicKey, joinedAt: 1 };
-    const host = new RoomHost(hub.factory("ABCD"), identity, meta, createRoom({ roomId: "ABCD", host: { id: "host", name: "Hana" } }));
+    const host = new RoomHost(bsPokerGame, hub.factory("ABCD"), identity, meta, createRoom({ roomId: "ABCD", host: { id: "host", name: "Hana" } }));
     await host.start();
     const { guest: ann } = await makeGuest(hub, "ann", "Ann");
     await settle();
@@ -198,10 +200,43 @@ describe("online room", () => {
     await settle();
     expect(ann.getSnapshot().status).toBe("host-away");
 
-    const again = new RoomHost(hub.factory("ABCD"), identity, { ...meta, joinedAt: 5 }, snap);
+    const again = new RoomHost(bsPokerGame, hub.factory("ABCD"), identity, { ...meta, joinedAt: 5 }, snap);
     await again.start();
     await settle();
     expect(again.getState().phase).toBe("bidding");
     expect(ann.getSnapshot().status).toBe("seated");
+  });
+
+  it("hosts Texas Hold'em the same way, keeping hole cards and the unturned board private", async () => {
+    const hub = createMemoryHub();
+    const wire: string[] = [];
+    hub.tap("holdem:ABCD", (_e, payload) => wire.push(JSON.stringify(payload)));
+    const identity = await generateIdentity();
+    const meta = { playerId: "host", name: "Hana", role: "host" as const, publicKey: identity.publicKey, joinedAt: 1 };
+    const host = new RoomHost(holdemGame, hub.factory("holdem:ABCD"), identity, meta, createHoldemRoom({ roomId: "ABCD", host: { id: "host", name: "Hana" } }));
+    await host.start();
+    const gid = await generateIdentity();
+    const ann = new RoomGuest<HoldemAction, HoldemView>(hub.factory("holdem:ABCD"), gid, { playerId: "ann", name: "Ann", role: "guest", publicKey: gid.publicKey, joinedAt: 2 });
+    await ann.start();
+    await settle();
+    host.act({ type: "START_GAME", playerId: "host", seed: 9 });
+    await settle();
+
+    const state = host.getState();
+    const secret = [...state.boardCards, ...state.burnCards, ...state.players.flatMap((p) => p.hand)];
+    const everything = wire.join("\n");
+    for (const c of secret) expect(everything).not.toContain(`"${c.id}"`);
+
+    const view = ann.getSnapshot().view!;
+    expect(view.players.find((p) => p.id === "ann")!.hand).toHaveLength(2);
+    expect(view.players.find((p) => p.id === "host")!.hand).toBeNull();
+    expect(view.board).toEqual([]);
+
+    // Ann acts through the encrypted channel.
+    const turn = state.currentTurnId!;
+    if (turn === "ann") await ann.act({ type: "CALL", playerId: "ann" });
+    else host.act({ type: "CALL", playerId: "host" });
+    await settle();
+    expect(host.getState().lastActions[turn]?.move).toBe("call");
   });
 });

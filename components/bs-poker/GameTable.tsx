@@ -5,7 +5,7 @@ import type { BsPokerView, PublicPlayer } from "@/lib/bs-poker-game";
 import { bidLabel } from "@/lib/bs-poker-engine";
 import { isWildCard } from "@/lib/bs-poker-engine";
 import { tableSlot } from "@/lib/deal-plan";
-import { BurnPile, DealtCard, DeckPile } from "./deal";
+import { BurnPile, DealtCard, DeckPile } from "@/components/table/deal";
 import { PlayerSeat, wildLabel, type SeatHighlights } from "./PlayerSeat";
 
 interface GameTableProps {

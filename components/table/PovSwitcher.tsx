@@ -1,11 +1,11 @@
 "use client";
 
 import clsx from "clsx";
-import type { PublicPlayer } from "@/lib/bs-poker-game";
 import { Toggle } from "@/components/ui/controls";
 
 interface PovSwitcherProps {
-  players: PublicPlayer[];
+  /** Anyone whose status isn't "active" is shown as out. */
+  players: { id: string; name: string; status: string }[];
   viewer: string | "god";
   currentTurnId: string | null;
   followTurn: boolean;
@@ -41,7 +41,7 @@ export function PovSwitcher({ players, viewer, currentTurnId, followTurn, onSele
           option(
             p.id,
             p.id === currentTurnId ? `${p.name} (turn)` : p.name,
-            p.status === "eliminated" ? "line-through opacity-60" : undefined,
+            p.status !== "active" ? "line-through opacity-60" : undefined,
           ),
         )}
         {option("god", "Everyone")}

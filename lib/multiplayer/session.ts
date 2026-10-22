@@ -10,6 +10,7 @@ import { createSupabaseChannel, isSupabaseConfigured } from "./supabase-channel"
 import { createTabChannel } from "./tab-channel";
 
 export interface RoomSession {
+  /** Room code, as shared (e.g. "ABCD"). */
   code: string;
   playerId: string;
   name: string;
@@ -18,8 +19,12 @@ export interface RoomSession {
   identity: StoredIdentity;
 }
 
-const sessionKey = (code: string) => `showdown:session:${code}`;
-const hostKey = (code: string) => `showdown:host:${code}`;
+/**
+ * `roomKey` names a room across games: BS Poker uses the plain code, Hold'em "holdem:CODE".
+ * It also names the realtime channel, so the two games' rooms never collide.
+ */
+const sessionKey = (roomKey: string) => `showdown:session:${roomKey}`;
+const hostKey = (roomKey: string) => `showdown:host:${roomKey}`;
 
 function read<T>(key: string): T | null {
   try {
@@ -38,9 +43,9 @@ function write(key: string, value: unknown) {
   }
 }
 
-export const loadSession = (code: string) => read<RoomSession>(sessionKey(code));
+export const loadSession = (roomKey: string) => read<RoomSession>(sessionKey(roomKey));
 
-export async function createSession(code: string, name: string, role: PeerRole): Promise<RoomSession> {
+export async function createSession(roomKey: string, code: string, name: string, role: PeerRole): Promise<RoomSession> {
   const identity = await generateIdentity();
   const session: RoomSession = {
     code,
@@ -50,19 +55,19 @@ export async function createSession(code: string, name: string, role: PeerRole):
     joinedAt: Date.now(),
     identity: await exportIdentity(identity),
   };
-  write(sessionKey(code), session);
+  write(sessionKey(roomKey), session);
   return session;
 }
 
 export const sessionIdentity = (s: RoomSession): Promise<Identity> => importIdentity(s.identity);
 
-export const loadHostSnapshot = (code: string) => read<HostSnapshot>(hostKey(code));
-export const saveHostSnapshot = (code: string, snap: HostSnapshot) => write(hostKey(code), snap);
+export const loadHostSnapshot = <S>(roomKey: string) => read<HostSnapshot<S>>(hostKey(roomKey));
+export const saveHostSnapshot = <S>(roomKey: string, snap: HostSnapshot<S>) => write(hostKey(roomKey), snap);
 
-export function clearSession(code: string) {
+export function clearSession(roomKey: string) {
   try {
-    sessionStorage.removeItem(sessionKey(code));
-    sessionStorage.removeItem(hostKey(code));
+    sessionStorage.removeItem(sessionKey(roomKey));
+    sessionStorage.removeItem(hostKey(roomKey));
   } catch {
     // Nothing to clear.
   }

@@ -38,3 +38,38 @@ export function planDeal(
   });
   return { order, count: n };
 }
+
+/** Hold'em streets: which board cards each burn comes before. */
+const HOLDEM_STREETS = [
+  { burn: 0, cards: [0, 1, 2], shown: 3 },
+  { burn: 1, cards: [3], shown: 4 },
+  { burn: 2, cards: [4], shown: 5 },
+];
+
+/**
+ * A Hold'em deal: optionally the hole cards (two passes around the table, starting left of
+ * the button), then every street turned between `fromShown` and `toShown` board cards, each
+ * after its burn. An all-in runout turns several streets in one deal.
+ */
+export function planHoldemDeal(opts: {
+  players: readonly { id: string; inHand: boolean }[];
+  buttonId: string | null;
+  holeCards: boolean;
+  fromShown: number;
+  toShown: number;
+}): DealPlan {
+  const order = new Map<string, number>();
+  let n = 0;
+  if (opts.holeCards) {
+    const seats = opts.players.filter((p) => p.inHand);
+    const button = seats.findIndex((p) => p.id === opts.buttonId);
+    const rotation = [...seats.slice(button + 1), ...seats.slice(0, button + 1)];
+    for (let pass = 0; pass < 2; pass++) for (const p of rotation) order.set(handSlot(p.id, pass), n++);
+  }
+  for (const street of HOLDEM_STREETS) {
+    if (street.shown <= opts.fromShown || street.shown > opts.toShown) continue;
+    order.set(burnSlot(street.burn), n++);
+    for (const i of street.cards) order.set(tableSlot(i), n++);
+  }
+  return { order, count: n };
+}

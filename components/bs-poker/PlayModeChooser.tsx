@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { GAMES, type GameId } from "@/lib/games";
 import { createSession, getTransport, type TransportKind } from "@/lib/multiplayer/session";
 import { generateRoomCode, isRoomCode, normalizeRoomCode } from "@/lib/multiplayer/room-code";
 import { NameField, rememberName, useRememberedName } from "./NameField";
 
-export default function PlayModeChooser() {
+/** Create a room, join one by code, or open the local simulator — for either game. */
+export default function PlayModeChooser({ game }: { game: GameId }) {
+  const info = GAMES[game];
   const router = useRouter();
   const [name, setName] = useRememberedName();
   const [code, setCode] = useState("");
@@ -23,14 +26,14 @@ export default function PlayModeChooser() {
     setBusy(kind);
     rememberName(name);
     const roomCode = kind === "create" ? generateRoomCode() : code;
-    await createSession(roomCode, name, kind === "create" ? "host" : "guest");
-    router.push(`/bs-poker/room/${roomCode}`);
+    await createSession(info.roomKey(roomCode), roomCode, name, kind === "create" ? "host" : "guest");
+    router.push(`${info.path}/room/${roomCode}`);
   };
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-4xl font-extrabold text-bone">BS Poker</h1>
+        <h1 className="font-display text-4xl font-extrabold text-bone">{info.title}</h1>
         <Link href="/" className="flex min-h-11 items-center px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline">
           Main menu
         </Link>
@@ -98,7 +101,7 @@ export default function PlayModeChooser() {
             Local simulator
           </h2>
           <Link
-            href="/bs-poker/local"
+            href={`${info.path}/local`}
             className="mt-5 inline-flex min-h-12 items-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone"
           >
             Open the simulator

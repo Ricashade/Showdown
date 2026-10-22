@@ -7,7 +7,7 @@ import { isWildCard } from "@/lib/bs-poker-engine";
 import { rankShort, sortCards, suitSymbol } from "@/lib/cards";
 import { type CardHighlight, type CardSize } from "@/components/ui/PlayingCard";
 import { handSlot } from "@/lib/deal-plan";
-import { DealtCard } from "./deal";
+import { DealtCard } from "@/components/table/deal";
 
 export interface SeatHighlights {
   cardIds: Set<string>;

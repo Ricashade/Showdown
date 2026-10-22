@@ -7,18 +7,36 @@
  *
  * Only the host ever holds the full GameState (hands of everyone + the shuffle seed).
  */
-import type { BsPokerAction, BsPokerState } from "@/types/bs-poker";
-import { applyAction, getPlayerView, MAX_PLAYERS, type BsPokerView } from "@/lib/bs-poker-game";
+import type { ActionResult, PlayerSeed } from "@/types/game";
 import type { PresenceMeta, RoomChannel } from "./channel";
 import { deriveSharedKey, isSealed, open, seal, type Identity, type Sealed } from "./crypto";
+
+/** The parts of a game's state the room needs. */
+export interface RoomState {
+  hostId: string;
+  phase: string;
+  players: { id: string }[];
+}
+
+/** Moves that act for a player carry their id in `playerId`. */
+export type RoomAction = { type: string; playerId?: string };
+
+/** A game the room can host: its rules, what each player may see, and how seats are taken. */
+export interface GameDefinition<S extends RoomState, A extends RoomAction, V> {
+  applyAction(state: S, action: A): ActionResult<S>;
+  getPlayerView(state: S, playerId: string): V;
+  join(player: PlayerSeed): A;
+  leave(playerId: string): A;
+  maxPlayers: number;
+}
 
 export type SeatStatus = "seated" | "rejected" | "removed" | "closed";
 
 /** What the host sends one guest (always sealed with that guest's key). */
-export interface GuestEnvelope {
+export interface GuestEnvelope<V> {
   seq: number;
   status: SeatStatus;
-  view: BsPokerView | null;
+  view: V | null;
   connectedIds: string[];
   /** Why a move or join didn't go through. */
   error?: string;
@@ -34,26 +52,29 @@ interface ActionMessage {
 }
 
 /** Inside a sealed action. `n` only ever increases, so recorded moves can't be replayed. */
-interface SealedAction {
+interface SealedAction<A> {
   n: number;
-  action: BsPokerAction;
+  action: A;
 }
 
 // ---------------------------------------------------------------------------
 // Host
 // ---------------------------------------------------------------------------
 
+const isSnapshot = <S>(x: unknown): x is HostSnapshot<S> =>
+  !!x && typeof x === "object" && "state" in x && "seq" in x && "guestKeys" in x;
+
 /** Everything a host needs to pick up again after a page refresh. */
-export interface HostSnapshot {
-  state: BsPokerState;
+export interface HostSnapshot<S> {
+  state: S;
   seq: number;
   guestKeys: [string, string][];
   lastNonce: [string, number][];
   removed: string[];
 }
 
-export class RoomHost {
-  private state: BsPokerState;
+export class RoomHost<S extends RoomState, A extends RoomAction, V> {
+  private state: S;
   private seq: number;
   /** playerId → their public key. First key seen wins; a later different key is an impostor. */
   private guestPublicKeys: Map<string, string>;
@@ -67,13 +88,14 @@ export class RoomHost {
   private closing = false;
 
   constructor(
+    private game: GameDefinition<S, A, V>,
     private channel: RoomChannel,
     private identity: Identity,
     private meta: PresenceMeta,
-    initial: BsPokerState | HostSnapshot,
+    initial: S | HostSnapshot<S>,
   ) {
-    const snap = "state" in initial ? initial : null;
-    this.state = snap ? snap.state : (initial as BsPokerState);
+    const snap = isSnapshot(initial) ? initial : null;
+    this.state = snap ? snap.state : (initial as S);
     this.seq = snap?.seq ?? 0;
     this.guestPublicKeys = new Map(snap?.guestKeys ?? []);
     this.lastNonce = new Map(snap?.lastNonce ?? []);
@@ -99,7 +121,7 @@ export class RoomHost {
     );
   }
 
-  snapshot(): HostSnapshot {
+  snapshot(): HostSnapshot<S> {
     return {
       state: this.state,
       seq: this.seq,
@@ -135,8 +157,8 @@ export class RoomHost {
   }
 
   /** The host's own moves, applied immediately. */
-  act(action: BsPokerAction) {
-    const result = applyAction(this.state, action);
+  act(action: A) {
+    const result = this.game.applyAction(this.state, action);
     if (result.ok) {
       this.state = result.state;
       this.notify();
@@ -149,7 +171,7 @@ export class RoomHost {
   removePlayer(playerId: string) {
     if (playerId === this.hostId) return;
     this.removed.add(playerId);
-    if (!this.act({ type: "LEAVE_ROOM", playerId }).ok) this.enqueue(() => this.publish());
+    if (!this.act(this.game.leave(playerId)).ok) this.enqueue(() => this.publish());
   }
 
   private enqueue(task: () => Promise<void>) {
@@ -160,8 +182,8 @@ export class RoomHost {
     this.listeners.forEach((fn) => fn());
   }
 
-  private apply(action: BsPokerAction): string | undefined {
-    const result = applyAction(this.state, action);
+  private apply(action: A): string | undefined {
+    const result = this.game.applyAction(this.state, action);
     if (!result.ok) return result.error;
     this.state = result.state;
     return undefined;
@@ -190,12 +212,12 @@ export class RoomHost {
       for (const [playerId, m] of connected) {
         const seated = this.state.players.some((p) => p.id === playerId);
         if (seated || this.removed.has(playerId)) continue;
-        const error = this.apply({ type: "JOIN_ROOM", player: { id: playerId, name: m.name } });
-        if (error) errors[playerId] = this.state.players.length >= MAX_PLAYERS ? "This table is full." : error;
+        const error = this.apply(this.game.join({ id: playerId, name: m.name }));
+        if (error) errors[playerId] = this.state.players.length >= this.game.maxPlayers ? "This table is full." : error;
       }
       // …and free the seats of anyone who left the lobby.
       for (const p of this.state.players) {
-        if (p.id !== this.hostId && !this.connected.has(p.id)) this.apply({ type: "LEAVE_ROOM", playerId: p.id });
+        if (p.id !== this.hostId && !this.connected.has(p.id)) this.apply(this.game.leave(p.id));
       }
     }
     this.notify();
@@ -207,9 +229,9 @@ export class RoomHost {
     if (!msg || typeof msg.from !== "string" || !isSealed(msg.sealed)) return;
     const key = this.sharedKeys.get(msg.from);
     if (!key) return;
-    let sealedAction: SealedAction;
+    let sealedAction: SealedAction<A>;
     try {
-      sealedAction = await open<SealedAction>(key, msg.sealed);
+      sealedAction = await open<SealedAction<A>>(key, msg.sealed);
     } catch {
       return; // Not sealed with this player's key: forged or tampered.
     }
@@ -218,8 +240,8 @@ export class RoomHost {
 
     const { action } = sealedAction;
     if (this.removed.has(msg.from)) return;
-    // Guests may only act as themselves; joining happens through presence.
-    if (action.type === "JOIN_ROOM" || action.playerId !== msg.from) {
+    // Guests may only act as themselves; joining (which has no playerId) happens through presence.
+    if (typeof action?.playerId !== "string" || action.playerId !== msg.from) {
       await this.publish({ [msg.from]: "That move isn't yours to make." });
       return;
     }
@@ -241,10 +263,10 @@ export class RoomHost {
           : seated
             ? "seated"
             : "rejected";
-      const envelope: GuestEnvelope = {
+      const envelope: GuestEnvelope<V> = {
         seq: this.seq,
         status,
-        view: seated ? getPlayerView(this.state, playerId) : null,
+        view: seated ? this.game.getPlayerView(this.state, playerId) : null,
         connectedIds,
         error:
           errors[playerId] ??
@@ -274,9 +296,9 @@ export type GuestStatus =
   | "host-away"
   | "not-found";
 
-export interface GuestSnapshot {
+export interface GuestSnapshot<V> {
   status: GuestStatus;
-  view: BsPokerView | null;
+  view: V | null;
   connectedIds: string[];
   /** Latest error from the host, with a counter so the same message can show twice. */
   error: { message: string; id: number } | null;
@@ -285,7 +307,7 @@ export interface GuestSnapshot {
 
 const NOT_FOUND_MS = 7000;
 
-export class RoomGuest {
+export class RoomGuest<A extends RoomAction, V> {
   private hostKey: CryptoKey | null = null;
   private hostPublicKey: string | null = null;
   private lastSeq = 0;
@@ -293,7 +315,7 @@ export class RoomGuest {
   private errorId = 0;
   private listeners = new Set<() => void>();
   private notFoundTimer: ReturnType<typeof setTimeout> | null = null;
-  private snap: GuestSnapshot = { status: "connecting", view: null, connectedIds: [], error: null, hostName: null };
+  private snap: GuestSnapshot<V> = { status: "connecting", view: null, connectedIds: [], error: null, hostName: null };
 
   constructor(
     private channel: RoomChannel,
@@ -330,15 +352,15 @@ export class RoomGuest {
   }
 
   /** Seal a move with our key and send it to the host. */
-  async act(action: BsPokerAction) {
+  async act(action: A) {
     if (!this.hostKey) return;
     // Wall-clock based so it keeps increasing across page refreshes.
     this.lastNonce = Math.max(this.lastNonce + 1, Date.now());
-    const sealed = await seal(this.hostKey, { n: this.lastNonce, action } satisfies SealedAction);
+    const sealed = await seal(this.hostKey, { n: this.lastNonce, action } satisfies SealedAction<A>);
     await this.channel.send("action", { from: this.meta.playerId, sealed } satisfies ActionMessage);
   }
 
-  private update(patch: Partial<GuestSnapshot>) {
+  private update(patch: Partial<GuestSnapshot<V>>) {
     this.snap = { ...this.snap, ...patch };
     this.listeners.forEach((fn) => fn());
   }
@@ -366,9 +388,9 @@ export class RoomGuest {
   private async onState(payload: unknown) {
     const sealed = (payload as StateMessage)?.envelopes?.[this.meta.playerId];
     if (!this.hostKey || !isSealed(sealed)) return;
-    let env: GuestEnvelope;
+    let env: GuestEnvelope<V>;
     try {
-      env = await open<GuestEnvelope>(this.hostKey, sealed);
+      env = await open<GuestEnvelope<V>>(this.hostKey, sealed);
     } catch {
       return;
     }
