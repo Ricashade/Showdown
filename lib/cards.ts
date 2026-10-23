@@ -58,6 +58,16 @@ export function nextRandom(state: number): [value: number, nextState: number] {
   return [((t ^ (t >>> 14)) >>> 0) / 4294967296, a >>> 0];
 }
 
+/** A repeatable random-number function (0 ≤ x < 1) from a seed, for bots and tests. */
+export function seededRandom(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    const [r, next] = nextRandom(s);
+    s = next;
+    return r;
+  };
+}
+
 /** Fisher–Yates shuffle driven by the seeded PRNG. */
 export function shuffle<T>(items: readonly T[], rngState: number): { result: T[]; rngState: number } {
   const result = items.slice();

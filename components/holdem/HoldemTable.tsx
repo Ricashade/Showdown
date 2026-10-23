@@ -6,6 +6,7 @@ import { nextBlindRise, type HoldemPublicPlayer, type HoldemView } from "@/lib/h
 import { buildPots } from "@/lib/holdem-pots";
 import { handSlot, tableSlot } from "@/lib/deal-plan";
 import { BurnPile, DealtCard, DeckPile } from "@/components/table/deal";
+import { DIFFICULTY_LABEL } from "@/lib/bot-ai";
 
 const chips = (n: number) => n.toLocaleString("en-US");
 
@@ -153,8 +154,10 @@ function Seat({
         <div className="flex max-w-36 items-baseline gap-1.5">
           <span className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{p.name}</span>
           {isViewer && <span className="text-xs text-brass-lit">you</span>}
+          {p.isBot && <span className="text-xs text-brass-lit">{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
         </div>
         {!busted && <span className="font-display text-lg leading-tight font-bold text-brass-lit tabular-nums">{chips(p.chips)}</span>}
+        {isTurn && p.isBot && <span className="text-xs font-bold text-brass-lit">Thinking…</span>}
         {disconnected && !busted && <span className="text-xs text-parchment">Reconnecting…</span>}
       </div>
 

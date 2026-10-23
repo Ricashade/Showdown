@@ -239,4 +239,16 @@ describe("online room", () => {
     await settle();
     expect(host.getState().lastActions[turn]?.move).toBe("call");
   });
+
+  it("keeps bots seated when real players come and go, and counts them as connected", async () => {
+    const hub = createMemoryHub();
+    const host = await makeHost(hub);
+    host.act({ type: "JOIN_ROOM", player: { id: "bot_1", name: "Shark Vinnie", isBot: true, botDifficulty: "hard" } });
+    const { guest: ann } = await makeGuest(hub, "ann", "Ann");
+    await settle();
+    await ann.stop();
+    await settle();
+    expect(host.getState().players.map((p) => p.id)).toEqual(["host", "bot_1"]);
+    expect(host.getConnectedIds()).toContain("bot_1");
+  });
 });

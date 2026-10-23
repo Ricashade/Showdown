@@ -4,6 +4,7 @@ import clsx from "clsx";
 import type { BsPokerSettings, WildAssignment } from "@/types/bs-poker";
 import type { PublicPlayer } from "@/lib/bs-poker-game";
 import { isWildCard } from "@/lib/bs-poker-engine";
+import { DIFFICULTY_LABEL } from "@/lib/bot-ai";
 import { rankShort, sortCards, suitSymbol } from "@/lib/cards";
 import { type CardHighlight, type CardSize } from "@/components/ui/PlayingCard";
 import { handSlot } from "@/lib/deal-plan";
@@ -95,8 +96,11 @@ export function PlayerSeat({
         <div className="flex max-w-40 items-baseline gap-1.5">
           <span className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{player.name}</span>
           {isViewer && <span className="text-xs text-brass-lit">you</span>}
+          {player.isBot && <span className="text-xs text-brass-lit">{DIFFICULTY_LABEL[player.botDifficulty ?? "medium"]}</span>}
         </div>
-        {isTurn && <span className="text-xs font-bold text-brass-lit">{isViewer ? "Your turn" : "Their turn"}</span>}
+        {isTurn && (
+          <span className="text-xs font-bold text-brass-lit">{player.isBot ? "Thinking…" : isViewer ? "Your turn" : "Their turn"}</span>
+        )}
         {onBrink && !isTurn && (
           <span className="text-xs font-bold text-chip-lit">One more loss and {isViewer ? "you're" : "they're"} out</span>
         )}

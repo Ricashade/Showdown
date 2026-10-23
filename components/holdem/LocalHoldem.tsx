@@ -5,6 +5,8 @@ import type { HoldemAction, HoldemState } from "@/types/holdem";
 import { applyHoldemAction, createHoldemRoom, getHoldemView } from "@/lib/holdem-game";
 import { createLocalTransport } from "@/lib/multiplayer/transport";
 import { useGameRoom } from "@/lib/hooks/use-game-room";
+import { useBotDriver } from "@/lib/hooks/use-bot-driver";
+import { holdemBots, newBot } from "@/lib/bot-ai";
 import { PovSwitcher } from "@/components/table/PovSwitcher";
 import { HoldemTableScreen } from "./HoldemTableScreen";
 
@@ -37,9 +39,14 @@ export default function LocalHoldem() {
     [transport],
   );
 
+  useBotDriver(state, holdemBots, dispatch);
+
+  // Follow the turn between humans; bots play themselves.
   useEffect(() => {
     const turnId = state.currentTurnId;
-    if (followTurn && state.phase === "betting" && turnId) setViewer((v) => (v === "god" ? v : turnId));
+    const turnIsBot = state.players.find((p) => p.id === turnId)?.isBot;
+    if (followTurn && state.phase === "betting" && turnId && !turnIsBot) setViewer((v) => (v === "god" ? v : turnId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followTurn, state.phase, state.currentTurnId]);
 
   useEffect(() => {
@@ -67,6 +74,7 @@ export default function LocalHoldem() {
         canRemove: (id) => id !== state.hostId,
         onRemove: (id) => dispatch({ type: "LEAVE_ROOM", playerId: id }),
         onRename: (id, name) => dispatch({ type: "RENAME_PLAYER", playerId: id, name }),
+        onAddBot: (difficulty) => dispatch({ type: "JOIN_ROOM", player: newBot(difficulty, state.players.map((p) => p.name)) }),
         onAddPlayer: () => {
           const n = nextIdRef.current++;
           dispatch({ type: "JOIN_ROOM", player: { id: `p${n}`, name: `Player ${state.players.length + 1}` } });

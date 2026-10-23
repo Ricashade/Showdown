@@ -13,7 +13,7 @@ import {
   type TransportKind,
 } from "@/lib/multiplayer/session";
 
-export type OnlineRoom<V> =
+export type OnlineRoom<S, V> =
   | { phase: "needs-name" }
   | { phase: "connecting" }
   | { phase: "failed"; message: string }
@@ -26,6 +26,8 @@ export type OnlineRoom<V> =
       connectedIds: Set<string>;
       hostName: string | null;
       error: { message: string; id: number } | null;
+      /** The full game state — host only, never sent anywhere. Bots are run from it. */
+      hostState: S | null;
     };
 
 /** How long a new host listens for an existing host before claiming the code. */
@@ -45,7 +47,7 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
   { roomKey, code, createState }: OnlineRoomOptions<S>,
 ) {
   const [session, setSession] = useState<RoomSession | null | undefined>(undefined);
-  const [room, setRoom] = useState<OnlineRoom<V>>({ phase: "connecting" });
+  const [room, setRoom] = useState<OnlineRoom<S, V>>({ phase: "connecting" });
   const [transport, setTransport] = useState<TransportKind>("supabase");
   const hostRef = useRef<RoomHost<S, A, V> | null>(null);
   const guestRef = useRef<RoomGuest<A, V> | null>(null);
@@ -90,6 +92,7 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
             connectedIds: new Set(host.getConnectedIds()),
             hostName: session.name,
             error: prev.phase === "ready" ? prev.error : null,
+            hostState: host.getState(),
           }));
         };
         const unsubscribe = host.subscribe(publish);
@@ -124,6 +127,7 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
             connectedIds: new Set(snap.connectedIds),
             hostName: snap.hostName,
             error: snap.error,
+            hostState: null,
           });
         };
         const unsubscribe = guest.subscribe(publish);

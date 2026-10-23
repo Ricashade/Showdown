@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Link2, UserPlus, X } from "lucide-react";
+import { Bot, Check, Link2, UserPlus, X } from "lucide-react";
+import type { BotDifficulty } from "@/types/game";
+import { DIFFICULTY_LABEL } from "@/lib/bot-ai";
 
 export interface LobbyOptions {
   /** Online rooms show their code and an invite link. */
@@ -12,10 +14,12 @@ export interface LobbyOptions {
   onRename: (playerId: string, name: string) => void;
   /** Local simulator only: add another seat on this screen. */
   onAddPlayer?: () => void;
+  /** Host only: seat a bot. */
+  onAddBot?: (difficulty: BotDifficulty) => void;
 }
 
 interface SeatsPanelProps {
-  players: { id: string; name: string; isHost: boolean }[];
+  players: { id: string; name: string; isHost: boolean; isBot?: boolean; botDifficulty?: BotDifficulty }[];
   viewerId: string | null;
   hostId: string;
   isHost: boolean;
@@ -48,7 +52,7 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
               <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-leather font-display text-lg font-bold text-bone">
                 {i + 1}
               </span>
-              {options.canRename(p.id) ? (
+              {options.canRename(p.id) && !p.isBot ? (
                 <input
                   value={p.name}
                   onChange={(e) => options.onRename(p.id, e.target.value)}
@@ -59,6 +63,7 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
                 <span className="min-w-0 flex-1 truncate px-1.5 text-base text-bone">
                   {p.name}
                   {viewerId === p.id && <span className="ml-1.5 text-sm text-brass-lit">you</span>}
+                  {p.isBot && <span className="ml-1.5 text-sm text-brass-lit">{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]} bot</span>}
                 </span>
               )}
               {!online && <span className="text-sm text-bone">Reconnecting…</span>}
@@ -77,6 +82,25 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
           );
         })}
       </ol>
+
+      {options.onAddBot && (
+        <div role="group" aria-label="Add a bot" className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 pr-1 text-sm font-bold text-bone">
+            <Bot className="size-4" aria-hidden /> Add a bot
+          </span>
+          {(["easy", "medium", "hard"] as const).map((d) => (
+            <button
+              key={d}
+              onClick={() => options.onAddBot!(d)}
+              disabled={players.length >= maxPlayers}
+              aria-label={`Add ${DIFFICULTY_LABEL[d].toLowerCase()} bot`}
+              className="min-h-11 rounded-full border border-bone/40 px-4 text-sm font-bold text-bone transition hover:border-bone disabled:opacity-40"
+            >
+              {DIFFICULTY_LABEL[d]}
+            </button>
+          ))}
+        </div>
+      )}
 
       {options.onAddPlayer && (
         <button

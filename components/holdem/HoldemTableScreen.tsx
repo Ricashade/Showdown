@@ -148,10 +148,10 @@ export function HoldemTableScreen({
                     <p role="status" className="text-lg text-parchment">
                       Dealing…
                     </p>
-                  ) : legal.isMyTurn && acting ? (
+                  ) : legal.isMyTurn && acting && !acting.isBot ? (
                     <HoldemActions key={`${view.version}-${acting.id}`} view={view} legal={legal} actingId={acting.id} actingName={acting.name} onAction={onAction} />
                   ) : (
-                    <p className="text-lg text-parchment">Waiting for {turnPlayer?.name}.</p>
+                    <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
                   )}
                 </div>
               )}

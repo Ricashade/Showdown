@@ -31,11 +31,11 @@ lib/
   holdem-game.ts            Hold'em reducer: blinds, betting rules, streets, runouts, showdown
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
                             nextRound, applyAction; getPlayerView (hidden info), getLegalActions
-  turn-controller.ts        BotController interface + registry (no AI yet)
+  bot-ai.ts                 Bots for both games (entry point); brains in bots/bs-poker-bot.ts, bots/holdem-bot.ts
   multiplayer/              Room protocol (room.ts), encryption (crypto.ts), channels: Supabase,
                             same-browser tabs, in-memory (tests)
   multiplayer/transport.ts  LocalTransport for the simulator
-  hooks/                    useOnlineRoom, useGameRoom, useBotTurns
+  hooks/                    useOnlineRoom, useGameRoom, useBotDriver
 components/
   ui/                       PlayingCard (flip/deal animations), Toggle/Stepper/Segmented
   bs-poker/                 TableScreen (shared), LocalGame, OnlineGame, Lobby, GameTable, BidBuilder, …
@@ -81,6 +81,23 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
   the button. All-in hands run the board out automatically.
 - **Online:** the host deals each new hand with *Next hand*; hole cards, the unturned board and
   the burns never leave the host.
+
+## Bots
+
+The host can seat Easy, Medium or Hard bots in either game, mixed freely with people.
+
+- **No cheating:** a bot only gets an observation built from its own redacted view (the same
+  `getPlayerView` real players get). Tests check a bot's choice doesn't change when the hidden
+  cards of others do.
+- **Pacing:** 0.9–1.8 s of "Thinking…", plus time for any deal animation still running.
+- **Who runs them:** the local simulator, or the online host's tab only, so each bot move is made
+  once and broadcast like any other.
+- **BS Poker:** Easy bids by feel; Medium runs 100 Monte Carlo rollouts (calls BS under 22%);
+  Hard runs 350 with bid inference (earlier bidders likely hold what they bid), calls under 28%,
+  and makes occasional pressure bids.
+- **Hold'em:** Easy is loose-passive; Medium is tight-aggressive with 150-run equity vs pot odds;
+  Hard plays position-aware ranges, 400-run equity, thin value bets, semi-bluffs, and respects
+  heavy action on scary boards.
 
 ## Online play (Supabase Realtime)
 

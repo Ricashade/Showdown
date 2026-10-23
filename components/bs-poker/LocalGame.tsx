@@ -5,7 +5,8 @@ import type { BsPokerAction, BsPokerState } from "@/types/bs-poker";
 import { applyAction, createRoom, getPlayerView } from "@/lib/bs-poker-game";
 import { createLocalTransport } from "@/lib/multiplayer/transport";
 import { useGameRoom } from "@/lib/hooks/use-game-room";
-import { useBotTurns } from "@/lib/hooks/use-bot-turns";
+import { useBotDriver } from "@/lib/hooks/use-bot-driver";
+import { bsPokerBots, newBot } from "@/lib/bot-ai";
 import { PovSwitcher } from "@/components/table/PovSwitcher";
 import { TableScreen } from "./TableScreen";
 
@@ -42,12 +43,15 @@ export default function LocalGame() {
     [transport],
   );
 
-  useBotTurns(state, dispatch);
+  useBotDriver(state, bsPokerBots, dispatch);
 
   // Runs only when the turn changes, so a manual POV pick sticks until the next move.
+  // Bots play themselves, so the view stays with the last human.
   useEffect(() => {
     const turnId = state.currentTurnPlayerId;
-    if (followTurn && state.phase === "bidding" && turnId) setViewer((v) => (v === "god" ? v : turnId));
+    const turnIsBot = state.players.find((p) => p.id === turnId)?.isBot;
+    if (followTurn && state.phase === "bidding" && turnId && !turnIsBot) setViewer((v) => (v === "god" ? v : turnId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followTurn, state.phase, state.currentTurnPlayerId]);
 
   // Keep the POV valid if its player was removed.
@@ -81,6 +85,7 @@ export default function LocalGame() {
         canRemove: (id) => id !== state.hostId,
         onRemove: (id) => dispatch({ type: "LEAVE_ROOM", playerId: id }),
         onRename: (id, name) => dispatch({ type: "RENAME_PLAYER", playerId: id, name }),
+        onAddBot: (difficulty) => dispatch({ type: "JOIN_ROOM", player: newBot(difficulty, state.players.map((p) => p.name)) }),
         onAddPlayer: () => {
           const n = nextIdRef.current++;
           dispatch({ type: "JOIN_ROOM", player: { id: `p${n}`, name: `Player ${state.players.length + 1}` } });

@@ -15,7 +15,8 @@ import { deriveSharedKey, isSealed, open, seal, type Identity, type Sealed } fro
 export interface RoomState {
   hostId: string;
   phase: string;
-  players: { id: string }[];
+  /** Bots sit at the table without a connection of their own; the host plays for them. */
+  players: { id: string; isBot?: boolean }[];
 }
 
 /** Moves that act for a player carry their id in `playerId`. */
@@ -111,7 +112,8 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
   }
 
   getConnectedIds(): string[] {
-    return [this.hostId, ...this.connected];
+    const bots = this.state.players.filter((p) => p.isBot).map((p) => p.id);
+    return [this.hostId, ...this.connected, ...bots];
   }
 
   /** Another host already holds this room code (the earlier one wins). */
@@ -217,7 +219,7 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
       }
       // …and free the seats of anyone who left the lobby.
       for (const p of this.state.players) {
-        if (p.id !== this.hostId && !this.connected.has(p.id)) this.apply(this.game.leave(p.id));
+        if (p.id !== this.hostId && !p.isBot && !this.connected.has(p.id)) this.apply(this.game.leave(p.id));
       }
     }
     this.notify();

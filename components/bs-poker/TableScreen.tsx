@@ -150,7 +150,7 @@ export function TableScreen({
                     <p role="status" className="text-lg text-parchment">
                       {shuffling ? "Shuffling the deck…" : `Dealing round ${view.round}…`}
                     </p>
-                  ) : legal.isMyTurn && acting ? (
+                  ) : legal.isMyTurn && acting && !acting.isBot ? (
                     <BidBuilder
                       key={`${view.round}-${view.bidHistory.length}-${acting.id}`}
                       legalBids={legal.legalBids}
@@ -164,8 +164,8 @@ export function TableScreen({
                     />
                   ) : (
                     <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-lg text-parchment">Waiting for {turnPlayer?.name}.</p>
-                      {turnPlayer && onViewAs && (
+                      <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
+                      {turnPlayer && onViewAs && !turnPlayer.isBot && (
                         <button
                           onClick={() => onViewAs(turnPlayer.id)}
                           className="min-h-11 rounded-full border border-dashed border-ash/60 px-4 text-sm text-parchment hover:text-bone"

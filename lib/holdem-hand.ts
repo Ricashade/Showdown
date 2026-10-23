@@ -116,3 +116,76 @@ export function bestHand(cards: readonly Card[]): HandValue {
           }
   return best!;
 }
+
+// ---------------------------------------------------------------------------
+// Fast scoring (for simulations)
+// ---------------------------------------------------------------------------
+
+const BIT = (r: number) => 1 << r;
+
+/** Top card of a straight inside a rank bitmask (bit r = rank r present), or 0. */
+function straightHighFromMask(mask: number): number {
+  const m = mask & BIT(14) ? mask | BIT(1) : mask; // Ace plays low too.
+  for (let high = 14; high >= 5; high--) {
+    const need = 0b11111 << (high - 4);
+    if ((m & need) === need) return high;
+  }
+  return 0;
+}
+
+/** Highest `n` ranks in a mask, descending. */
+function topRanks(mask: number, n: number, skip: number[] = []): number[] {
+  const out: number[] = [];
+  for (let r = 14; r >= 2 && out.length < n; r--) if (mask & BIT(r) && !skip.includes(r)) out.push(r);
+  return out;
+}
+
+/**
+ * One number per hand: bigger is better, equal means a split. Same ordering as
+ * `compareHands(bestHand(a), bestHand(b))` but with no combinations or labels, so
+ * equity simulations can score thousands of hands quickly.
+ */
+export function handScore(cards: readonly Card[]): number {
+  const counts = new Array<number>(15).fill(0);
+  const suitMask: Record<string, number> = { S: 0, H: 0, D: 0, C: 0 };
+  const suitCount: Record<string, number> = { S: 0, H: 0, D: 0, C: 0 };
+  let all = 0;
+  for (const c of cards) {
+    if (c.kind !== "standard") continue;
+    counts[c.rank]++;
+    suitMask[c.suit] |= BIT(c.rank);
+    suitCount[c.suit]++;
+    all |= BIT(c.rank);
+  }
+  const encode = (category: number, ranks: number[]) => {
+    let v = category;
+    for (let i = 0; i < 5; i++) v = v * 15 + (ranks[i] ?? 0);
+    return v;
+  };
+
+  const flushSuit = (["S", "H", "D", "C"] as const).find((s) => suitCount[s] >= 5);
+  if (flushSuit) {
+    const sf = straightHighFromMask(suitMask[flushSuit]);
+    if (sf) return encode(8, [sf]);
+  }
+  const quads: number[] = [];
+  const trips: number[] = [];
+  const pairs: number[] = [];
+  for (let r = 14; r >= 2; r--) {
+    if (counts[r] === 4) quads.push(r);
+    else if (counts[r] === 3) trips.push(r);
+    else if (counts[r] === 2) pairs.push(r);
+  }
+  if (quads.length) return encode(7, [quads[0], ...topRanks(all, 1, [quads[0]])]);
+  if (trips.length && (trips.length > 1 || pairs.length)) {
+    const pair = Math.max(trips[1] ?? 0, pairs[0] ?? 0);
+    return encode(6, [trips[0], pair]);
+  }
+  if (flushSuit) return encode(5, topRanks(suitMask[flushSuit], 5));
+  const straight = straightHighFromMask(all);
+  if (straight) return encode(4, [straight]);
+  if (trips.length) return encode(3, [trips[0], ...topRanks(all, 2, [trips[0]])]);
+  if (pairs.length >= 2) return encode(2, [pairs[0], pairs[1], ...topRanks(all, 1, [pairs[0], pairs[1]])]);
+  if (pairs.length) return encode(1, [pairs[0], ...topRanks(all, 3, [pairs[0]])]);
+  return encode(0, topRanks(all, 5));
+}

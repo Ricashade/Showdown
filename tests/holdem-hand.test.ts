@@ -56,3 +56,28 @@ describe("kickers and ties", () => {
     expect(beats("9S 9H AD KC QS 3H 2D", "9D 9C AH KS QD 4C 3S")).toBe(0);
   });
 });
+
+describe("fast hand score", () => {
+  it("orders hands exactly like the full evaluator", async () => {
+    const { createDeck, seededRandom, shuffle } = await import("@/lib/cards");
+    const { handScore } = await import("@/lib/holdem-hand");
+    const rng = seededRandom(42);
+    for (let i = 0; i < 3000; i++) {
+      const { result: deck } = shuffle(createDeck(false), Math.floor(rng() * 2 ** 32));
+      const a = deck.slice(0, 7);
+      const b = deck.slice(7, 14);
+      const slow = Math.sign(compareHands(bestHand(a), bestHand(b)));
+      const fast = Math.sign(handScore(a) - handScore(b));
+      if (slow !== fast) throw new Error(`Mismatch: ${a.map((c) => c.id)} vs ${b.map((c) => c.id)}`);
+    }
+    expect(true).toBe(true);
+  });
+
+  it("scores tricky cases", async () => {
+    const { handScore } = await import("@/lib/holdem-hand");
+    const s = (x: string) => handScore(cards(x));
+    expect(s("AS 2H 3D 4C 5S KD QC")).toBeLessThan(s("2S 3H 4D 5C 6S KD QC")); // wheel is lowest
+    expect(s("KS KH KD 4C 4H 4S 2D")).toBe(s("KC KH KD 4C 4D 2S 3S")); // trips+trips plays as full house
+    expect(s("AS AH KD KC 2S 2H 9D")).toBeGreaterThan(s("AS AH KD KC 2S 2H 8D")); // kicker after two pair
+  });
+});

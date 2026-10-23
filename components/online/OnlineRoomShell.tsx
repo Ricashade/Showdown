@@ -7,6 +7,9 @@ import type { GameInfo } from "@/lib/games";
 import { useOnlineRoom } from "@/lib/hooks/use-online-room";
 import { createSession, type RoomSession } from "@/lib/multiplayer/session";
 import type { GameDefinition, GuestStatus, RoomAction, RoomState } from "@/lib/multiplayer/room";
+import type { BotDifficulty } from "@/types/game";
+import { newBot, type BotRunner } from "@/lib/bot-ai";
+import { useBotDriver } from "@/lib/hooks/use-bot-driver";
 import type { HeaderExit } from "@/components/table/chrome";
 import { NameField, rememberName, useRememberedName } from "@/components/bs-poker/NameField";
 
@@ -29,6 +32,8 @@ export interface ReadyRoom<V, A> {
   isHost: boolean;
   act: (action: A) => void;
   removePlayer: (playerId: string) => void;
+  /** Host only: seat a bot. */
+  addBot: (difficulty: BotDifficulty) => void;
   connectedIds: Set<string>;
   error: { message: string; id: number } | null;
   /** The header's way out, right for this player and phase. */
@@ -36,9 +41,10 @@ export interface ReadyRoom<V, A> {
   notices: string[];
 }
 
-interface ShellProps<S extends RoomState, A extends RoomAction, V extends { phase: string }> {
+interface ShellProps<S extends RoomState & { version: number }, A extends RoomAction, V extends { phase: string }> {
   info: GameInfo;
   game: GameDefinition<S, A, V>;
+  bots: BotRunner<S, A>;
   code: string;
   createState: (host: { id: string; name: string }) => S;
   returnToLobby: (hostId: string) => A;
@@ -46,9 +52,10 @@ interface ShellProps<S extends RoomState, A extends RoomAction, V extends { phas
 }
 
 /** Everything an online room needs around the table: joining, connection states, leaving. */
-export function OnlineRoomShell<S extends RoomState, A extends RoomAction, V extends { phase: string }>({
+export function OnlineRoomShell<S extends RoomState & { version: number }, A extends RoomAction, V extends { phase: string }>({
   info,
   game,
+  bots,
   code,
   createState,
   returnToLobby,
@@ -57,6 +64,9 @@ export function OnlineRoomShell<S extends RoomState, A extends RoomAction, V ext
   const router = useRouter();
   const roomKey = info.roomKey(code);
   const { room, transport, setSession, act, removePlayer, leave } = useOnlineRoom(game, { roomKey, code, createState });
+  // Bots are played by the host's tab only, from the full state it holds.
+  const hostState = room.phase === "ready" ? room.hostState : null;
+  useBotDriver(hostState, bots, act);
 
   const leaveAndGoBack = async () => {
     await leave();
@@ -101,7 +111,12 @@ export function OnlineRoomShell<S extends RoomState, A extends RoomAction, V ext
     status === "host-away" && `${hostName ?? "The host"} lost connection.`,
   ].filter(Boolean) as string[];
 
-  return <>{children({ view, me, isHost, act, removePlayer, connectedIds, error, exit, notices })}</>;
+  const addBot = (difficulty: BotDifficulty) => {
+    const names = hostState?.players.map((p) => (p as { name?: string }).name ?? "") ?? [];
+    act(game.join(newBot(difficulty, names)));
+  };
+
+  return <>{children({ view, me, isHost, act, removePlayer, addBot, connectedIds, error, exit, notices })}</>;
 }
 
 function StatusScreen({
