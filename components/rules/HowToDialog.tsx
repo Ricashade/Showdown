@@ -16,11 +16,13 @@ interface HowToDialogProps {
   /** `exit` goes back to the guide. */
   demo: (exit: () => void) => React.ReactNode;
   initialTab?: Tab;
+  /** What the demo tab is called ("Quick demo" unless a game says otherwise). */
+  demoLabel?: string;
   onClose: () => void;
 }
 
 /** A game's rules guide and quick scripted demo, in one dialog. */
-export function HowToDialog({ title, guide, demo, initialTab = "guide", onClose }: HowToDialogProps) {
+export function HowToDialog({ title, guide, demo, initialTab = "guide", demoLabel = "Quick demo", onClose }: HowToDialogProps) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -53,7 +55,7 @@ export function HowToDialog({ title, guide, demo, initialTab = "guide", onClose 
                 onClick={() => setTab(t)}
                 className={clsx("min-h-10 rounded-full px-4 text-sm font-bold transition", tab === t ? "bg-brass text-smoke" : "text-parchment hover:text-bone")}
               >
-                {t === "guide" ? "Guide" : "Quick demo"}
+                {t === "guide" ? "Guide" : demoLabel}
               </button>
             ))}
           </div>

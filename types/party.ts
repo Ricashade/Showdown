@@ -5,10 +5,11 @@ import type { GarbageAction, GarbageState } from "./garbage";
 import type { HoldemAction, HoldemState } from "./holdem";
 import type { RummyAction, RummyState } from "./rummy";
 import type { WarAction, WarState } from "./war";
+import type { GoFishAction, GoFishState } from "./gofish";
 
-/** Whichever of the six games the room has on the table; `mode` says which. */
-export type ActiveGameState = BsPokerState | HoldemState | BlackjackState | GarbageState | RummyState | WarState;
-export type ActiveGameAction = BsPokerAction | HoldemAction | BlackjackAction | GarbageAction | RummyAction | WarAction;
+/** Whichever game the room has on the table; `mode` says which. */
+export type ActiveGameState = BsPokerState | HoldemState | BlackjackState | GarbageState | RummyState | WarState | GoFishState;
+export type ActiveGameAction = BsPokerAction | HoldemAction | BlackjackAction | GarbageAction | RummyAction | WarAction | GoFishAction;
 
 /** Someone in the room. They keep their seat and their wins across games. */
 export interface PartyPlayer extends BasePlayer {

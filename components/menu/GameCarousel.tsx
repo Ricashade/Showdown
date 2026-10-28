@@ -13,6 +13,7 @@ import { HoldemHowTo } from "@/components/holdem/HoldemHowTo";
 import { GarbageHowTo } from "@/components/garbage/GarbageHowTo";
 import { RummyHowTo } from "@/components/rummy/RummyHowTo";
 import { WarHowTo } from "@/components/war/WarHowTo";
+import { GoFishHowTo } from "@/components/gofish/GoFishHowTo";
 import { JoinWithCode } from "./JoinWithCode";
 import { GAME_ART } from "./game-art";
 
@@ -23,6 +24,8 @@ interface Slide {
   hidden: number;
   /** Where "How to play" goes: a page, or a dialog with a guide and demo. */
   howTo: { href: string } | { Dialog: ComponentType<{ onClose: () => void }> };
+  /** The button's wording, if not "How to play & demo". */
+  howToLabel?: string;
 }
 
 const SLIDES: Slide[] = [
@@ -55,6 +58,12 @@ const SLIDES: Slide[] = [
     id: "war",
     ...GAME_ART["war"],
     howTo: { Dialog: WarHowTo },
+  },
+  {
+    id: "go-fish",
+    ...GAME_ART["go-fish"],
+    howTo: { Dialog: GoFishHowTo },
+    howToLabel: "Learn to play",
   },
 ];
 
@@ -221,7 +230,7 @@ function SlideFace({ slide, onJoin, onHowTo }: { slide: Slide; onJoin: () => voi
         </button>
         {"Dialog" in slide.howTo ? (
           <button onClick={onHowTo} className={secondary}>
-            How to play &amp; demo
+            {slide.howToLabel ?? "How to play & demo"}
           </button>
         ) : (
           <Link href={slide.howTo.href} className={secondary}>

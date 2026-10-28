@@ -1,6 +1,6 @@
 /**
  * A room that outlasts any one game. The host runs it like any other game (lib/multiplayer/room.ts);
- * it wraps the six games' own reducers, so their rules, views and bots are unchanged.
+ * it wraps every game's own reducers, so their rules, views and bots are unchanged.
  *
  * The roster is the room's: people stay in it while the host switches games, and the selected
  * game deals in as many of them as it has seats. Everyone else sits that one out and watches.
@@ -11,27 +11,30 @@ import type { BlackjackState } from "@/types/blackjack";
 import type { GameDefinition, RoomAction, RoomState } from "./multiplayer/room";
 import type { BotRunner } from "./bot-ai";
 import type { TableClock } from "./hooks/use-table-clock";
-import { blackjackBots, bsPokerBots, garbageBots, holdemBots, rummyBots, warBots } from "./bot-ai";
+import { blackjackBots, bsPokerBots, garbageBots, goFishBots, holdemBots, rummyBots, warBots } from "./bot-ai";
 import { bsPokerGame, createRoom, MIN_PLAYERS } from "./bs-poker-game";
 import { createHoldemRoom, holdemGame, HOLDEM_MIN_PLAYERS } from "./holdem-game";
 import { BLACKJACK_MIN_PLAYERS, blackjackClock, blackjackGame, createBlackjackRoom } from "./blackjack-engine";
 import { createGarbageRoom, garbageGame, GARBAGE_MIN_PLAYERS } from "./garbage-engine";
 import { createRummyRoom, rummyGame, RUMMY_MIN_PLAYERS } from "./rummy-engine";
 import { createWarRoom, warGame, WAR_MIN_PLAYERS } from "./war-engine";
+import { createGoFishRoom, goFishGame, GOFISH_MIN_PLAYERS } from "./gofish-engine";
 import type { BlackjackView } from "./blackjack-engine";
 import type { BsPokerView } from "./bs-poker-game";
 import type { GarbageView } from "./garbage-engine";
 import type { HoldemView } from "./holdem-game";
 import type { RummyView } from "./rummy-engine";
 import type { WarView } from "./war-engine";
+import type { GoFishView } from "./gofish-engine";
+import type { GoFishState } from "@/types/gofish";
 
 /** Hold'em seats the most. */
 export const PARTY_MAX_PLAYERS = 9;
 
-export type ActiveGameView = BsPokerView | HoldemView | BlackjackView | GarbageView | RummyView | WarView;
+export type ActiveGameView = BsPokerView | HoldemView | BlackjackView | GarbageView | RummyView | WarView | GoFishView;
 
 // ---------------------------------------------------------------------------
-// The six games, as the room drives them
+// The games, as the room drives them
 // ---------------------------------------------------------------------------
 
 interface GameKit<S extends RoomState, A extends RoomAction, V> {
@@ -72,6 +75,14 @@ const kits: Record<GameMode, unknown> = {
   garbage: defineKit({ def: garbageGame, create: (roomId, host) => createGarbageRoom({ roomId, host }), minPlayers: GARBAGE_MIN_PLAYERS, bots: garbageBots, winners: winnerOf }),
   rummy: defineKit({ def: rummyGame, create: (roomId, host) => createRummyRoom({ roomId, host }), minPlayers: RUMMY_MIN_PLAYERS, bots: rummyBots, winners: winnerOf }),
   war: defineKit({ def: warGame, create: (roomId, host) => createWarRoom({ roomId, host }), minPlayers: WAR_MIN_PLAYERS, bots: warBots, winners: winnerOf }),
+  // A tie for most books crowns everyone tied.
+  "go-fish": defineKit({
+    def: goFishGame,
+    create: (roomId, host) => createGoFishRoom({ roomId, host }),
+    minPlayers: GOFISH_MIN_PLAYERS,
+    bots: goFishBots,
+    winners: (s: GoFishState, finished: boolean) => (finished ? s.winnerIds : []),
+  }),
 };
 
 /** Each kit is typed for its own game; the room only ever hands a game its own state and moves. */

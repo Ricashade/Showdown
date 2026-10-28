@@ -8,4 +8,5 @@ export const GAME_ART: Record<GameId, { show: string; hidden: number }> = {
   garbage: { show: "AS 2H 3D", hidden: 2 },
   rummy: { show: "7S 8S 9S KH", hidden: 1 },
   war: { show: "AS AH", hidden: 1 },
+  "go-fish": { show: "8S 8H 8D 8C", hidden: 0 },
 };

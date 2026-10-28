@@ -242,3 +242,25 @@ describe("shared online room", () => {
     expect(ann.getSnapshot().view?.activeGameView.mode).toBe("rummy");
   });
 });
+
+describe("Go Fish in a shared room", () => {
+  it("switches to Go Fish, plays to the end with bots, and crowns the most books", () => {
+    let s = act(room(["h", "a"]), { type: "SWITCH_GAME", playerId: "h", newGameType: "go-fish" });
+    s = act(s, { type: "JOIN", player: { id: "bot", name: "Bot", isBot: true, botDifficulty: "hard" } });
+    expect(s.activeGameState.players.map((p) => p.id)).toEqual(["h", "a", "bot"]);
+    s = move(s, { type: "START_GAME", playerId: "h", seed: 3 });
+    expect(s.phase).toBe("in_game");
+    // Everyone plays bot-style: the room's bot runner for the bot, the same brain for the people.
+    for (let i = 0; i < 3000 && s.phase === "in_game"; i++) {
+      const g = s.activeGameState as import("@/types/gofish").GoFishState;
+      const turn = g.currentTurnId!;
+      const asBot = { ...g, players: g.players.map((p) => ({ ...p, isBot: true })) };
+      const next = partyBots.decide({ ...s, activeGameState: asBot }, turn, () => 0.5);
+      s = act(s, next!);
+    }
+    expect(s.phase).toBe("post_game");
+    const g = s.activeGameState as import("@/types/gofish").GoFishState;
+    expect(s.lastWinnerIds).toEqual(g.winnerIds);
+    for (const id of g.winnerIds) expect(s.players.find((p) => p.id === id)!.sessionWins).toBe(1);
+  });
+});

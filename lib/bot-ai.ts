@@ -11,6 +11,7 @@ import type { BlackjackAction, BlackjackState } from "@/types/blackjack";
 import type { GarbageAction, GarbageState } from "@/types/garbage";
 import type { RummyAction, RummyState } from "@/types/rummy";
 import type { WarAction, WarState } from "@/types/war";
+import type { GoFishAction, GoFishState } from "@/types/gofish";
 import type { BotDifficulty } from "@/types/game";
 import { getPlayerView } from "./bs-poker-game";
 import { getHoldemView } from "./holdem-game";
@@ -18,12 +19,14 @@ import { getBlackjackView, MIN_BET } from "./blackjack-engine";
 import { getGarbageView } from "./garbage-engine";
 import { getRummyView } from "./rummy-engine";
 import { getWarView } from "./war-engine";
+import { getGoFishView } from "./gofish-engine";
 import { getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 import { getHoldemBotAction, observeHoldem } from "./bots/holdem-bot";
 import { getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
 import { arrangeRevealed, getGarbageBotAction, observeGarbage } from "./bots/garbage-bot";
 import { getRummyBotAction, observeRummy } from "./bots/rummy-bot";
 import { getWarBotAction, observeWar } from "./bots/war-bot";
+import { getGoFishBotAction, observeGoFish } from "./bots/gofish-bot";
 import { randomId } from "./multiplayer/room-code";
 
 export { estimateBidProbability, getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
@@ -32,6 +35,7 @@ export { basicStrategy, getBlackjackBotAction, observeBlackjack } from "./bots/b
 export { arrangeRevealed, chooseWildSlot, getGarbageBotAction, observeGarbage } from "./bots/garbage-bot";
 export { getRummyBotAction, observeRummy } from "./bots/rummy-bot";
 export { chooseWarCard, getWarBotAction, observeWar } from "./bots/war-bot";
+export { chooseAsk, getGoFishBotAction, observeGoFish } from "./bots/gofish-bot";
 
 /** How a game exposes its bots to the driver that runs them. */
 export interface BotRunner<S, A> {
@@ -142,6 +146,23 @@ export const rummyBots: BotRunner<RummyState, RummyAction> = {
   decide(s, botId, rng) {
     const obs = observeRummy(getRummyView(s, botId), botId);
     return obs ? getRummyBotAction(obs, difficultyOf(s.players, botId), rng) : null;
+  },
+};
+
+/** Gap between a Go Fish bot's asks, so people can read who asked whom for what. */
+export const GOFISH_ASK_MS = 1200;
+
+export const goFishBots: BotRunner<GoFishState, GoFishAction> = {
+  pending(s) {
+    if (s.phase !== "playing" || !s.currentTurnId) return null;
+    const p = s.players.find((x) => x.id === s.currentTurnId);
+    if (!p?.isBot) return null;
+    // The first ask waits for the deal.
+    return { botId: p.id, justDealt: 0, pace: s.log.some((e) => e.kind === "ask") ? GOFISH_ASK_MS : GOFISH_ASK_MS + 1200 };
+  },
+  decide(s, botId, rng) {
+    const obs = observeGoFish(getGoFishView(s, botId), botId);
+    return obs ? getGoFishBotAction(obs, difficultyOf(s.players, botId), rng) : null;
   },
 };
 

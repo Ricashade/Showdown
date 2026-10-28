@@ -1,6 +1,6 @@
 # Showdown
 
-Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage**, **Rummy** and **War**, online or on one screen.
+Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage**, **Rummy**, **War** and **Go Fish**, online or on one screen.
 
 ```bash
 npm install
@@ -24,6 +24,7 @@ app/
   garbage/                  Garbage: same three routes
   rummy/                    Rummy: same three routes
   war/                      War: same three routes
+  go-fish/                  Go Fish: same three routes (local/?bots=1 seats you against two bots)
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -40,6 +41,7 @@ lib/
   rummy-melds.ts            Rummy sets and runs (Aces, Jokers), lay-offs, finding melds in a hand, points
   rummy-engine.ts           Rummy reducer: draw (incl. Rummy 500 digs), meld, lay off, discard, scoring
   war-engine.ts             War: battles, Wars and short stacks, Classic and Tactical, win conditions
+  gofish-engine.ts          Go Fish: asks, go fish and lucky catches, books, empty-hand refills, memory
   party-engine.ts           Shared rooms: the roster and tonight's wins around whichever game is on
                             (switch game, play again, back to lobby), plus their bots and timers
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
@@ -60,6 +62,8 @@ components/
   garbage/                  Boards, piles and chain animations, lobby, how-to-play dialog with demo
   rummy/                    Hand (sort, multi-select), melds, fanned discard pile, lobby, how-to dialog
   war/                      Tug-of-war counter, battle zone, WAR! banner, flip/auto-flip/speed, how-to
+  gofish/                   Seats with speech bubbles and memory, hand grouped by rank, history log,
+                            and a click-through lesson for first-timers
 tests/                      Engine, game-loop and online-room tests
 ```
 
@@ -164,6 +168,17 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
 - **Winning:** all the cards (default), first to 40, or most cards after 50 battles.
 - **Tactical War:** hold three cards and pick one each battle (and to settle a War).
 
+## Go Fish (as implemented)
+
+- **Table:** 2–6 players, one deck; 7 cards each for two or three players, 5 for more. The rest is the pond.
+- **Turn:** ask another player who has cards for a rank you hold. They hand over every card of it and
+  you go again; otherwise "Go fish!": draw one, and your turn ends unless it's the rank you asked for
+  (a lucky catch, shown to everyone; the host can switch this off).
+- **Books:** four of a kind goes down at once (or a pair, in the pairs variant). An empty hand draws
+  from the pond (1 card, or up to 5). When every card is booked, most books wins; ties share it.
+- **Memory helper:** marks the ranks each player is known to hold, from what they've asked for and
+  taken. The host can turn it off.
+
 ## Bots
 
 The host can seat Easy, Medium or Hard bots in any game, mixed freely with people.
@@ -195,6 +210,9 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
 - **War:** in Classic, a bot flips as soon as a battle opens, so your flip settles it at once. In
   Tactical, Easy plays at random; Medium saves Aces and Kings for Wars; Hard baits a War when it holds
   two high cards and throws low cards when the other side probably holds the high ones.
+- **Go Fish:** asks come 1.2 s apart. Easy asks anyone for anything it holds; Medium remembers the
+  last four asks and goes after whoever just asked for a rank it holds; Hard remembers every ask,
+  steal and book, then goes for the rank it holds most of, from whoever has the most cards.
 
 ## Shared rooms (as implemented)
 
