@@ -9,21 +9,25 @@ import type { BsPokerAction, BsPokerState } from "@/types/bs-poker";
 import type { HoldemAction, HoldemState } from "@/types/holdem";
 import type { BlackjackAction, BlackjackState } from "@/types/blackjack";
 import type { GarbageAction, GarbageState } from "@/types/garbage";
+import type { RummyAction, RummyState } from "@/types/rummy";
 import type { BotDifficulty } from "@/types/game";
 import { getPlayerView } from "./bs-poker-game";
 import { getHoldemView } from "./holdem-game";
 import { getBlackjackView, MIN_BET } from "./blackjack-engine";
 import { getGarbageView } from "./garbage-engine";
+import { getRummyView } from "./rummy-engine";
 import { getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 import { getHoldemBotAction, observeHoldem } from "./bots/holdem-bot";
 import { getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
 import { arrangeRevealed, getGarbageBotAction, observeGarbage } from "./bots/garbage-bot";
+import { getRummyBotAction, observeRummy } from "./bots/rummy-bot";
 import { randomId } from "./multiplayer/room-code";
 
 export { estimateBidProbability, getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 export { estimateHoldemEquity, getHoldemBotAction, observeHoldem, startingHandScore } from "./bots/holdem-bot";
 export { basicStrategy, getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
 export { arrangeRevealed, chooseWildSlot, getGarbageBotAction, observeGarbage } from "./bots/garbage-bot";
+export { getRummyBotAction, observeRummy } from "./bots/rummy-bot";
 
 /** How a game exposes its bots to the driver that runs them. */
 export interface BotRunner<S, A> {
@@ -115,6 +119,25 @@ export const garbageBots: BotRunner<GarbageState, GarbageAction> = {
     if (view.phase === "reveal") return arrangeRevealed(view, botId);
     const obs = observeGarbage(view, botId);
     return obs ? getGarbageBotAction(obs, difficultyOf(s.players, botId), rng) : null;
+  },
+};
+
+/** Gap between a Rummy bot's melds, lay-offs and discard, so people can follow along. */
+export const RUMMY_PLAY_STEP_MS = 900;
+
+export const rummyBots: BotRunner<RummyState, RummyAction> = {
+  pending(s) {
+    if (s.phase !== "playing" || !s.currentTurnId) return null;
+    const p = s.players.find((x) => x.id === s.currentTurnId);
+    if (!p?.isBot) return null;
+    if (s.step === "play") return { botId: p.id, justDealt: 0, pace: RUMMY_PLAY_STEP_MS };
+    // First draw of a round: the hands are still being dealt.
+    const freshRound = s.melds.length === 0 && s.discard.length === 1 && s.players.every((x) => !x.meldedBefore);
+    return { botId: p.id, justDealt: freshRound ? 1500 : 0 };
+  },
+  decide(s, botId, rng) {
+    const obs = observeRummy(getRummyView(s, botId), botId);
+    return obs ? getRummyBotAction(obs, difficultyOf(s.players, botId), rng) : null;
   },
 };
 

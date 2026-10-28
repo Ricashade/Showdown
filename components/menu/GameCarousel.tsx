@@ -11,6 +11,7 @@ import { cards } from "@/components/rules/sample-cards";
 import { BlackjackHowTo } from "@/components/blackjack/BlackjackHowTo";
 import { HoldemHowTo } from "@/components/holdem/HoldemHowTo";
 import { GarbageHowTo } from "@/components/garbage/GarbageHowTo";
+import { RummyHowTo } from "@/components/rummy/RummyHowTo";
 import { JoinWithCode } from "./JoinWithCode";
 
 interface Slide {
@@ -46,6 +47,12 @@ const SLIDES: Slide[] = [
     show: "AS 2H 3D",
     hidden: 2,
     howTo: { Dialog: GarbageHowTo },
+  },
+  {
+    id: "rummy",
+    show: "7S 8S 9S KH",
+    hidden: 1,
+    howTo: { Dialog: RummyHowTo },
   },
 ];
 

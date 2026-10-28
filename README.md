@@ -1,6 +1,6 @@
 # Showdown
 
-Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack** and **Garbage**, online or on one screen.
+Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage** and **Rummy**, online or on one screen.
 
 ```bash
 npm install
@@ -21,6 +21,7 @@ app/
   texas-holdem/              Hold'em: chooser, room/[code]/ (online), local/ (simulator)
   blackjack/                Blackjack: same three routes
   garbage/                  Garbage: same three routes
+  rummy/                    Rummy: same three routes
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -34,6 +35,8 @@ lib/
   blackjack-engine.ts       Blackjack: hand values, reducer (bets, insurance, hit/stand/double/split,
                             dealer, payouts), views, and the host's clock (blackjackClock)
   garbage-engine.ts         Garbage: face-card roles, legal slots, chain turns, shrinking rounds, views
+  rummy-melds.ts            Rummy sets and runs (Aces, Jokers), lay-offs, finding melds in a hand, points
+  rummy-engine.ts           Rummy reducer: draw (incl. Rummy 500 digs), meld, lay off, discard, scoring
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
                             nextRound, applyAction; getPlayerView (hidden info), getLegalActions
   bot-ai.ts                 Bots for every game (entry point); brains in bots/*-bot.ts
@@ -49,6 +52,7 @@ components/
   blackjack/                Table, lobby, actions, round results, how-to-play dialog with demo
   menu/                     Game carousel, join-with-code dialog
   garbage/                  Boards, piles and chain animations, lobby, how-to-play dialog with demo
+  rummy/                    Hand (sort, multi-select), melds, fanned discard pile, lobby, how-to dialog
 tests/                      Engine, game-loop and online-room tests
 ```
 
@@ -126,6 +130,21 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
   presses Done, or the host ends it. The host can switch the last turn and reveal off, and the
   round then ends as soon as a board is cleared.
 
+## Rummy (as implemented)
+
+- **Table:** 2–6 players. Two players get 10 cards each (13 if the host picks it), three or more get 7;
+  one deck up to four players, two for five or six, plus two Jokers per deck if wild Jokers are on.
+- **Turn:** draw from the stock or the top of the discard pile, put down sets (3–4 of a rank, different
+  suits) and runs (3+ in a row, one suit), lay off on any meld on the table, then discard. Empty
+  your hand and the round ends. Aces play low or high (Q-K-A) by default; the host can make them
+  low only, or allow K-A-2.
+- **Classic:** whoever goes out scores the cards left in the other hands (A 1, 2–10 face value,
+  J/Q/K 10, Jokers 15). Match to 100 by default.
+- **Rummy 500:** the discard pile is spread out; take any card in it plus everything on top, if you
+  play that card the same turn. Everyone scores what they put on the table (2–9 are 5, 10–K 10,
+  A 15 or 5 when played low, Jokers 15) minus what's left in hand. Match to 500 by default.
+- **Rummy:** going out in one turn without having melded before doubles the points.
+
 ## Bots
 
 The host can seat Easy, Medium or Hard bots in any game, mixed freely with people.
@@ -149,6 +168,11 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
   playable discard half the time and puts wilds in the first open slot; Medium always takes it and
   puts wilds where that number has shown up most; Hard puts wilds where the fewest copies are left
   unseen (discards and every board).
+- **Rummy:** a bot's melds, lay-offs and discard come 900 ms apart. Easy draws from the stock 80% of
+  the time, melds when it can and discards at random; Medium takes the top discard when it makes a
+  meld, lays off, and throws away its highest unconnected card; Hard also weighs every Rummy 500
+  dig, drops pairs and near-runs whose cards are all gone, and avoids discards that would feed the
+  table or the next player.
 
 ## Online play (Supabase Realtime)
 

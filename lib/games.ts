@@ -13,6 +13,8 @@ export const BLACKJACK: GameInfo = { title: "Blackjack", path: "/blackjack", roo
 
 export const GARBAGE: GameInfo = { title: "Garbage", path: "/garbage", roomKey: (code) => `garbage:${code}` };
 
-export type GameId = "bs-poker" | "texas-holdem" | "blackjack" | "garbage";
+export const RUMMY: GameInfo = { title: "Rummy", path: "/rummy", roomKey: (code) => `rummy:${code}` };
+
+export type GameId = "bs-poker" | "texas-holdem" | "blackjack" | "garbage" | "rummy";
 /** Look-up by id: server pages pass the id, since GameInfo holds a function. */
-export const GAMES: Record<GameId, GameInfo> = { "bs-poker": BS_POKER, "texas-holdem": TEXAS_HOLDEM, blackjack: BLACKJACK, garbage: GARBAGE };
+export const GAMES: Record<GameId, GameInfo> = { "bs-poker": BS_POKER, "texas-holdem": TEXAS_HOLDEM, blackjack: BLACKJACK, garbage: GARBAGE, rummy: RUMMY };
