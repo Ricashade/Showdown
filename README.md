@@ -1,6 +1,6 @@
 # Showdown
 
-Multiplayer card games on Next.js (App Router): **BS Poker** and **Texas Hold'em** (no-limit), online or on one screen.
+Multiplayer card games on Next.js (App Router): **BS Poker**, **Texas Hold'em** (no-limit) and **Blackjack**, online or on one screen.
 
 ```bash
 npm install
@@ -13,12 +13,13 @@ npm run build
 
 ```
 app/
-  page.tsx                  Main menu
+  page.tsx                  Main menu: one-game-at-a-time carousel (components/menu/)
   bs-poker/page.tsx         Choose: create room, join room, or local simulator
   bs-poker/room/[code]/     Online room (host or guest)
   bs-poker/local/           Local simulator (every seat on one screen)
   rules/, rules/demo/       How to play + guided 30-second demo
   texas-holdem/              Hold'em: chooser, room/[code]/ (online), local/ (simulator)
+  blackjack/                Blackjack: same three routes
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -29,17 +30,22 @@ lib/
   holdem-hand.ts            Best 5 of 7 cards, full kicker comparison
   holdem-pots.ts            Side pots (layered by contribution) and split pots with odd chips
   holdem-game.ts            Hold'em reducer: blinds, betting rules, streets, runouts, showdown
+  blackjack-engine.ts       Blackjack: hand values, reducer (bets, insurance, hit/stand/double/split,
+                            dealer, payouts), views, and the host's clock (blackjackClock)
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
                             nextRound, applyAction; getPlayerView (hidden info), getLegalActions
-  bot-ai.ts                 Bots for both games (entry point); brains in bots/bs-poker-bot.ts, bots/holdem-bot.ts
+  bot-ai.ts                 Bots for every game (entry point); brains in bots/*-bot.ts
   multiplayer/              Room protocol (room.ts), encryption (crypto.ts), channels: Supabase,
                             same-browser tabs, in-memory (tests)
   multiplayer/transport.ts  LocalTransport for the simulator
-  hooks/                    useOnlineRoom, useGameRoom, useBotDriver
+  hooks/                    useOnlineRoom, useGameRoom, useBotDriver, useTableClock
 components/
   ui/                       PlayingCard (flip/deal animations), Toggle/Stepper/Segmented
   bs-poker/                 TableScreen (shared), LocalGame, OnlineGame, Lobby, GameTable, BidBuilder, …
-  rules/                    Rules tabs, QuickDemo
+  rules/                    Rules tabs, QuickDemo; HowToDialog (guide + demo dialog shared by Hold'em and Blackjack)
+  holdem/                   Hold'em table, actions, results, HoldemHowTo
+  blackjack/                Table, lobby, actions, round results, how-to-play dialog with demo
+  menu/                     Game carousel, join-with-code dialog
 tests/                      Engine, game-loop and online-room tests
 ```
 
@@ -82,9 +88,26 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
 - **Online:** the host deals each new hand with *Next hand*; hole cards, the unturned board and
   the burns never leave the host.
 
+## Blackjack (as implemented)
+
+- **Table:** 1–7 players against an automated dealer; 1,000 chips, 6-deck shoe reshuffled at 75%,
+  minimum bet 10 (quick chips 10/25/50/100). The host can change chips, decks and betting time.
+- **Round:** 15 s to bet (deals as soon as everyone has bet; nobody bet means a fresh timer), then
+  two cards each and one face up for the dealer. With an Ace showing, insurance is offered (half
+  the bet, pays 2:1); with an Ace or ten showing, the dealer checks for blackjack first.
+- **Moves:** hit, stand, double (first two cards; one card, then stand), split (same rank, up to 4
+  hands; split Aces get one card each, and 21 after a split isn't a blackjack). Each decision has
+  30 s, then you stand.
+- **Dealer:** turns the hole card and draws one card at a time, hitting soft 17.
+- **Payouts:** natural 3:2 (rounded down), win 1:1, tie pushes. Results show for 7 s, then the next
+  betting round opens on its own; the host can deal sooner. Under 10 chips you're out; when
+  everyone is out, the house wins.
+- **Timers online:** the reducer takes `now` as an argument and the host stamps its own clock on
+  every move; `useTableClock` on the host fires TIME_UP / DEALER_STEP / NEXT_ROUND when due.
+
 ## Bots
 
-The host can seat Easy, Medium or Hard bots in either game, mixed freely with people.
+The host can seat Easy, Medium or Hard bots in any game, mixed freely with people.
 
 - **No cheating:** a bot only gets an observation built from its own redacted view (the same
   `getPlayerView` real players get). Tests check a bot's choice doesn't change when the hidden
@@ -98,6 +121,9 @@ The host can seat Easy, Medium or Hard bots in either game, mixed freely with pe
 - **Hold'em:** Easy is loose-passive; Medium is tight-aggressive with 150-run equity vs pot odds;
   Hard plays position-aware ranges, 400-run equity, thin value bets, semi-bluffs, and respects
   heavy action on scary boards.
+- **Blackjack:** Easy hits until it gets nervous (14–17); Medium plays the rule of thumb (hit 11
+  or less, stand on 12–16 against 2–6) plus doubling 10/11 and splitting Aces and 8s; Hard plays
+  full basic strategy. Only Easy ever takes insurance.
 
 ## Online play (Supabase Realtime)
 

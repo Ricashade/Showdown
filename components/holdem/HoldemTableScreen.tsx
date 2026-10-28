@@ -12,6 +12,7 @@ import { HoldemLobby } from "./HoldemLobby";
 import { HoldemTable } from "./HoldemTable";
 import { HoldemActions } from "./HoldemActions";
 import { HandResult, HoldemGameOver } from "./HandResult";
+import { HandRankingsButton } from "./HandRankings";
 
 export interface HoldemTableScreenProps {
   view: HoldemView;
@@ -114,6 +115,8 @@ export function HoldemTableScreen({
   }, [view.result]);
 
   const legal = getHoldemLegal(view, actingId);
+  const myHole = view.players.find((p) => p.id === view.viewerId)?.hand;
+  const myCards = myHole ? [...myHole, ...view.board] : null;
   const acting = view.players.find((p) => p.id === actingId);
   const turnPlayer = view.players.find((p) => p.id === view.currentTurnId);
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "the host";
@@ -141,6 +144,9 @@ export function HoldemTableScreen({
             />
           ) : (
             <main className="mx-auto max-w-6xl space-y-6 pt-5 sm:px-4">
+              <div className="flex justify-end px-4 sm:px-0">
+                <HandRankingsButton myCards={myCards} />
+              </div>
               <HoldemTable view={view} winningCardIds={winningCardIds} connectedIds={connectedIds} />
               {view.phase === "betting" && (
                 <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">

@@ -117,6 +117,20 @@ export function bestHand(cards: readonly Card[]): HandValue {
   return best!;
 }
 
+/**
+ * What you hold right now: your best hand from your hole cards and the board so far.
+ * Before the flop that's just a pair or a high card.
+ */
+export function madeHand(cards: readonly Card[]): { category: number; label: string } | null {
+  const std = cards.filter((c): c is StandardCard => c.kind === "standard");
+  if (std.length >= 5) return bestHand(std);
+  if (std.length !== 2) return null;
+  const [a, b] = std;
+  return a.rank === b.rank
+    ? { category: 1, label: `Pair of ${rankPlural(a.rank)}` }
+    : { category: 0, label: `${rankName(Math.max(a.rank, b.rank) as Rank)} high` };
+}
+
 // ---------------------------------------------------------------------------
 // Fast scoring (for simulations)
 // ---------------------------------------------------------------------------

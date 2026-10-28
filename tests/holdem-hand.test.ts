@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestHand, compareHands } from "@/lib/holdem-hand";
+import { bestHand, compareHands, madeHand } from "@/lib/holdem-hand";
 import { cards } from "@/components/rules/sample-cards";
 
 const best = (s: string) => bestHand(cards(s));
@@ -79,5 +79,14 @@ describe("fast hand score", () => {
     expect(s("AS 2H 3D 4C 5S KD QC")).toBeLessThan(s("2S 3H 4D 5C 6S KD QC")); // wheel is lowest
     expect(s("KS KH KD 4C 4H 4S 2D")).toBe(s("KC KH KD 4C 4D 2S 3S")); // trips+trips plays as full house
     expect(s("AS AH KD KC 2S 2H 9D")).toBeGreaterThan(s("AS AH KD KC 2S 2H 8D")); // kicker after two pair
+  });
+});
+
+describe("madeHand", () => {
+  it("names what you hold before the flop and after", () => {
+    expect(madeHand(cards("QS QH"))).toEqual({ category: 1, label: "Pair of Queens" });
+    expect(madeHand(cards("AS 7H"))).toEqual({ category: 0, label: "Ace high" });
+    expect(madeHand(cards("AH QH QC 7D 2H AC"))?.label).toBe("Two pair, Aces and Queens");
+    expect(madeHand(cards("AH QH QC"))).toBeNull();
   });
 });

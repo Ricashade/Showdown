@@ -20,7 +20,8 @@ export interface RoomSession {
 }
 
 /**
- * `roomKey` names a room across games: BS Poker uses the plain code, Hold'em "holdem:CODE".
+ * `roomKey` names a room across games: BS Poker uses the plain code, Hold'em "holdem:CODE",
+ * Blackjack "blackjack:CODE".
  * It also names the realtime channel, so the two games' rooms never collide.
  */
 const sessionKey = (roomKey: string) => `showdown:session:${roomKey}`;

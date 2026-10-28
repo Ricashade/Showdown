@@ -1,5 +1,5 @@
 /**
- * Bot players for both games.
+ * Bot players for every game.
  *
  * The one rule: a bot only ever sees its own seat's view. `decide*` take the host's full
  * state, but immediately redact it with the same `getPlayerView` the server uses for real
@@ -7,15 +7,19 @@
  */
 import type { BsPokerAction, BsPokerState } from "@/types/bs-poker";
 import type { HoldemAction, HoldemState } from "@/types/holdem";
+import type { BlackjackAction, BlackjackState } from "@/types/blackjack";
 import type { BotDifficulty } from "@/types/game";
 import { getPlayerView } from "./bs-poker-game";
 import { getHoldemView } from "./holdem-game";
+import { getBlackjackView, MIN_BET } from "./blackjack-engine";
 import { getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 import { getHoldemBotAction, observeHoldem } from "./bots/holdem-bot";
+import { getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
 import { randomId } from "./multiplayer/room-code";
 
 export { estimateBidProbability, getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 export { estimateHoldemEquity, getHoldemBotAction, observeHoldem, startingHandScore } from "./bots/holdem-bot";
+export { basicStrategy, getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
 
 /** How a game exposes its bots to the driver that runs them. */
 export interface BotRunner<S, A> {
@@ -54,6 +58,30 @@ export const holdemBots: BotRunner<HoldemState, HoldemAction> = {
   decide(s, botId, rng) {
     const obs = observeHoldem(getHoldemView(s, botId), botId);
     return obs ? getHoldemBotAction(obs, difficultyOf(s.players, botId), rng) : null;
+  },
+};
+
+export const blackjackBots: BotRunner<BlackjackState, BlackjackAction> = {
+  pending(s) {
+    if (s.phase === "betting") {
+      const p = s.players.find((x) => x.isBot && x.status === "active" && x.bet === 0 && x.chips >= MIN_BET);
+      return p ? { botId: p.id, justDealt: 0 } : null;
+    }
+    if (s.phase === "insurance") {
+      const p = s.players.find((x) => x.isBot && x.insurance === null);
+      return p ? { botId: p.id, justDealt: 0 } : null;
+    }
+    if (s.phase !== "playing" || !s.currentTurnId) return null;
+    const p = s.players.find((x) => x.id === s.currentTurnId);
+    if (!p?.isBot) return null;
+    // First move of the round: the cards are still flying out.
+    const first = s.players.find((x) => x.hands.length > 0);
+    const freshDeal = first?.id === p.id && p.hands.length === 1 && p.hands[0].cards.length === 2;
+    return { botId: p.id, justDealt: freshDeal ? 1500 : 0 };
+  },
+  decide(s, botId, rng) {
+    const obs = observeBlackjack(getBlackjackView(s, botId), botId);
+    return obs ? getBlackjackBotAction(obs, difficultyOf(s.players, botId), rng) : null;
   },
 };
 

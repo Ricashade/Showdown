@@ -10,6 +10,7 @@ import type { GameDefinition, GuestStatus, RoomAction, RoomState } from "@/lib/m
 import type { BotDifficulty } from "@/types/game";
 import { newBot, type BotRunner } from "@/lib/bot-ai";
 import { useBotDriver } from "@/lib/hooks/use-bot-driver";
+import { useTableClock, type TableClock } from "@/lib/hooks/use-table-clock";
 import type { HeaderExit } from "@/components/table/chrome";
 import { NameField, rememberName, useRememberedName } from "@/components/bs-poker/NameField";
 
@@ -45,6 +46,8 @@ interface ShellProps<S extends RoomState & { version: number }, A extends RoomAc
   info: GameInfo;
   game: GameDefinition<S, A, V>;
   bots: BotRunner<S, A>;
+  /** Timers a self-running table needs (Blackjack's dealer), run by the host. */
+  clock?: TableClock<S, A>;
   code: string;
   createState: (host: { id: string; name: string }) => S;
   returnToLobby: (hostId: string) => A;
@@ -56,6 +59,7 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
   info,
   game,
   bots,
+  clock,
   code,
   createState,
   returnToLobby,
@@ -67,6 +71,7 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
   // Bots are played by the host's tab only, from the full state it holds.
   const hostState = room.phase === "ready" ? room.hostState : null;
   useBotDriver(hostState, bots, act);
+  useTableClock(hostState, clock, act);
 
   const leaveAndGoBack = async () => {
     await leave();

@@ -1,8 +1,8 @@
 /**
- * Mode-agnostic types shared by every game mode (BS Poker now, Texas Hold'em later).
+ * Mode-agnostic types shared by every game mode.
  */
 
-export type GameMode = "bs-poker" | "texas-holdem";
+export type GameMode = "bs-poker" | "texas-holdem" | "blackjack";
 
 export type BotDifficulty = "easy" | "medium" | "hard";
 
