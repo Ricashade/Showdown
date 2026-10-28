@@ -42,7 +42,6 @@ export function HoldemLobby({ view, isHost, options, connectedIds, onUpdateSetti
         connectedIds={connectedIds}
         minPlayers={HOLDEM_MIN_PLAYERS}
         maxPlayers={HOLDEM_MAX_PLAYERS}
-        roomPath="/texas-holdem/room"
         onStart={onStart}
       />
 

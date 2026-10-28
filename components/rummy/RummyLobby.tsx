@@ -37,7 +37,6 @@ export function RummyLobby({ view, isHost, options, connectedIds, onUpdateSettin
         connectedIds={connectedIds}
         minPlayers={RUMMY_MIN_PLAYERS}
         maxPlayers={RUMMY_MAX_PLAYERS}
-        roomPath="/rummy/room"
         onStart={onStart}
       />
 

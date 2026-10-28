@@ -40,7 +40,6 @@ export function WarLobby({ view, isHost, options, connectedIds, onUpdateSettings
         connectedIds={connectedIds}
         minPlayers={WAR_MIN_PLAYERS}
         maxPlayers={WAR_MAX_PLAYERS}
-        roomPath="/war/room"
         onStart={onStart}
       />
 
@@ -66,6 +65,7 @@ export function WarLobby({ view, isHost, options, connectedIds, onUpdateSettings
                 ))}
                 <span className="col-start-2 row-start-1 font-display text-xl font-bold text-bone">vs</span>
               </div>
+              <Toggle label="Winner stays on" checked={settings.winnerStaysOn} onChange={(winnerStaysOn) => set({ winnerStaysOn })} disabled={locked} />
             </Group>
           )}
 

@@ -17,6 +17,10 @@ export const RUMMY: GameInfo = { title: "Rummy", path: "/rummy", roomKey: (code)
 
 export const WAR: GameInfo = { title: "War", path: "/war", roomKey: (code) => `war:${code}` };
 
+/** A shared room: one code for the night, whichever game is on. */
+export const ROOM: GameInfo = { title: "Showdown", path: "/", roomKey: (code) => `room:${code}` };
+export const ROOM_PATH = "/room";
+
 export type GameId = "bs-poker" | "texas-holdem" | "blackjack" | "garbage" | "rummy" | "war";
 /** Look-up by id: server pages pass the id, since GameInfo holds a function. */
 export const GAMES: Record<GameId, GameInfo> = { "bs-poker": BS_POKER, "texas-holdem": TEXAS_HOLDEM, blackjack: BLACKJACK, garbage: GARBAGE, rummy: RUMMY, war: WAR };

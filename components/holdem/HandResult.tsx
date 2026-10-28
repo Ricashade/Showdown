@@ -110,7 +110,7 @@ export function HandResult({ view, winningCardIds, continueLabel, onContinue, wa
   );
 }
 
-export function HoldemGameOver({ view, canPlayAgain, onPlayAgain }: { view: HoldemView; canPlayAgain: boolean; onPlayAgain: () => void }) {
+export function HoldemGameOver({ view, actions, canPlayAgain, onPlayAgain }: { view: HoldemView; canPlayAgain: boolean; onPlayAgain: () => void; actions?: React.ReactNode }) {
   const winner = view.players.find((p) => p.id === view.winnerId);
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "the host";
   const againRef = useRef<HTMLButtonElement>(null);
@@ -141,25 +141,29 @@ export function HoldemGameOver({ view, canPlayAgain, onPlayAgain }: { view: Hold
             </li>
           ))}
         </ol>
-        {!canPlayAgain && <p className="mt-6 text-base text-bone">Waiting for {hostName} to start a new game.</p>}
-        <div className="mt-7 flex flex-wrap gap-3">
-          {canPlayAgain && (
-            <button
-              ref={againRef}
-              onClick={onPlayAgain}
-              className="min-h-12 flex-1 rounded-full bg-brass px-6 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
-            >
-              Play again
-            </button>
-          )}
-          <Link
-            ref={menuRef}
-            href="/"
-            className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone"
-          >
-            Main menu
-          </Link>
-        </div>
+        {actions ?? (
+          <>
+            {!canPlayAgain && <p className="mt-6 text-base text-bone">Waiting for {hostName} to start a new game.</p>}
+            <div className="mt-7 flex flex-wrap gap-3">
+              {canPlayAgain && (
+                <button
+                  ref={againRef}
+                  onClick={onPlayAgain}
+                  className="min-h-12 flex-1 rounded-full bg-brass px-6 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
+                >
+                  Play again
+                </button>
+              )}
+              <Link
+                ref={menuRef}
+                href="/"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone"
+              >
+                Main menu
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </motion.div>
   );

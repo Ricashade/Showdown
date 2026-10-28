@@ -28,13 +28,17 @@ export interface WarTableScreenProps {
   connectedIds?: Set<string>;
   error?: { message: string; id: number } | null;
   topBar?: React.ReactNode;
+  /** Shared rooms: controls beside the game's name in the lobby. */
+  headerExtra?: React.ReactNode;
+  /** Shared rooms: the host's choices once a match is over, in place of Play again. */
+  postGameActions?: React.ReactNode;
 }
 
 /** Auto-flip pacing: time to look at a battle, and a longer beat when a War breaks out. */
 const STEP_MS: Record<WarSpeed, number> = { normal: 1400, fast: 650, turbo: 180 };
 const WAR_PAUSE_MS: Record<WarSpeed, number> = { normal: 2600, fast: 1600, turbo: 1000 };
 
-export function WarTableScreen({ view, controlIds, actingId, isHost, onAction, onStartGame, lobby, exit, connectedIds, error, topBar }: WarTableScreenProps) {
+export function WarTableScreen({ view, controlIds, actingId, isHost, onAction, onStartGame, lobby, exit, connectedIds, error, topBar, headerExtra, postGameActions }: WarTableScreenProps) {
   const [speed, setSpeed] = useState<WarSpeed>("normal");
   const [autoFlip, setAutoFlip] = useState(false);
   const tactical = view.settings.mode === "tactical";
@@ -78,7 +82,7 @@ export function WarTableScreen({ view, controlIds, actingId, isHost, onAction, o
   return (
     <div className="min-h-screen pb-16">
       <div inert={view.phase === "game_over"}>
-        <ScreenHeader title="War" exit={exit} />
+        <ScreenHeader title="War" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
         {view.phase === "lobby" ? (
@@ -159,13 +163,13 @@ export function WarTableScreen({ view, controlIds, actingId, isHost, onAction, o
         ) : null}
       </div>
 
-      {view.phase === "game_over" && <GameOver view={view} canPlayAgain={isHost} hostName={hostName} onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })} />}
+      {view.phase === "game_over" && <GameOver view={view} canPlayAgain={isHost} actions={postGameActions} hostName={hostName} onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })} />}
       <Toast error={error} />
     </div>
   );
 }
 
-function GameOver({ view, canPlayAgain, hostName, onPlayAgain }: { view: WarView; canPlayAgain: boolean; hostName: string; onPlayAgain: () => void }) {
+function GameOver({ view, actions, canPlayAgain, hostName, onPlayAgain }: { view: WarView; canPlayAgain: boolean; hostName: string; onPlayAgain: () => void; actions?: React.ReactNode }) {
   const winner = view.players.find((p) => p.id === view.winnerId);
   const againRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLAnchorElement>(null);
@@ -191,17 +195,21 @@ function GameOver({ view, canPlayAgain, hostName, onPlayAgain }: { view: WarView
           {view.battles} battles
           {high.length > 0 && `. The last War buried ${high.map((l) => cardLabel(l.card)).join(", ")}.`}
         </p>
-        {!canPlayAgain && <p className="mt-6 text-base text-bone">Waiting for {hostName} to start a new game.</p>}
-        <div className="mt-7 flex flex-wrap gap-3">
-          {canPlayAgain && (
-            <button ref={againRef} onClick={onPlayAgain} className="min-h-12 flex-1 rounded-full bg-brass px-6 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit">
-              Play again
-            </button>
-          )}
-          <Link ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
-            Main menu
-          </Link>
-        </div>
+        {actions ?? (
+          <>
+            {!canPlayAgain && <p className="mt-6 text-base text-bone">Waiting for {hostName} to start a new game.</p>}
+            <div className="mt-7 flex flex-wrap gap-3">
+              {canPlayAgain && (
+                <button ref={againRef} onClick={onPlayAgain} className="min-h-12 flex-1 rounded-full bg-brass px-6 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit">
+                  Play again
+                </button>
+              )}
+              <Link ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
+                Main menu
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </motion.div>
   );

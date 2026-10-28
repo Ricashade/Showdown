@@ -33,7 +33,6 @@ export function GarbageLobby({ view, isHost, options, connectedIds, onUpdateSett
         connectedIds={connectedIds}
         minPlayers={GARBAGE_MIN_PLAYERS}
         maxPlayers={GARBAGE_MAX_PLAYERS}
-        roomPath="/garbage/room"
         onStart={onStart}
       />
 

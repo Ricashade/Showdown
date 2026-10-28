@@ -22,6 +22,10 @@ export interface BlackjackTableScreenProps {
   connectedIds?: Set<string>;
   error?: { message: string; id: number } | null;
   topBar?: React.ReactNode;
+  /** Shared rooms: controls beside the game's name in the lobby. */
+  headerExtra?: React.ReactNode;
+  /** Shared rooms: the host's choices once a match is over, in place of Play again. */
+  postGameActions?: React.ReactNode;
 }
 
 /** Let the last card land before the results come up. */
@@ -41,7 +45,7 @@ function describe(prev: BlackjackView, next: BlackjackView): string | null {
   return null;
 }
 
-export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStartGame, lobby, exit, connectedIds, error, topBar }: BlackjackTableScreenProps) {
+export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStartGame, lobby, exit, connectedIds, error, topBar, headerExtra, postGameActions }: BlackjackTableScreenProps) {
   const [announcement, setAnnouncement] = useState("");
   const [closedRound, setClosedRound] = useState<number | null>(null);
   const [resultReady, setResultReady] = useState<number | null>(null);
@@ -106,7 +110,7 @@ export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStart
   return (
     <div className="min-h-screen pb-16">
       <div inert={showResult || showGameOver}>
-        <ScreenHeader title="Blackjack" exit={exit} />
+        <ScreenHeader title="Blackjack" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
         {view.phase === "lobby" ? (
@@ -147,7 +151,7 @@ export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStart
           onClose={() => setClosedRound(view.roundNumber)}
         />
       )}
-      {showGameOver && <BlackjackGameOver view={view} canPlayAgain={isHost} onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })} />}
+      {showGameOver && <BlackjackGameOver view={view} canPlayAgain={isHost} actions={postGameActions} onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })} />}
 
       <Toast error={error} />
     </div>

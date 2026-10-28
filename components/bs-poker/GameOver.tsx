@@ -9,11 +9,14 @@ export function GameOver({
   view,
   onPlayAgain,
   canPlayAgain = true,
+  actions,
 }: {
   view: BsPokerView;
   onPlayAgain: () => void;
   /** Online, only the host can reset the table. */
   canPlayAgain?: boolean;
+  /** Replaces Play again and Main menu (shared rooms). */
+  actions?: React.ReactNode;
 }) {
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "the host";
   const winner = view.players.find((p) => p.id === view.winnerId);
@@ -61,25 +64,29 @@ export function GameOver({
           ))}
         </ol>
 
-        {!canPlayAgain && <p className="mt-6 text-base text-bone">Waiting for {hostName} to start a new game.</p>}
-        <div className="mt-7 flex flex-wrap gap-3">
-          {canPlayAgain && (
-            <button
-              ref={againRef}
-              onClick={onPlayAgain}
-              className="min-h-12 flex-1 rounded-full bg-brass px-6 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
-            >
-              Play again
-            </button>
-          )}
-          <Link
-            ref={menuRef}
-            href="/"
-            className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone"
-          >
-            Main menu
-          </Link>
-        </div>
+        {actions ?? (
+          <>
+            {!canPlayAgain && <p className="mt-6 text-base text-bone">Waiting for {hostName} to start a new game.</p>}
+            <div className="mt-7 flex flex-wrap gap-3">
+              {canPlayAgain && (
+                <button
+                  ref={againRef}
+                  onClick={onPlayAgain}
+                  className="min-h-12 flex-1 rounded-full bg-brass px-6 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
+                >
+                  Play again
+                </button>
+              )}
+              <Link
+                ref={menuRef}
+                href="/"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone"
+              >
+                Main menu
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </motion.div>
   );

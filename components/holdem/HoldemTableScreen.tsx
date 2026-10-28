@@ -25,6 +25,10 @@ export interface HoldemTableScreenProps {
   connectedIds?: Set<string>;
   error?: { message: string; id: number } | null;
   topBar?: React.ReactNode;
+  /** Shared rooms: controls beside the game's name in the lobby. */
+  headerExtra?: React.ReactNode;
+  /** Shared rooms: the host's choices once a match is over, in place of Play again. */
+  postGameActions?: React.ReactNode;
 }
 
 const MOVE_WORDS: Record<string, string> = {
@@ -63,6 +67,8 @@ export function HoldemTableScreen({
   connectedIds,
   error,
   topBar,
+  headerExtra,
+  postGameActions,
 }: HoldemTableScreenProps) {
   const [announcement, setAnnouncement] = useState("");
   const [dismissedHand, setDismissedHand] = useState<number | null>(null);
@@ -130,7 +136,7 @@ export function HoldemTableScreen({
     <DealProvider value={deal}>
       <div className="min-h-screen pb-16">
         <div inert={showResult || showGameOver}>
-          <ScreenHeader title="Texas Hold'em" exit={exit} />
+          <ScreenHeader title="Texas Hold'em" exit={exit} extra={headerExtra} />
           {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
           {view.phase === "lobby" ? (
@@ -182,7 +188,7 @@ export function HoldemTableScreen({
           />
         )}
         {showGameOver && (
-          <HoldemGameOver view={view} canPlayAgain={isHost} onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })} />
+          <HoldemGameOver view={view} canPlayAgain={isHost} actions={postGameActions} onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })} />
         )}
 
         <Toast error={error} />

@@ -21,8 +21,8 @@ const BEN_BID: Bid = { type: "TWO_PAIR", high: 13, low: 5 };
 type Step = 0 | 1 | 2 | 3;
 const STEP_COUNT = 4;
 
-/** A scripted mini-round: deal, two bids, you call BS, everything flips. */
-export function QuickDemo() {
+/** A scripted mini-round: deal, two bids, you call BS, everything flips. In a dialog, `onExit` goes back to the rules. */
+export function QuickDemo({ onExit }: { onExit?: () => void } = {}) {
   const [step, setStep] = useState<Step>(0);
   const [flipped, setFlipped] = useState(false);
   const primaryRef = useRef<HTMLButtonElement>(null);
@@ -69,7 +69,7 @@ export function QuickDemo() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-24 pb-16 sm:px-8">
+    <div className={onExit ? "" : "mx-auto max-w-5xl px-4 pt-24 pb-16 sm:px-8"}>
       <p className="text-base text-ash">
         Step {step + 1} of {STEP_COUNT}
       </p>
@@ -173,12 +173,14 @@ export function QuickDemo() {
         )}
         {step === 3 && flipped && (
           <>
-            <Link
-              href="/bs-poker"
-              className="flex min-h-12 items-center rounded-full bg-brass px-7 font-display text-2xl font-bold text-smoke hover:bg-brass-lit"
-            >
-              Play BS Poker
-            </Link>
+            {!onExit && (
+              <Link
+                href="/bs-poker"
+                className="flex min-h-12 items-center rounded-full bg-brass px-7 font-display text-2xl font-bold text-smoke hover:bg-brass-lit"
+              >
+                Play BS Poker
+              </Link>
+            )}
             <button
               ref={primaryRef}
               onClick={() => setStep(0)}
@@ -186,9 +188,15 @@ export function QuickDemo() {
             >
               Replay the demo
             </button>
-            <Link href="/rules" className="min-h-12 content-center px-2 text-base text-parchment underline underline-offset-4 hover:text-bone">
-              Back to the rules
-            </Link>
+            {onExit ? (
+              <button onClick={onExit} className="min-h-12 content-center px-2 text-base text-parchment underline underline-offset-4 hover:text-bone">
+                Back to the rules
+              </button>
+            ) : (
+              <Link href="/rules" className="min-h-12 content-center px-2 text-base text-parchment underline underline-offset-4 hover:text-bone">
+                Back to the rules
+              </Link>
+            )}
           </>
         )}
       </div>

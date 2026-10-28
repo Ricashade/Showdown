@@ -25,6 +25,10 @@ export interface RummyTableScreenProps {
   connectedIds?: Set<string>;
   error?: { message: string; id: number } | null;
   topBar?: React.ReactNode;
+  /** Shared rooms: controls beside the game's name in the lobby. */
+  headerExtra?: React.ReactNode;
+  /** Shared rooms: the host's choices once a match is over, in place of Play again. */
+  postGameActions?: React.ReactNode;
 }
 
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : "0");
@@ -41,7 +45,7 @@ function describe(prev: RummyView, next: RummyView): string | null {
   return null;
 }
 
-export function RummyTableScreen({ view, actingId, isHost, onAction, onStartGame, lobby, exit, connectedIds, error, topBar }: RummyTableScreenProps) {
+export function RummyTableScreen({ view, actingId, isHost, onAction, onStartGame, lobby, exit, connectedIds, error, topBar, headerExtra, postGameActions }: RummyTableScreenProps) {
   const [announcement, setAnnouncement] = useState("");
   const [closedRound, setClosedRound] = useState<number | null>(null);
   const prevView = useRef(view);
@@ -78,7 +82,7 @@ export function RummyTableScreen({ view, actingId, isHost, onAction, onStartGame
   return (
     <div className="min-h-screen pb-16">
       <div inert={showRound || showResult || showWinner}>
-        <ScreenHeader title="Rummy" exit={exit} />
+        <ScreenHeader title="Rummy" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
         {view.phase === "lobby" ? (
@@ -117,7 +121,7 @@ export function RummyTableScreen({ view, actingId, isHost, onAction, onStartGame
           waitingText={`Waiting for ${hostName} to deal.`}
         />
       )}
-      {showWinner && <GameOver view={view} canPlayAgain={isHost} hostName={hostName} onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })} />}
+      {showWinner && <GameOver view={view} canPlayAgain={isHost} actions={postGameActions} hostName={hostName} onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })} />}
 
       <Toast error={error} />
     </div>
@@ -182,7 +186,7 @@ function RoundOver({ view, action, waitingText }: { view: RummyView; action: { l
   );
 }
 
-function GameOver({ view, canPlayAgain, hostName, onPlayAgain }: { view: RummyView; canPlayAgain: boolean; hostName: string; onPlayAgain: () => void }) {
+function GameOver({ view, actions, canPlayAgain, hostName, onPlayAgain }: { view: RummyView; canPlayAgain: boolean; hostName: string; onPlayAgain: () => void; actions?: React.ReactNode }) {
   const winner = view.players.find((p) => p.id === view.winnerId);
   const againRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLAnchorElement>(null);
@@ -206,17 +210,21 @@ function GameOver({ view, canPlayAgain, hostName, onPlayAgain }: { view: RummyVi
             </li>
           ))}
         </ol>
-        {!canPlayAgain && <p className="mt-6 text-base text-bone">Waiting for {hostName} to start a new game.</p>}
-        <div className="mt-7 flex flex-wrap gap-3">
-          {canPlayAgain && (
-            <button ref={againRef} onClick={onPlayAgain} className="min-h-12 flex-1 rounded-full bg-brass px-6 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit">
-              Play again
-            </button>
-          )}
-          <Link ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
-            Main menu
-          </Link>
-        </div>
+        {actions ?? (
+          <>
+            {!canPlayAgain && <p className="mt-6 text-base text-bone">Waiting for {hostName} to start a new game.</p>}
+            <div className="mt-7 flex flex-wrap gap-3">
+              {canPlayAgain && (
+                <button ref={againRef} onClick={onPlayAgain} className="min-h-12 flex-1 rounded-full bg-brass px-6 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit">
+                  Play again
+                </button>
+              )}
+              <Link ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
+                Main menu
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </motion.div>
   );

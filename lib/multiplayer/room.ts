@@ -29,6 +29,8 @@ export interface GameDefinition<S extends RoomState, A extends RoomAction, V> {
   join(player: PlayerSeed): A;
   leave(playerId: string): A;
   maxPlayers: number;
+  /** Whether newcomers get a seat right now. Without it, only in the lobby. */
+  seatsOpen?(state: S): boolean;
 }
 
 export type SeatStatus = "seated" | "rejected" | "removed" | "closed";
@@ -82,7 +84,8 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
   private sharedKeys = new Map<string, CryptoKey>();
   private lastNonce: Map<string, number>;
   private removed: Set<string>;
-  private connected = new Set<string>();
+  /** Connected guests: playerId → the presence entry carrying that player's real key. */
+  private connected = new Map<string, PresenceMeta>();
   private listeners = new Set<() => void>();
   private queue: Promise<void> = Promise.resolve();
   private members: PresenceMeta[] = [];
@@ -113,7 +116,7 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
 
   getConnectedIds(): string[] {
     const bots = this.state.players.filter((p) => p.isBot).map((p) => p.id);
-    return [this.hostId, ...this.connected, ...bots];
+    return [this.hostId, ...this.connected.keys(), ...bots];
   }
 
   /** Another host already holds this room code (the earlier one wins). */
@@ -160,9 +163,12 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
 
   /** The host's own moves, applied immediately. */
   act(action: A) {
+    const before = this.state.phase;
     const result = this.game.applyAction(this.state, action);
     if (result.ok) {
       this.state = result.state;
+      // Back in the lobby: seat whoever turned up meanwhile, free the seats of whoever left.
+      if (before !== "lobby" && this.state.phase === "lobby") this.seatGuests({});
       this.notify();
       this.enqueue(() => this.publish());
     }
@@ -207,23 +213,27 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
       }
       connected.set(m.playerId, m);
     }
-    this.connected = new Set(connected.keys());
+    this.connected = connected;
+    this.seatGuests(errors);
+    this.notify();
+    await this.publish(errors);
+  }
 
-    if (this.state.phase === "lobby") {
-      // Seat newcomers…
-      for (const [playerId, m] of connected) {
-        const seated = this.state.players.some((p) => p.id === playerId);
-        if (seated || this.removed.has(playerId)) continue;
+  /** Seat newcomers, and in the lobby free the seats of anyone who left. */
+  private seatGuests(errors: Record<string, string>) {
+    const open = this.game.seatsOpen?.(this.state) ?? this.state.phase === "lobby";
+    if (open) {
+      for (const [playerId, m] of this.connected) {
+        if (this.state.players.some((p) => p.id === playerId) || this.removed.has(playerId)) continue;
         const error = this.apply(this.game.join({ id: playerId, name: m.name }));
         if (error) errors[playerId] = this.state.players.length >= this.game.maxPlayers ? "This table is full." : error;
       }
-      // …and free the seats of anyone who left the lobby.
+    }
+    if (this.state.phase === "lobby") {
       for (const p of this.state.players) {
         if (p.id !== this.hostId && !p.isBot && !this.connected.has(p.id)) this.apply(this.game.leave(p.id));
       }
     }
-    this.notify();
-    await this.publish(errors);
   }
 
   private async onAction(payload: unknown) {

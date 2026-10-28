@@ -39,7 +39,6 @@ export function Lobby({ view, isHost, options, connectedIds, onUpdateSettings, o
         connectedIds={connectedIds}
         minPlayers={MIN_PLAYERS}
         maxPlayers={MAX_PLAYERS}
-        roomPath="/bs-poker/room"
         onStart={onStart}
       />
 

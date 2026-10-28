@@ -14,11 +14,12 @@ npm run build
 ```
 app/
   page.tsx                  Main menu: one-game-at-a-time carousel (components/menu/)
-  bs-poker/page.tsx         Choose: create room, join room, or local simulator
-  bs-poker/room/[code]/     Online room (host or guest)
+  room/[code]/              Online room (host or guest), shared by every game
+  bs-poker/page.tsx         Choose: create a room on this game, join one, or local simulator
+  bs-poker/room/[code]/     Old invite links; redirects to room/[code]
   bs-poker/local/           Local simulator (every seat on one screen)
   rules/, rules/demo/       How to play + guided 30-second demo
-  texas-holdem/              Hold'em: chooser, room/[code]/ (online), local/ (simulator)
+  texas-holdem/              Hold'em: chooser, room/[code]/ (redirect), local/ (simulator)
   blackjack/                Blackjack: same three routes
   garbage/                  Garbage: same three routes
   rummy/                    Rummy: same three routes
@@ -39,6 +40,8 @@ lib/
   rummy-melds.ts            Rummy sets and runs (Aces, Jokers), lay-offs, finding melds in a hand, points
   rummy-engine.ts           Rummy reducer: draw (incl. Rummy 500 digs), meld, lay off, discard, scoring
   war-engine.ts             War: battles, Wars and short stacks, Classic and Tactical, win conditions
+  party-engine.ts           Shared rooms: the roster and tonight's wins around whichever game is on
+                            (switch game, play again, back to lobby), plus their bots and timers
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
                             nextRound, applyAction; getPlayerView (hidden info), getLegalActions
   bot-ai.ts                 Bots for every game (entry point); brains in bots/*-bot.ts
@@ -53,6 +56,7 @@ components/
   holdem/                   Hold'em table, actions, results, HoldemHowTo
   blackjack/                Table, lobby, actions, round results, how-to-play dialog with demo
   menu/                     Game carousel, join-with-code dialog
+  party/                    Shared online room: game picker, post-game buttons, each game's table
   garbage/                  Boards, piles and chain animations, lobby, how-to-play dialog with demo
   rummy/                    Hand (sort, multi-select), melds, fanned discard pile, lobby, how-to dialog
   war/                      Tug-of-war counter, battle zone, WAR! banner, flip/auto-flip/speed, how-to
@@ -192,6 +196,25 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
   Tactical, Easy plays at random; Medium saves Aces and Kings for Wars; Hard baits a War when it holds
   two high cards and throws low cards when the other side probably holds the high ones.
 
+## Shared rooms (as implemented)
+
+- **One code all night:** every online room is a shared room (`/room/CODE`). Creating one from a game's page
+  opens it on that game; the host can switch to any of the six from the lobby (*Change game*) or the winner
+  screen (*Switch game*), and nobody reconnects. The new game starts on its default house rules.
+- **After a match:** the host can *Play again* (same game and house rules), go back to the *Lobby*, or
+  *Switch game*. During a match, *End match* in the header goes back to the lobby.
+- **Seats:** the room holds up to 9. A game seats people in room order up to its own limit; the rest sit
+  out that game and watch, and are dealt in as soon as a game has room (a smaller game, someone leaving,
+  or the next deal). People who arrive mid-match watch until the next deal.
+- **War:** the host picks the two duelists; everyone else watches. With *Winner stays on*, the winner keeps
+  their seat and the next player round the table takes them on.
+- **Wins tonight:** each finished match gives its winner a crown, shown beside their name in the lobby.
+  Ending a match early crowns nobody, except at Blackjack, which never finishes with a winner: ending the
+  table crowns whoever has the most chips, if they're up. Someone who drops and rejoins keeps theirs.
+- **How it's built:** the room is one more game for the host to run (`lib/party-engine.ts`), wrapping the
+  six games' own reducers, views and bots. Moves inside a game travel as `GAME` actions, sealed like any
+  other move, and act only for whoever sent them.
+
 ## Online play (Supabase Realtime)
 
 Rooms run over Supabase Realtime **Broadcast + Presence** only: no database tables, no server code.
@@ -214,6 +237,8 @@ After every change, the host sends each player *their own* `getPlayerView`, encr
 shares (ECDH P-256 → AES-GCM), so nobody can read anyone else's cards off the wire. The same keys authenticate
 moves, so a player can't act in someone else's name, and recorded messages can't be replayed. The shuffle seed
 never leaves the host.
+
+Shared rooms seat newcomers at any time (`GameDefinition.seatsOpen`); other games only in the lobby.
 
 **Limits:** the host's tab is the server. If the host closes it, the game pauses until they reopen the room
 link in the same tab. A player who loses connection mid-game stays seated, but the game waits on their turn.

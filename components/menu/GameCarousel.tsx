@@ -14,6 +14,7 @@ import { GarbageHowTo } from "@/components/garbage/GarbageHowTo";
 import { RummyHowTo } from "@/components/rummy/RummyHowTo";
 import { WarHowTo } from "@/components/war/WarHowTo";
 import { JoinWithCode } from "./JoinWithCode";
+import { GAME_ART } from "./game-art";
 
 interface Slide {
   id: GameId;
@@ -27,38 +28,32 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     id: "texas-holdem",
-    show: "AS KS",
-    hidden: 0,
+    ...GAME_ART["texas-holdem"],
     howTo: { Dialog: HoldemHowTo },
   },
   {
     id: "bs-poker",
-    show: "QD 8S 7H",
-    hidden: 2,
+    ...GAME_ART["bs-poker"],
     howTo: { href: "/rules" },
   },
   {
     id: "blackjack",
-    show: "AC KH",
-    hidden: 1,
+    ...GAME_ART["blackjack"],
     howTo: { Dialog: BlackjackHowTo },
   },
   {
     id: "garbage",
-    show: "AS 2H 3D",
-    hidden: 2,
+    ...GAME_ART["garbage"],
     howTo: { Dialog: GarbageHowTo },
   },
   {
     id: "rummy",
-    show: "7S 8S 9S KH",
-    hidden: 1,
+    ...GAME_ART["rummy"],
     howTo: { Dialog: RummyHowTo },
   },
   {
     id: "war",
-    show: "AS AH",
-    hidden: 1,
+    ...GAME_ART["war"],
     howTo: { Dialog: WarHowTo },
   },
 ];
@@ -200,7 +195,7 @@ export function GameCarousel() {
         </button>
       </nav>
 
-      {dialog === "join" && <JoinWithCode info={info} onClose={() => setDialog(null)} />}
+      {dialog === "join" && <JoinWithCode onClose={() => setDialog(null)} />}
       {dialog === "howto" && "Dialog" in slide.howTo && <slide.howTo.Dialog onClose={() => setDialog(null)} />}
     </main>
   );

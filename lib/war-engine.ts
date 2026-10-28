@@ -19,7 +19,7 @@ export const HAND_SIZE = 3;
 export const QUICK_MATCH_CARDS = 40;
 export const BLITZ_BATTLES = 50;
 
-export const WAR_DEFAULTS: WarSettings = { mode: "classic", bounty: 3, winCondition: "domination", jokers: false, duelistIds: null };
+export const WAR_DEFAULTS: WarSettings = { mode: "classic", bounty: 3, winCondition: "domination", jokers: false, duelistIds: null, winnerStaysOn: false };
 
 type Result = ActionResult<WarState>;
 const fail = (state: WarState, error: string): Result => ({ ok: false, error, state });
@@ -32,7 +32,7 @@ export function sanitizeWarSettings(s: Partial<WarSettings>): WarSettings {
   const bounty = s.bounty === 1 || s.bounty === 2 ? s.bounty : 3;
   const winCondition = s.winCondition === "forty" || s.winCondition === "blitz" ? s.winCondition : "domination";
   const pair = Array.isArray(s.duelistIds) && s.duelistIds.length === 2 && s.duelistIds[0] !== s.duelistIds[1] ? (s.duelistIds as [string, string]) : null;
-  return { mode: s.mode === "tactical" ? "tactical" : "classic", bounty, winCondition, jokers: !!s.jokers, duelistIds: pair };
+  return { mode: s.mode === "tactical" ? "tactical" : "classic", bounty, winCondition, jokers: !!s.jokers, duelistIds: pair, winnerStaysOn: !!s.winnerStaysOn };
 }
 
 const seat = (seed: PlayerSeed, isHost: boolean): WarPlayer => ({
@@ -66,6 +66,16 @@ export function createWarRoom(params: { roomId: string; host: PlayerSeed; settin
 function resetToLobby(s: WarState): WarState {
   const fresh = createWarRoom({ roomId: s.roomId, host: { id: s.hostId, name: "" }, settings: s.settings });
   return { ...fresh, version: s.version, players: s.players.map((p) => ({ ...seat(p, p.id === s.hostId), name: p.name })) };
+}
+
+/** Winner stays on: they face whoever sits next after the player they beat, round the table. */
+export function nextDuel(s: Pick<WarState, "players" | "sides" | "winnerId">): [string, string] | null {
+  const winner = s.winnerId;
+  const loser = s.sides?.find((x) => x.id !== winner)?.id;
+  if (!winner || !loser) return null;
+  const line = s.players.map((p) => p.id).filter((id) => id !== winner);
+  if (line.length === 0) return null;
+  return [winner, line[(line.indexOf(loser) + 1) % line.length]];
 }
 
 /** Who duels: the host's pick if both are still seated, otherwise the first two seats. */
@@ -251,7 +261,9 @@ export function applyWarAction(state: WarState, action: WarAction): Result {
       return commit(state, action.playerId, action.cardId);
     case "RETURN_TO_LOBBY": {
       if (action.playerId !== state.hostId) return fail(state, "Only the host can reset the game");
-      return succeed(resetToLobby(state));
+      const next = resetToLobby(state);
+      const duel = state.phase === "game_over" && state.settings.winnerStaysOn ? nextDuel(state) : null;
+      return succeed(duel ? { ...next, settings: { ...next.settings, duelistIds: duel } } : next);
     }
   }
 }

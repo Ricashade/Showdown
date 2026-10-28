@@ -36,6 +36,10 @@ export interface TableScreenProps {
   canDealNextRound: boolean;
   /** Extra controls above the table (the dev POV switcher, connection notices). */
   topBar?: React.ReactNode;
+  /** Shared rooms: controls beside the game's name in the lobby. */
+  headerExtra?: React.ReactNode;
+  /** Shared rooms: the host's choices once a match is over, in place of Play again. */
+  postGameActions?: React.ReactNode;
   /** Local simulator: who to switch to when it's someone else's turn. */
   onViewAs?: (playerId: string) => void;
 }
@@ -65,6 +69,8 @@ export function TableScreen({
   error,
   canDealNextRound,
   topBar,
+  headerExtra,
+  postGameActions,
   onViewAs,
 }: TableScreenProps) {
   const deal = useDealClock({
@@ -125,7 +131,7 @@ export function TableScreen({
       <div className="min-h-screen pb-16">
         {/* Everything behind an open dialog is inert, so focus can't wander under it. */}
         <div inert={dialogOpen}>
-          <ScreenHeader title="BS Poker" exit={exit} />
+          <ScreenHeader title="BS Poker" exit={exit} extra={headerExtra} />
 
           {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
@@ -206,7 +212,7 @@ export function TableScreen({
         {showGameOver && (
           <GameOver
             view={view}
-            canPlayAgain={isHost}
+            canPlayAgain={isHost} actions={postGameActions}
             onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })}
           />
         )}

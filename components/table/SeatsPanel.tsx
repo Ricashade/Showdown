@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Check, Link2, UserPlus, X } from "lucide-react";
+import { Bot, Check, Crown, Link2, UserPlus, X } from "lucide-react";
 import type { BotDifficulty } from "@/types/game";
 import { DIFFICULTY_LABEL } from "@/lib/bot-ai";
+import { ROOM_PATH } from "@/lib/games";
 
 export interface LobbyOptions {
   /** Online rooms show their code and an invite link. */
@@ -16,6 +17,10 @@ export interface LobbyOptions {
   onAddPlayer?: () => void;
   /** Host only: seat a bot. */
   onAddBot?: (difficulty: BotDifficulty) => void;
+  /** Shared rooms: matches each player has won tonight, across games. */
+  crowns?: Record<string, number>;
+  /** Shared rooms: people in the room this game has no seat for. */
+  sittingOut?: { id: string; name: string; isBot?: boolean; botDifficulty?: BotDifficulty }[];
 }
 
 interface SeatsPanelProps {
@@ -27,18 +32,16 @@ interface SeatsPanelProps {
   connectedIds?: Set<string>;
   minPlayers: number;
   maxPlayers: number;
-  /** Path of this game's room pages, for the invite link. */
-  roomPath: string;
   onStart: () => void;
 }
 
 /** The lobby's seat list on felt: room code, seats in turn order, and the start button. */
-export function SeatsPanel({ players, viewerId, hostId, isHost, options, connectedIds, minPlayers, maxPlayers, roomPath, onStart }: SeatsPanelProps) {
+export function SeatsPanel({ players, viewerId, hostId, isHost, options, connectedIds, minPlayers, maxPlayers, onStart }: SeatsPanelProps) {
   const hostName = players.find((p) => p.id === hostId)?.name ?? "The host";
   const canStart = players.length >= minPlayers;
   return (
     <section aria-labelledby="seats-heading" className="felt self-start rounded-[2rem] p-6 sm:p-8">
-      {options.roomCode && <RoomCode code={options.roomCode} roomPath={roomPath} />}
+      {options.roomCode && <RoomCode code={options.roomCode} />}
 
       <h2 id="seats-heading" className="font-display text-4xl font-bold text-bone">
         Seats
@@ -67,6 +70,7 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
                 </span>
               )}
               {!online && <span className="text-sm text-bone">Reconnecting…</span>}
+              <Crowns count={options.crowns?.[p.id]} />
               {p.isHost ? (
                 <span className="pr-3 text-sm text-brass-lit">Host</span>
               ) : options.canRemove(p.id) ? (
@@ -82,6 +86,33 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
           );
         })}
       </ol>
+
+      {options.sittingOut && options.sittingOut.length > 0 && (
+        <>
+          <h3 className="mt-6 font-display text-2xl font-bold text-bone">Sitting out</h3>
+          <ul className="mt-3 space-y-2">
+            {options.sittingOut.map((p) => (
+              <li key={p.id} className="flex min-h-12 items-center gap-3 rounded-full border border-dashed border-bone/30 py-1 pr-2 pl-4">
+                <span className="min-w-0 flex-1 truncate text-base text-bone">
+                  {p.name}
+                  {viewerId === p.id && <span className="ml-1.5 text-sm text-brass-lit">you</span>}
+                  {p.isBot && <span className="ml-1.5 text-sm text-brass-lit">{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]} bot</span>}
+                </span>
+                <Crowns count={options.crowns?.[p.id]} />
+                {options.canRemove(p.id) && (
+                  <button
+                    onClick={() => options.onRemove(p.id)}
+                    className="grid size-10 place-items-center rounded-full text-bone transition hover:bg-black/25"
+                    aria-label={`Remove ${p.name}`}
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       {options.onAddBot && (
         <div role="group" aria-label="Add a bot" className="mt-4 flex flex-wrap items-center gap-2">
@@ -137,11 +168,11 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
   );
 }
 
-function RoomCode({ code, roomPath }: { code: string; roomPath: string }) {
+function RoomCode({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}${roomPath}/${code}`);
+      await navigator.clipboard.writeText(`${window.location.origin}${ROOM_PATH}/${code}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -167,6 +198,17 @@ function RoomCode({ code, roomPath }: { code: string; roomPath: string }) {
   );
 }
 
+
+/** Matches won tonight, shown once there's at least one. */
+function Crowns({ count }: { count?: number }) {
+  if (!count) return null;
+  return (
+    <span className="flex items-center gap-1 pr-1 font-display text-lg font-bold text-brass-lit tabular-nums" aria-label={`${count} ${count === 1 ? "win" : "wins"} tonight`}>
+      <Crown className="size-4" aria-hidden />
+      {count}
+    </span>
+  );
+}
 
 /** A titled group of house-rule controls. */
 export function Group({ title, children }: { title: string; children: React.ReactNode }) {

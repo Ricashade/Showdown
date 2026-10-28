@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GAMES, type GameId } from "@/lib/games";
+import { GAMES, ROOM, ROOM_PATH, type GameId } from "@/lib/games";
 import { createSession, getTransport, type TransportKind } from "@/lib/multiplayer/session";
 import { generateRoomCode, isRoomCode, normalizeRoomCode } from "@/lib/multiplayer/room-code";
 import { NameField, rememberName, useRememberedName } from "./NameField";
 
-/** Create a room, join one by code, or open the local simulator — for either game. */
+/** Create a room starting on this game, join one by code, or open this game's local simulator. */
 export default function PlayModeChooser({ game }: { game: GameId }) {
   const info = GAMES[game];
   const router = useRouter();
@@ -26,8 +26,9 @@ export default function PlayModeChooser({ game }: { game: GameId }) {
     setBusy(kind);
     rememberName(name);
     const roomCode = kind === "create" ? generateRoomCode() : code;
-    await createSession(info.roomKey(roomCode), roomCode, name, kind === "create" ? "host" : "guest");
-    router.push(`${info.path}/room/${roomCode}`);
+    await createSession(ROOM.roomKey(roomCode), roomCode, name, kind === "create" ? "host" : "guest");
+    // The room opens on this game; a guest gets whatever the host has on.
+    router.push(kind === "create" ? `${ROOM_PATH}/${roomCode}?game=${game}` : `${ROOM_PATH}/${roomCode}`);
   };
 
   return (

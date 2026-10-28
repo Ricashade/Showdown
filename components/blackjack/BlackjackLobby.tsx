@@ -38,7 +38,6 @@ export function BlackjackLobby({ view, isHost, options, connectedIds, onUpdateSe
         connectedIds={connectedIds}
         minPlayers={BLACKJACK_MIN_PLAYERS}
         maxPlayers={BLACKJACK_MAX_PLAYERS}
-        roomPath="/blackjack/room"
         onStart={onStart}
       />
 

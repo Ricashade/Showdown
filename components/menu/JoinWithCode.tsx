@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
-import type { GameInfo } from "@/lib/games";
+import { ROOM, ROOM_PATH } from "@/lib/games";
 import { createSession } from "@/lib/multiplayer/session";
 import { isRoomCode, normalizeRoomCode } from "@/lib/multiplayer/room-code";
 import { NameField, rememberName, useRememberedName } from "@/components/bs-poker/NameField";
 
-/** Name and room code, then straight to the table. */
-export function JoinWithCode({ info, onClose }: { info: GameInfo; onClose: () => void }) {
+/** Name and room code, then straight to the table (whichever game the host has on). */
+export function JoinWithCode({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const [name, setName] = useRememberedName();
   const [code, setCode] = useState("");
@@ -29,8 +29,8 @@ export function JoinWithCode({ info, onClose }: { info: GameInfo; onClose: () =>
     if (!ok) return;
     setBusy(true);
     rememberName(name);
-    await createSession(info.roomKey(code), code, name, "guest");
-    router.push(`${info.path}/room/${code}`);
+    await createSession(ROOM.roomKey(code), code, name, "guest");
+    router.push(`${ROOM_PATH}/${code}`);
   };
 
   return (
@@ -48,7 +48,7 @@ export function JoinWithCode({ info, onClose }: { info: GameInfo; onClose: () =>
       >
         <div className="flex items-start justify-between gap-3">
           <h2 id="join-title" className="font-display text-4xl font-extrabold text-bone">
-            Join {info.title}
+            Join a room
           </h2>
           <button type="button" onClick={onClose} aria-label="Close" className="grid size-11 shrink-0 place-items-center rounded-full text-bone hover:bg-black/25">
             <X className="size-5" />

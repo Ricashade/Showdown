@@ -11,12 +11,19 @@ export interface HeaderExit {
   onExit: () => void;
 }
 
-/** Game title plus one way out (with a confirm step). Without `exit`, links to the main menu. */
-export function ScreenHeader({ title, exit }: { title: string; exit?: HeaderExit }) {
+/** Game title (with anything that goes beside it) plus one way out. Without `exit`, links to the main menu. */
+export function ScreenHeader({ title, exit, extra }: { title: string; exit?: HeaderExit; extra?: React.ReactNode }) {
   const [confirming, setConfirming] = useState(false);
   return (
     <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 pt-5 sm:px-8">
-      <h1 className="font-display text-4xl font-extrabold text-bone">{title}</h1>
+      {extra ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <h1 className="font-display text-4xl font-extrabold text-bone">{title}</h1>
+          {extra}
+        </div>
+      ) : (
+        <h1 className="font-display text-4xl font-extrabold text-bone">{title}</h1>
+      )}
       {!exit ? (
         <Link href="/" className="flex min-h-11 items-center px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline">
           Main menu

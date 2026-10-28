@@ -108,7 +108,7 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
   const exit: HeaderExit = isHost
     ? inLobby
       ? { label: "Close room", confirm: "Close this room for everyone?", onExit: leaveAndGoBack }
-      : { label: "End game", confirm: "End this game for everyone?", onExit: () => act(returnToLobby(me)) }
+      : { label: "End match", confirm: "End this match and go back to the lobby?", onExit: () => act(returnToLobby(me)) }
     : { label: "Leave room", confirm: inLobby ? "Leave this room?" : "Leave this game?", onExit: leaveAndGoBack };
 
   const notices = [
@@ -139,7 +139,7 @@ function StatusScreen({
   retry?: boolean;
   onLeave?: () => void;
 }) {
-  const back = `Back to ${info.title}`;
+  const back = info.path === "/" ? "Main menu" : `Back to ${info.title}`;
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 sm:px-8">
       <p className="text-base text-ash">Room {code}</p>
@@ -176,7 +176,7 @@ function JoinFromLink({ info, code, onJoined }: { info: GameInfo; code: string; 
   const [busy, setBusy] = useState(false);
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 sm:px-8">
-      <p className="text-base text-ash">{info.title}</p>
+      <p className="text-base text-ash">Room</p>
       <h1 className="font-display text-7xl leading-none font-extrabold tracking-[0.12em] text-bone">{code}</h1>
       <form
         className="mt-8 space-y-4"
@@ -197,7 +197,7 @@ function JoinFromLink({ info, code, onJoined }: { info: GameInfo; code: string; 
         </button>
       </form>
       <Link href={info.path} className="mt-6 text-base text-parchment underline underline-offset-4 hover:text-bone">
-        Back to {info.title}
+        {info.path === "/" ? "Main menu" : `Back to ${info.title}`}
       </Link>
     </main>
   );

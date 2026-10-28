@@ -16,6 +16,8 @@ export interface WarSettings {
   jokers: boolean;
   /** The two players who duel; everyone else watches. Null picks the first two seats. */
   duelistIds: [string, string] | null;
+  /** After a game, the winner keeps their seat and the next player in line takes on them. */
+  winnerStaysOn: boolean;
 }
 
 export type WarPlayer = BasePlayer;
