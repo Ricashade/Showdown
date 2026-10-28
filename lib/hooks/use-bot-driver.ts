@@ -19,14 +19,14 @@ export function useBotDriver<S extends { version: number }, A>(state: S | null, 
 
   useEffect(() => {
     if (!pending) return;
-    const { botId, justDealt } = pending;
+    const { botId, justDealt, pace } = pending;
     const timer = setTimeout(() => {
       const now = latest.current;
       // Only act if nothing changed while we were "thinking".
       if (!now || now.version !== version || bots.pending(now)?.botId !== botId) return;
       const action = bots.decide(now, botId);
       if (action) dispatchRef.current(action);
-    }, thinkingTime() + justDealt);
+    }, pace ?? thinkingTime() + justDealt);
     return () => clearTimeout(timer);
     // Re-arm on every new state; `pending` is derived from it.
     // eslint-disable-next-line react-hooks/exhaustive-deps

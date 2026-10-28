@@ -8,23 +8,30 @@
 import type { BsPokerAction, BsPokerState } from "@/types/bs-poker";
 import type { HoldemAction, HoldemState } from "@/types/holdem";
 import type { BlackjackAction, BlackjackState } from "@/types/blackjack";
+import type { GarbageAction, GarbageState } from "@/types/garbage";
 import type { BotDifficulty } from "@/types/game";
 import { getPlayerView } from "./bs-poker-game";
 import { getHoldemView } from "./holdem-game";
 import { getBlackjackView, MIN_BET } from "./blackjack-engine";
+import { getGarbageView } from "./garbage-engine";
 import { getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 import { getHoldemBotAction, observeHoldem } from "./bots/holdem-bot";
 import { getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
+import { arrangeRevealed, getGarbageBotAction, observeGarbage } from "./bots/garbage-bot";
 import { randomId } from "./multiplayer/room-code";
 
 export { estimateBidProbability, getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 export { estimateHoldemEquity, getHoldemBotAction, observeHoldem, startingHandScore } from "./bots/holdem-bot";
 export { basicStrategy, getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
+export { arrangeRevealed, chooseWildSlot, getGarbageBotAction, observeGarbage } from "./bots/garbage-bot";
 
 /** How a game exposes its bots to the driver that runs them. */
 export interface BotRunner<S, A> {
-  /** The bot whose turn it is, if any. `justDealt` adds time for the deal animation. */
-  pending(state: S): { botId: string; justDealt: number } | null;
+  /**
+   * The bot whose turn it is, if any. `justDealt` adds time for the deal animation; `pace`
+   * replaces the thinking time with a fixed delay (a chain of quick moves people can follow).
+   */
+  pending(state: S): { botId: string; justDealt: number; pace?: number } | null;
   decide(state: S, botId: string, rng?: () => number): A | null;
 }
 
@@ -82,6 +89,32 @@ export const blackjackBots: BotRunner<BlackjackState, BlackjackAction> = {
   decide(s, botId, rng) {
     const obs = observeBlackjack(getBlackjackView(s, botId), botId);
     return obs ? getBlackjackBotAction(obs, difficultyOf(s.players, botId), rng) : null;
+  },
+};
+
+/** Gap between the steps of a bot's chain, so people can follow it. */
+export const GARBAGE_CHAIN_STEP_MS = 900;
+
+export const garbageBots: BotRunner<GarbageState, GarbageAction> = {
+  pending(s) {
+    if (s.phase === "reveal") {
+      // Bots tidy their revealed cards one swap at a time, so you can watch.
+      const p = s.players.find((x) => x.isBot && !x.revealDone);
+      return p ? { botId: p.id, justDealt: 0, pace: GARBAGE_CHAIN_STEP_MS } : null;
+    }
+    if (s.phase !== "playing" || !s.currentTurnId) return null;
+    const p = s.players.find((x) => x.id === s.currentTurnId);
+    if (!p?.isBot) return null;
+    if (s.active) return { botId: p.id, justDealt: 0, pace: GARBAGE_CHAIN_STEP_MS };
+    // First move of a round: the boards are still being dealt.
+    const freshRound = s.discard.length === 1 && s.players.every((x) => x.slots.every((slot) => slot.shown === null));
+    return { botId: p.id, justDealt: freshRound ? 1500 : 0 };
+  },
+  decide(s, botId, rng) {
+    const view = getGarbageView(s, botId);
+    if (view.phase === "reveal") return arrangeRevealed(view, botId);
+    const obs = observeGarbage(view, botId);
+    return obs ? getGarbageBotAction(obs, difficultyOf(s.players, botId), rng) : null;
   },
 };
 

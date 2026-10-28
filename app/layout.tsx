@@ -8,7 +8,7 @@ const shoulders = Big_Shoulders({ subsets: ["latin"], variable: "--font-shoulder
 
 export const metadata: Metadata = {
   title: "Showdown",
-  description: "BS Poker, Texas Hold'em and Blackjack with friends",
+  description: "Texas Hold'em, BS Poker, Blackjack and Garbage with friends",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

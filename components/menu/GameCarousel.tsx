@@ -10,6 +10,7 @@ import { PlayingCard } from "@/components/ui/PlayingCard";
 import { cards } from "@/components/rules/sample-cards";
 import { BlackjackHowTo } from "@/components/blackjack/BlackjackHowTo";
 import { HoldemHowTo } from "@/components/holdem/HoldemHowTo";
+import { GarbageHowTo } from "@/components/garbage/GarbageHowTo";
 import { JoinWithCode } from "./JoinWithCode";
 
 interface Slide {
@@ -39,6 +40,12 @@ const SLIDES: Slide[] = [
     show: "AC KH",
     hidden: 1,
     howTo: { Dialog: BlackjackHowTo },
+  },
+  {
+    id: "garbage",
+    show: "AS 2H 3D",
+    hidden: 2,
+    howTo: { Dialog: GarbageHowTo },
   },
 ];
 

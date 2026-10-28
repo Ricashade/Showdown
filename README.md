@@ -1,6 +1,6 @@
 # Showdown
 
-Multiplayer card games on Next.js (App Router): **BS Poker**, **Texas Hold'em** (no-limit) and **Blackjack**, online or on one screen.
+Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack** and **Garbage**, online or on one screen.
 
 ```bash
 npm install
@@ -20,6 +20,7 @@ app/
   rules/, rules/demo/       How to play + guided 30-second demo
   texas-holdem/              Hold'em: chooser, room/[code]/ (online), local/ (simulator)
   blackjack/                Blackjack: same three routes
+  garbage/                  Garbage: same three routes
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -32,6 +33,7 @@ lib/
   holdem-game.ts            Hold'em reducer: blinds, betting rules, streets, runouts, showdown
   blackjack-engine.ts       Blackjack: hand values, reducer (bets, insurance, hit/stand/double/split,
                             dealer, payouts), views, and the host's clock (blackjackClock)
+  garbage-engine.ts         Garbage: face-card roles, legal slots, chain turns, shrinking rounds, views
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
                             nextRound, applyAction; getPlayerView (hidden info), getLegalActions
   bot-ai.ts                 Bots for every game (entry point); brains in bots/*-bot.ts
@@ -46,6 +48,7 @@ components/
   holdem/                   Hold'em table, actions, results, HoldemHowTo
   blackjack/                Table, lobby, actions, round results, how-to-play dialog with demo
   menu/                     Game carousel, join-with-code dialog
+  garbage/                  Boards, piles and chain animations, lobby, how-to-play dialog with demo
 tests/                      Engine, game-loop and online-room tests
 ```
 
@@ -105,6 +108,24 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
 - **Timers online:** the reducer takes `now` as an argument and the host stamps its own clock on
   every move; `useTableClock` on the host fires TIME_UP / DEALER_STEP / NEXT_ROUND when due.
 
+## Garbage (as implemented)
+
+- **Table:** 2–6 players; one deck for two players, two decks for three or more. An empty draw pile
+  is rebuilt from the discards (all but the top card). One card starts the discard pile.
+- **Boards:** 10 face-down slots (A–5 on top, 6–10 below). Clear your board and you get one fewer
+  slot next round; the first to clear a one-slot board wins.
+- **Turn:** draw from the stock, or take the top discard if you can play it. Put a number in its
+  own slot and pick up the face-down card there; a wild goes in any face-down slot. The real number
+  bumps a wild out of its slot, and the wild moves on. A card with nowhere to go (a dead face card,
+  a slot you've already filled, a number above your slot count) is discarded and ends your turn.
+- **Face cards:** Queens and Kings wild, Jacks garbage by default; the host can make Jacks wild
+  instead, or set each face card.
+- **End of a round:** once someone clears their board, everyone else gets one last turn. Then they
+  turn over their face-down cards and can swap them between those slots; anyone whose slots all end
+  up holding their own number (or a wild) clears too. Bots lay theirs out the best way. Each player
+  presses Done, or the host ends it. The host can switch the last turn and reveal off, and the
+  round then ends as soon as a board is cleared.
+
 ## Bots
 
 The host can seat Easy, Medium or Hard bots in any game, mixed freely with people.
@@ -124,6 +145,10 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
 - **Blackjack:** Easy hits until it gets nervous (14–17); Medium plays the rule of thumb (hit 11
   or less, stand on 12–16 against 2–6) plus doubling 10/11 and splitting Aces and 8s; Hard plays
   full basic strategy. Only Easy ever takes insurance.
+- **Garbage:** each step of a bot's chain is 900 ms apart so you can follow it. Easy takes a
+  playable discard half the time and puts wilds in the first open slot; Medium always takes it and
+  puts wilds where that number has shown up most; Hard puts wilds where the fewest copies are left
+  unseen (discards and every board).
 
 ## Online play (Supabase Realtime)
 
