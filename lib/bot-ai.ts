@@ -10,17 +10,20 @@ import type { HoldemAction, HoldemState } from "@/types/holdem";
 import type { BlackjackAction, BlackjackState } from "@/types/blackjack";
 import type { GarbageAction, GarbageState } from "@/types/garbage";
 import type { RummyAction, RummyState } from "@/types/rummy";
+import type { WarAction, WarState } from "@/types/war";
 import type { BotDifficulty } from "@/types/game";
 import { getPlayerView } from "./bs-poker-game";
 import { getHoldemView } from "./holdem-game";
 import { getBlackjackView, MIN_BET } from "./blackjack-engine";
 import { getGarbageView } from "./garbage-engine";
 import { getRummyView } from "./rummy-engine";
+import { getWarView } from "./war-engine";
 import { getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 import { getHoldemBotAction, observeHoldem } from "./bots/holdem-bot";
 import { getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
 import { arrangeRevealed, getGarbageBotAction, observeGarbage } from "./bots/garbage-bot";
 import { getRummyBotAction, observeRummy } from "./bots/rummy-bot";
+import { getWarBotAction, observeWar } from "./bots/war-bot";
 import { randomId } from "./multiplayer/room-code";
 
 export { estimateBidProbability, getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
@@ -28,6 +31,7 @@ export { estimateHoldemEquity, getHoldemBotAction, observeHoldem, startingHandSc
 export { basicStrategy, getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
 export { arrangeRevealed, chooseWildSlot, getGarbageBotAction, observeGarbage } from "./bots/garbage-bot";
 export { getRummyBotAction, observeRummy } from "./bots/rummy-bot";
+export { chooseWarCard, getWarBotAction, observeWar } from "./bots/war-bot";
 
 /** How a game exposes its bots to the driver that runs them. */
 export interface BotRunner<S, A> {
@@ -138,6 +142,23 @@ export const rummyBots: BotRunner<RummyState, RummyAction> = {
   decide(s, botId, rng) {
     const obs = observeRummy(getRummyView(s, botId), botId);
     return obs ? getRummyBotAction(obs, difficultyOf(s.players, botId), rng) : null;
+  },
+};
+
+export const warBots: BotRunner<WarState, WarAction> = {
+  pending(s) {
+    if (s.phase !== "playing" || !s.sides) return null;
+    const bot = s.sides.find((x) => !x.ready && s.players.find((p) => p.id === x.id)?.isBot);
+    if (!bot) return null;
+    const vsBot = s.sides.every((x) => s.players.find((p) => p.id === x.id)?.isBot);
+    // Against a person, flip straight away so their flip settles it at once. Two bots slow
+    // down enough to watch; picking a card in Tactical War takes a moment.
+    const pace = vsBot ? 1100 : s.settings.mode === "tactical" ? 600 : 150;
+    return { botId: bot.id, justDealt: 0, pace: s.stage === "war" && vsBot ? 2000 : pace };
+  },
+  decide(s, botId, rng) {
+    const obs = observeWar(getWarView(s, botId), botId);
+    return obs ? getWarBotAction(obs, difficultyOf(s.players, botId), rng) : null;
   },
 };
 

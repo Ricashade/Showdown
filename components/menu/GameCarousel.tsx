@@ -12,6 +12,7 @@ import { BlackjackHowTo } from "@/components/blackjack/BlackjackHowTo";
 import { HoldemHowTo } from "@/components/holdem/HoldemHowTo";
 import { GarbageHowTo } from "@/components/garbage/GarbageHowTo";
 import { RummyHowTo } from "@/components/rummy/RummyHowTo";
+import { WarHowTo } from "@/components/war/WarHowTo";
 import { JoinWithCode } from "./JoinWithCode";
 
 interface Slide {
@@ -53,6 +54,12 @@ const SLIDES: Slide[] = [
     show: "7S 8S 9S KH",
     hidden: 1,
     howTo: { Dialog: RummyHowTo },
+  },
+  {
+    id: "war",
+    show: "AS AH",
+    hidden: 1,
+    howTo: { Dialog: WarHowTo },
   },
 ];
 
@@ -206,7 +213,7 @@ function SlideFace({ slide, onJoin, onHowTo }: { slide: Slide; onJoin: () => voi
   return (
     <>
       <div className="flex items-center justify-between gap-6">
-        <h2 className="min-w-0 font-display text-6xl leading-[0.9] font-extrabold text-bone sm:text-8xl">{info.title}</h2>
+        <h2 className="min-w-0 font-display text-6xl leading-[0.9] font-extrabold text-bone sm:text-7xl lg:text-8xl">{info.title}</h2>
         <Showcase slide={slide} />
       </div>
 

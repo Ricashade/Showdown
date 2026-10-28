@@ -1,6 +1,6 @@
 # Showdown
 
-Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage** and **Rummy**, online or on one screen.
+Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage**, **Rummy** and **War**, online or on one screen.
 
 ```bash
 npm install
@@ -22,6 +22,7 @@ app/
   blackjack/                Blackjack: same three routes
   garbage/                  Garbage: same three routes
   rummy/                    Rummy: same three routes
+  war/                      War: same three routes
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -37,6 +38,7 @@ lib/
   garbage-engine.ts         Garbage: face-card roles, legal slots, chain turns, shrinking rounds, views
   rummy-melds.ts            Rummy sets and runs (Aces, Jokers), lay-offs, finding melds in a hand, points
   rummy-engine.ts           Rummy reducer: draw (incl. Rummy 500 digs), meld, lay off, discard, scoring
+  war-engine.ts             War: battles, Wars and short stacks, Classic and Tactical, win conditions
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
                             nextRound, applyAction; getPlayerView (hidden info), getLegalActions
   bot-ai.ts                 Bots for every game (entry point); brains in bots/*-bot.ts
@@ -53,6 +55,7 @@ components/
   menu/                     Game carousel, join-with-code dialog
   garbage/                  Boards, piles and chain animations, lobby, how-to-play dialog with demo
   rummy/                    Hand (sort, multi-select), melds, fanned discard pile, lobby, how-to dialog
+  war/                      Tug-of-war counter, battle zone, WAR! banner, flip/auto-flip/speed, how-to
 tests/                      Engine, game-loop and online-room tests
 ```
 
@@ -145,6 +148,18 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
   A 15 or 5 when played low, Jokers 15) minus what's left in hand. Match to 500 by default.
 - **Rummy:** going out in one turn without having melded before doubles the points.
 
+## War (as implemented)
+
+- **Players:** two duel; anyone else in the room watches. With more than two seated, the host picks
+  the duelists. Each gets half the deck (27 with Jokers, which beat everything). Suits don't count.
+- **Battles:** both flip (button or Space; auto-flip at 1×, 2× or Turbo); the higher card takes both.
+  A tie is a War: three face-down cards each (the host can make it 1 or 2), then one face up; the
+  higher takes the lot, and further ties stack. The face-down bounty is shown once it's settled.
+- **Short stacks:** too few cards for a full War puts down all but the last, which decides it; no
+  cards left at all loses. Won cards are shuffled into your deck when it runs out.
+- **Winning:** all the cards (default), first to 40, or most cards after 50 battles.
+- **Tactical War:** hold three cards and pick one each battle (and to settle a War).
+
 ## Bots
 
 The host can seat Easy, Medium or Hard bots in any game, mixed freely with people.
@@ -173,6 +188,9 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
   meld, lays off, and throws away its highest unconnected card; Hard also weighs every Rummy 500
   dig, drops pairs and near-runs whose cards are all gone, and avoids discards that would feed the
   table or the next player.
+- **War:** in Classic, a bot flips as soon as a battle opens, so your flip settles it at once. In
+  Tactical, Easy plays at random; Medium saves Aces and Kings for Wars; Hard baits a War when it holds
+  two high cards and throws low cards when the other side probably holds the high ones.
 
 ## Online play (Supabase Realtime)
 
