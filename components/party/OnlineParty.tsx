@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpen, Shuffle } from "lucide-react";
-import type { ActiveGameAction, PartyAction } from "@/types/party";
+import type { ActiveGameAction, PartyAction, PartyState } from "@/types/party";
 import { createParty, partyBots, partyClock, partyGame, type PartyView } from "@/lib/party-engine";
 import { GAMES, ROOM, type GameId } from "@/lib/games";
 import { OnlineRoomShell, type ReadyRoom } from "@/components/online/OnlineRoomShell";
@@ -18,6 +18,9 @@ import { GoFishTableScreen } from "@/components/gofish/GoFishTableScreen";
 import { GamePicker } from "./GamePicker";
 import { PostGameActions } from "./PostGameActions";
 import { HOW_TO } from "./how-to";
+import { RoomChat } from "@/components/RoomChat";
+import { mergeChat } from "@/lib/chat";
+import { useBanterSetting, useBotBanter, useRoomEvents } from "@/lib/hooks/use-room-chat";
 
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 
@@ -39,11 +42,22 @@ export default function OnlineParty({ code, initialGame }: { code: string; initi
   );
 }
 
-function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, PartyAction> }) {
-  const { view, me, isHost, act, removePlayer, addBot, connectedIds, error, exit, notices } = room;
+function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, PartyAction, PartyState> }) {
+  const { view, me, isHost, act, removePlayer, addBot, connectedIds, error, exit, notices, chat, say, hostState, postAsBot, live } = room;
   const [dialog, setDialog] = useState<"picker" | "howto" | null>(null);
   const [switched, setSwitched] = useState<{ message: string; id: number } | null>(null);
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "The host";
+
+  // The chat lives here, above whichever game is on, so it carries across game switches.
+  const [banter, setBanter] = useBanterSetting();
+  useBotBanter(hostState?.activeGameState ?? null, isHost && banter, postAsBot);
+  const roomEvents = useRoomEvents({
+    players: view.players,
+    game: view.selectedGame,
+    hostName,
+    winners: view.phase === "post_game" ? view.lastWinnerIds : [],
+    place: "room",
+  });
   const game = view.activeGameView;
 
   // Tell everyone else when the host puts another game on.
@@ -141,6 +155,15 @@ function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, 
       {dialog === "picker" && <GamePicker current={view.selectedGame} people={view.players.length} onPick={pick} onClose={() => setDialog(null)} />}
       {dialog === "howto" && <HowTo onClose={() => setDialog(null)} />}
       <Toast error={switched} />
+      <RoomChat
+        title="Room chat"
+        code={code}
+        me={me}
+        live={live}
+        messages={mergeChat(chat, roomEvents)}
+        onSend={say}
+        banter={isHost ? { on: banter, set: setBanter } : undefined}
+      />
     </>
   );
 }

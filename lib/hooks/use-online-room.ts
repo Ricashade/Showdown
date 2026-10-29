@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RoomGuest, RoomHost, type GameDefinition, type GuestStatus, type RoomAction, type RoomState } from "@/lib/multiplayer/room";
+import type { ChatMessage } from "@/lib/chat";
 import {
   clearSession,
   getTransport,
@@ -28,6 +29,7 @@ export type OnlineRoom<S, V> =
       error: { message: string; id: number } | null;
       /** The full game state — host only, never sent anywhere. Bots are run from it. */
       hostState: S | null;
+      chat: ChatMessage[];
     };
 
 /** How long a new host listens for an existing host before claiming the code. */
@@ -93,6 +95,7 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
             hostName: session.name,
             error: prev.phase === "ready" ? prev.error : null,
             hostState: host.getState(),
+            chat: host.getChat(),
           }));
         };
         const unsubscribe = host.subscribe(publish);
@@ -128,6 +131,7 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
             hostName: snap.hostName,
             error: snap.error,
             hostState: null,
+            chat: snap.chat,
           });
         };
         const unsubscribe = guest.subscribe(publish);
@@ -166,6 +170,16 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
 
   const removePlayer = useCallback((playerId: string) => hostRef.current?.removePlayer(playerId), []);
 
+  /** Say something in the room chat as this player. */
+  const say = useCallback((kind: "chat" | "reaction", text: string) => {
+    const host = hostRef.current;
+    if (host) host.post(host.hostId, kind, text);
+    else void guestRef.current?.say(kind, text);
+  }, []);
+
+  /** Host only: a line from one of the host's bots. */
+  const postAsBot = useCallback((botId: string, text: string) => void hostRef.current?.post(botId, "chat", text), []);
+
   /** Leave for good: the host closes the room for everyone, a guest gives up their seat. */
   const leave = useCallback(async () => {
     if (hostRef.current) await hostRef.current.close();
@@ -173,5 +187,5 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
     clearSession(roomKey);
   }, [roomKey]);
 
-  return { room, transport, setSession, act, removePlayer, leave };
+  return { room, transport, setSession, act, removePlayer, leave, say, postAsBot };
 }

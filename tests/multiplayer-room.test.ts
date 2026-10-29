@@ -251,4 +251,84 @@ describe("online room", () => {
     expect(host.getState().players.map((p) => p.id)).toEqual(["host", "bot_1"]);
     expect(host.getConnectedIds()).toContain("bot_1");
   });
+
+  describe("room chat", () => {
+    it("passes a guest's line to everyone, named by the host", async () => {
+      const hub = createMemoryHub();
+      const host = await makeHost(hub);
+      const { guest: ann } = await makeGuest(hub, "ann", "Ann");
+      const { guest: ben } = await makeGuest(hub, "ben", "Ben");
+      await settle();
+
+      await ann.say("chat", "  nice   hand  ");
+      await settle();
+      const line = { senderId: "ann", senderName: "Ann", text: "nice hand", kind: "chat" };
+      expect(host.getChat()).toMatchObject([line]);
+      expect(ann.getSnapshot().chat).toMatchObject([line]);
+      expect(ben.getSnapshot().chat).toMatchObject([line]);
+    });
+
+    it("posts for the host and the host's bots, but not as a guest", async () => {
+      const hub = createMemoryHub();
+      const host = await makeHost(hub);
+      const { guest: ann } = await makeGuest(hub, "ann", "Ann");
+      await settle();
+      host.act({ type: "JOIN_ROOM", player: { id: "bot_1", name: "Dealer Dan", isBot: true, botDifficulty: "easy" } });
+
+      expect(host.post("host", "reaction", "🔥")).toBe(true);
+      expect(host.post("bot_1", "chat", "I never bluff.")).toBe(true);
+      expect(host.post("ann", "chat", "words in Ann's mouth")).toBe(false);
+      expect(host.post("host", "reaction", "🍕")).toBe(false);
+      await settle();
+      expect(ann.getSnapshot().chat.map((m) => `${m.senderName}: ${m.text}`)).toEqual(["Hana: 🔥", "Dealer Dan: I never bluff."]);
+    });
+
+    it("ignores chat sealed with someone else's key, and replays", async () => {
+      const hub = createMemoryHub();
+      const host = await makeHost(hub);
+      const recorded: unknown[] = [];
+      hub.tap("ABCD", (event, payload) => event === "chat" && (payload as { from?: string }).from && recorded.push(payload));
+      const { guest: ann } = await makeGuest(hub, "ann", "Ann");
+      await settle();
+
+      const fakeKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+      const attacker = hub.factory("ABCD");
+      await attacker.send("chat", { from: "ann", sealed: await seal(fakeKey, { n: Date.now() + 1e6, chat: { kind: "chat", text: "forged" } }) });
+      await ann.say("chat", "real");
+      await settle();
+      await new Promise((r) => setTimeout(r, 300));
+      await attacker.send("chat", recorded[0]);
+      await settle();
+      expect(host.getChat().map((m) => m.text)).toEqual(["real"]);
+    });
+
+    it("gives the chat so far to someone who joins later, and keeps it across a host refresh", async () => {
+      const hub = createMemoryHub();
+      const host = await makeHost(hub);
+      await settle();
+      host.post("host", "chat", "first");
+      host.post("host", "chat", "second");
+      const { guest: ann } = await makeGuest(hub, "ann", "Ann");
+      await settle();
+      expect(ann.getSnapshot().chat.map((m) => m.text)).toEqual(["first", "second"]);
+
+      const identity = await generateIdentity();
+      const meta = { playerId: "host", name: "Hana", role: "host" as const, publicKey: identity.publicKey, joinedAt: 1 };
+      const again = new RoomHost(bsPokerGame, hub.factory("ZZZZ"), identity, meta, host.snapshot());
+      expect(again.getChat().map((m) => m.text)).toEqual(["first", "second"]);
+    });
+
+    it("drops empty lines, trims long ones, and slows down a flood", async () => {
+      const hub = createMemoryHub();
+      const host = await makeHost(hub);
+      const { guest: ann } = await makeGuest(hub, "ann", "Ann");
+      await settle();
+
+      await ann.say("chat", "   ");
+      await ann.say("chat", "x".repeat(500));
+      await ann.say("chat", "too soon");
+      await settle();
+      expect(host.getChat().map((m) => m.text.length)).toEqual([200]);
+    });
+  });
 });

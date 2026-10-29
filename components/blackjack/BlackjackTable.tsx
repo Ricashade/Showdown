@@ -149,7 +149,7 @@ function Seat({
         )}
       >
         <div className="flex max-w-40 items-baseline gap-1.5">
-          <span className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{p.name}</span>
+          <span data-seat-of={p.id} className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{p.name}</span>
           {isViewer && <span className="text-xs text-brass-lit">you</span>}
           {p.isBot && <span className="text-xs text-brass-lit">{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
         </div>

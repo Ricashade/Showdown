@@ -4,10 +4,13 @@
  *   guest ──presence (name, public key)──▶ host     host seats lobby newcomers
  *   guest ──"action" {from, sealed move}──▶ host     host checks it's really them, runs applyAction
  *   host  ──"state" {sealed view per player}──▶ all  each guest can open only their own view
+ *   guest ──"chat" {from, sealed message}──▶ host    host checks the sender, stamps their name
+ *   host  ──"chat" {sealed messages per player}──▶ all  new messages (or the history, on hello)
  *
  * Only the host ever holds the full GameState (hands of everyone + the shuffle seed).
  */
 import type { ActionResult, PlayerSeed } from "@/types/game";
+import { CHAT_HISTORY, CHAT_MIN_GAP_MS, cleanChat, isChatMessage, makeChat, mergeChat, type ChatMessage } from "@/lib/chat";
 import type { PresenceMeta, RoomChannel } from "./channel";
 import { deriveSharedKey, isSealed, open, seal, type Identity, type Sealed } from "./crypto";
 
@@ -16,7 +19,7 @@ export interface RoomState {
   hostId: string;
   phase: string;
   /** Bots sit at the table without a connection of their own; the host plays for them. */
-  players: { id: string; isBot?: boolean }[];
+  players: { id: string; name?: string; isBot?: boolean }[];
 }
 
 /** Moves that act for a player carry their id in `playerId`. */
@@ -60,6 +63,17 @@ interface SealedAction<A> {
   action: A;
 }
 
+/** Inside a guest's sealed chat line; `n` shares the action counter. */
+interface SealedChat {
+  n: number;
+  chat: { kind: unknown; text: unknown };
+}
+
+/** What the host sends one guest about chat (sealed with their key). */
+interface ChatEnvelope {
+  messages: ChatMessage[];
+}
+
 // ---------------------------------------------------------------------------
 // Host
 // ---------------------------------------------------------------------------
@@ -74,6 +88,7 @@ export interface HostSnapshot<S> {
   guestKeys: [string, string][];
   lastNonce: [string, number][];
   removed: string[];
+  chat?: ChatMessage[];
 }
 
 export class RoomHost<S extends RoomState, A extends RoomAction, V> {
@@ -90,6 +105,8 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
   private queue: Promise<void> = Promise.resolve();
   private members: PresenceMeta[] = [];
   private closing = false;
+  private chat: ChatMessage[];
+  private lastChatAt = new Map<string, number>();
 
   constructor(
     private game: GameDefinition<S, A, V>,
@@ -104,6 +121,7 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
     this.guestPublicKeys = new Map(snap?.guestKeys ?? []);
     this.lastNonce = new Map(snap?.lastNonce ?? []);
     this.removed = new Set(snap?.removed ?? []);
+    this.chat = (snap?.chat ?? []).filter(isChatMessage).slice(-CHAT_HISTORY);
   }
 
   get hostId() {
@@ -133,7 +151,25 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
       guestKeys: [...this.guestPublicKeys],
       lastNonce: [...this.lastNonce],
       removed: [...this.removed],
+      chat: this.chat,
     };
+  }
+
+  getChat() {
+    return this.chat;
+  }
+
+  /**
+   * Post to the room chat as the host or one of the host's bots (a guest's line arrives through
+   * `onChat`, already checked). Returns false if it isn't sendable.
+   */
+  post(senderId: string, kind: unknown, text: unknown): boolean {
+    const clean = cleanChat(kind, text);
+    if (!clean) return false;
+    const sender = this.state.players.find((p) => p.id === senderId);
+    if (senderId !== this.hostId && !sender?.isBot) return false;
+    this.addChat(senderId, clean.kind, clean.text);
+    return true;
   }
 
   subscribe(fn: () => void) {
@@ -144,8 +180,15 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
   async start() {
     this.channel.onPresence((members) => this.enqueue(() => this.onPresence(members)));
     this.channel.onMessage("action", (p) => this.enqueue(() => this.onAction(p)));
-    // A guest that just (re)connected asks for the latest state.
-    this.channel.onMessage("hello", () => this.enqueue(() => this.publish()));
+    this.channel.onMessage("chat", (p) => this.enqueue(() => this.onChat(p)));
+    // A guest that just (re)connected asks for the latest state, and the chat so far.
+    this.channel.onMessage("hello", (p) =>
+      this.enqueue(async () => {
+        await this.publish();
+        const from = (p as { from?: unknown } | null)?.from;
+        if (typeof from === "string" && this.chat.length) await this.publishChat(this.chat, from);
+      }),
+    );
     await this.channel.connect(this.meta);
   }
 
@@ -262,6 +305,48 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
     await this.publish(error ? { [msg.from]: error } : undefined);
   }
 
+  private async onChat(payload: unknown) {
+    const msg = payload as ActionMessage;
+    if (!msg || typeof msg.from !== "string" || !isSealed(msg.sealed)) return;
+    const key = this.sharedKeys.get(msg.from);
+    if (!key || this.removed.has(msg.from)) return;
+    let sealedChat: SealedChat;
+    try {
+      sealedChat = await open<SealedChat>(key, msg.sealed);
+    } catch {
+      return; // Not sealed with this player's key.
+    }
+    if (!(sealedChat.n > (this.lastNonce.get(msg.from) ?? 0))) return; // Replay.
+    this.lastNonce.set(msg.from, sealedChat.n);
+    const clean = cleanChat(sealedChat.chat?.kind, sealedChat.chat?.text);
+    if (!clean) return;
+    // Only people actually in the room, and not faster than a person types.
+    if (!this.state.players.some((p) => p.id === msg.from) && !this.connected.has(msg.from)) return;
+    const now = Date.now();
+    if (now - (this.lastChatAt.get(msg.from) ?? 0) < CHAT_MIN_GAP_MS) return;
+    this.lastChatAt.set(msg.from, now);
+    this.addChat(msg.from, clean.kind, clean.text);
+  }
+
+  /** Name the sender from the room's own records, keep it, and pass it on. */
+  private addChat(senderId: string, kind: "chat" | "reaction", text: string) {
+    const name = this.state.players.find((p) => p.id === senderId)?.name ?? this.connected.get(senderId)?.name ?? "Player";
+    const message = makeChat(senderId, name, kind, text);
+    this.chat = mergeChat(this.chat, [message]);
+    this.notify();
+    this.enqueue(() => this.publishChat([message]));
+  }
+
+  /** Seal chat messages for every guest (or just `onlyTo`). */
+  private async publishChat(messages: ChatMessage[], onlyTo?: string) {
+    const envelopes: Record<string, Sealed> = {};
+    for (const [playerId, key] of this.sharedKeys) {
+      if (this.removed.has(playerId) || (onlyTo && playerId !== onlyTo)) continue;
+      envelopes[playerId] = await seal(key, { messages } satisfies ChatEnvelope);
+    }
+    if (Object.keys(envelopes).length) await this.channel.send("chat", { envelopes } satisfies StateMessage);
+  }
+
   private async publish(errors: Record<string, string> = {}) {
     this.seq++;
     const connectedIds = this.getConnectedIds();
@@ -315,6 +400,7 @@ export interface GuestSnapshot<V> {
   /** Latest error from the host, with a counter so the same message can show twice. */
   error: { message: string; id: number } | null;
   hostName: string | null;
+  chat: ChatMessage[];
 }
 
 const NOT_FOUND_MS = 7000;
@@ -327,7 +413,7 @@ export class RoomGuest<A extends RoomAction, V> {
   private errorId = 0;
   private listeners = new Set<() => void>();
   private notFoundTimer: ReturnType<typeof setTimeout> | null = null;
-  private snap: GuestSnapshot<V> = { status: "connecting", view: null, connectedIds: [], error: null, hostName: null };
+  private snap: GuestSnapshot<V> = { status: "connecting", view: null, connectedIds: [], error: null, hostName: null, chat: [] };
 
   constructor(
     private channel: RoomChannel,
@@ -351,6 +437,7 @@ export class RoomGuest<A extends RoomAction, V> {
   async start() {
     this.channel.onPresence((m) => void this.onPresence(m));
     this.channel.onMessage("state", (p) => void this.onState(p));
+    this.channel.onMessage("chat", (p) => void this.onChat(p));
     await this.channel.connect(this.meta);
     this.update({ status: this.snap.status === "connecting" ? "finding-host" : this.snap.status });
     this.notFoundTimer = setTimeout(() => {
@@ -366,10 +453,33 @@ export class RoomGuest<A extends RoomAction, V> {
   /** Seal a move with our key and send it to the host. */
   async act(action: A) {
     if (!this.hostKey) return;
-    // Wall-clock based so it keeps increasing across page refreshes.
-    this.lastNonce = Math.max(this.lastNonce + 1, Date.now());
-    const sealed = await seal(this.hostKey, { n: this.lastNonce, action } satisfies SealedAction<A>);
+    const sealed = await seal(this.hostKey, { n: this.nextNonce(), action } satisfies SealedAction<A>);
     await this.channel.send("action", { from: this.meta.playerId, sealed } satisfies ActionMessage);
+  }
+
+  /** Say something in the room chat. It shows once the host has passed it on. */
+  async say(kind: "chat" | "reaction", text: string) {
+    if (!this.hostKey || !cleanChat(kind, text)) return;
+    const sealed = await seal(this.hostKey, { n: this.nextNonce(), chat: { kind, text } } satisfies SealedChat);
+    await this.channel.send("chat", { from: this.meta.playerId, sealed } satisfies ActionMessage);
+  }
+
+  /** Wall-clock based so it keeps increasing across page refreshes; shared by moves and chat. */
+  private nextNonce() {
+    this.lastNonce = Math.max(this.lastNonce + 1, Date.now());
+    return this.lastNonce;
+  }
+
+  private async onChat(payload: unknown) {
+    const sealed = (payload as StateMessage)?.envelopes?.[this.meta.playerId];
+    if (!this.hostKey || !isSealed(sealed)) return;
+    let env: ChatEnvelope;
+    try {
+      env = await open<ChatEnvelope>(this.hostKey, sealed);
+    } catch {
+      return;
+    }
+    if (Array.isArray(env?.messages)) this.update({ chat: mergeChat(this.snap.chat, env.messages) });
   }
 
   private update(patch: Partial<GuestSnapshot<V>>) {

@@ -94,6 +94,9 @@ export const isGameId = (x: unknown): x is GameMode => typeof x === "string" && 
 /** Seats the game has, and how many it needs. */
 export const seatsFor = (id: GameMode) => ({ min: kit(id).minPlayers, max: kit(id).def.maxPlayers });
 
+/** Who won a game that has just finished on its own (none while it's still going). */
+export const matchWinners = (s: ActiveGameState): string[] => (s.phase === "game_over" ? kit(s.mode as GameMode).winners(s, true) : []);
+
 // ---------------------------------------------------------------------------
 // The reducer
 // ---------------------------------------------------------------------------

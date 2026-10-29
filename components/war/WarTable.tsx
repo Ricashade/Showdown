@@ -167,7 +167,7 @@ function Deck({ side, view, disconnected }: { side: WarPublicSide; view: WarView
         )}
       </div>
       <div className="flex min-w-24 flex-col items-center rounded-2xl bg-leather px-3 py-1.5">
-        <span className="max-w-32 truncate text-sm font-bold text-bone">
+        <span data-seat-of={side.id} className="max-w-32 truncate text-sm font-bold text-bone">
           {p?.name}
           {side.id === view.viewerId && <span className="ml-1 text-xs font-normal text-brass-lit">you</span>}
         </span>

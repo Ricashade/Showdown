@@ -165,7 +165,7 @@ function Seat({
           {p.handCount === 0 && <span className="pb-4 text-sm text-ash">No cards</span>}
         </div>
         <div className={clsx("flex w-full flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-leather-lit ring-2 ring-brass-lit" : "bg-leather")}>
-          <span className="flex max-w-full items-center gap-1.5 truncate text-base font-bold text-bone">
+          <span data-seat-of={p.id} className="flex max-w-full items-center gap-1.5 truncate text-base font-bold text-bone">
             {p.isBot && <Bot className="size-4 shrink-0 text-brass-lit" aria-hidden />}
             {p.name}
           </span>
@@ -296,7 +296,7 @@ function Nameplate({ player: p, view, you }: { player: GoFishPublicPlayer; view:
   const isTurn = view.phase === "playing" && view.currentTurnId === p.id;
   return (
     <div className={clsx("flex min-w-32 flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-leather-lit ring-2 ring-brass-lit" : "bg-leather")}>
-      <span className="text-base font-bold text-bone">
+      <span data-seat-of={p.id} className="text-base font-bold text-bone">
         {p.name}
         {you && <span className="ml-1.5 text-xs font-normal text-brass-lit">you</span>}
       </span>

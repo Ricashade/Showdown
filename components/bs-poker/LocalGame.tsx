@@ -9,6 +9,7 @@ import { useBotDriver } from "@/lib/hooks/use-bot-driver";
 import { bsPokerBots, newBot } from "@/lib/bot-ai";
 import { PovSwitcher } from "@/components/table/PovSwitcher";
 import { TableScreen } from "./TableScreen";
+import { LocalRoomChat } from "@/components/RoomChat";
 
 function initialRoom(): BsPokerState {
   let s = createRoom({ roomId: "local-dev", host: { id: "p1", name: "Player 1" } });
@@ -63,47 +64,50 @@ export default function LocalGame() {
   const actingId = viewer === "god" ? state.currentTurnPlayerId : viewer;
 
   return (
-    <TableScreen
-      view={view}
-      actingId={actingId}
-      isHost
-      onAction={dispatch}
-      onStartGame={() => dispatch({ type: "START_GAME", playerId: state.hostId, seed: randomSeed() })}
-      exit={
-        state.phase === "lobby"
-          ? undefined
-          : {
-              label: "End game",
-              confirm: "End this game and go back to the lobby?",
-              onExit: () => dispatch({ type: "RETURN_TO_LOBBY", playerId: state.hostId }),
-            }
-      }
-      canDealNextRound
-      onViewAs={setViewer}
-      lobby={{
-        canRename: () => true,
-        canRemove: (id) => id !== state.hostId,
-        onRemove: (id) => dispatch({ type: "LEAVE_ROOM", playerId: id }),
-        onRename: (id, name) => dispatch({ type: "RENAME_PLAYER", playerId: id, name }),
-        onAddBot: (difficulty) => dispatch({ type: "JOIN_ROOM", player: newBot(difficulty, state.players.map((p) => p.name)) }),
-        onAddPlayer: () => {
-          const n = nextIdRef.current++;
-          dispatch({ type: "JOIN_ROOM", player: { id: `p${n}`, name: `Player ${state.players.length + 1}` } });
-        },
-      }}
-      error={error}
-      topBar={
-        state.phase === "lobby" ? undefined : (
-          <PovSwitcher
-            players={view.players}
-            viewer={viewer}
-            currentTurnId={state.currentTurnPlayerId}
-            followTurn={followTurn}
-            onSelect={setViewer}
-            onFollowTurnChange={setFollowTurn}
-          />
-        )
-      }
-    />
+    <>
+      <TableScreen
+        view={view}
+        actingId={actingId}
+        isHost
+        onAction={dispatch}
+        onStartGame={() => dispatch({ type: "START_GAME", playerId: state.hostId, seed: randomSeed() })}
+        exit={
+          state.phase === "lobby"
+            ? undefined
+            : {
+                label: "End game",
+                confirm: "End this game and go back to the lobby?",
+                onExit: () => dispatch({ type: "RETURN_TO_LOBBY", playerId: state.hostId }),
+              }
+        }
+        canDealNextRound
+        onViewAs={setViewer}
+        lobby={{
+          canRename: () => true,
+          canRemove: (id) => id !== state.hostId,
+          onRemove: (id) => dispatch({ type: "LEAVE_ROOM", playerId: id }),
+          onRename: (id, name) => dispatch({ type: "RENAME_PLAYER", playerId: id, name }),
+          onAddBot: (difficulty) => dispatch({ type: "JOIN_ROOM", player: newBot(difficulty, state.players.map((p) => p.name)) }),
+          onAddPlayer: () => {
+            const n = nextIdRef.current++;
+            dispatch({ type: "JOIN_ROOM", player: { id: `p${n}`, name: `Player ${state.players.length + 1}` } });
+          },
+        }}
+        error={error}
+        topBar={
+          state.phase === "lobby" ? undefined : (
+            <PovSwitcher
+              players={view.players}
+              viewer={viewer}
+              currentTurnId={state.currentTurnPlayerId}
+              followTurn={followTurn}
+              onSelect={setViewer}
+              onFollowTurnChange={setFollowTurn}
+            />
+          )
+        }
+      />
+      <LocalRoomChat state={state} speakerId={viewer === "god" ? state.hostId : viewer} />
+    </>
   );
 }

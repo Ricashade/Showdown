@@ -94,7 +94,7 @@ export function PlayerSeat({
         )}
       >
         <div className="flex max-w-40 items-baseline gap-1.5">
-          <span className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{player.name}</span>
+          <span data-seat-of={player.id} className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{player.name}</span>
           {isViewer && <span className="text-xs text-brass-lit">you</span>}
           {player.isBot && <span className="text-xs text-brass-lit">{DIFFICULTY_LABEL[player.botDifficulty ?? "medium"]}</span>}
         </div>

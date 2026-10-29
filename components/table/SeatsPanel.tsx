@@ -51,7 +51,7 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
         {players.map((p, i) => {
           const online = !connectedIds || connectedIds.has(p.id);
           return (
-            <li key={p.id} className="flex min-h-12 items-center gap-3 rounded-full bg-baize-deep/70 py-1 pr-2 pl-1.5">
+            <li key={p.id} data-seat-of={p.id} className="flex min-h-12 items-center gap-3 rounded-full bg-baize-deep/70 py-1 pr-2 pl-1.5">
               <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-leather font-display text-lg font-bold text-bone">
                 {i + 1}
               </span>
@@ -92,7 +92,7 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
           <h3 className="mt-6 font-display text-2xl font-bold text-bone">Sitting out</h3>
           <ul className="mt-3 space-y-2">
             {options.sittingOut.map((p) => (
-              <li key={p.id} className="flex min-h-12 items-center gap-3 rounded-full border border-dashed border-bone/30 py-1 pr-2 pl-4">
+              <li key={p.id} data-seat-of={p.id} className="flex min-h-12 items-center gap-3 rounded-full border border-dashed border-bone/30 py-1 pr-2 pl-4">
                 <span className="min-w-0 flex-1 truncate text-base text-bone">
                   {p.name}
                   {viewerId === p.id && <span className="ml-1.5 text-sm text-brass-lit">you</span>}

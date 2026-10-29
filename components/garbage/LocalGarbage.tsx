@@ -9,6 +9,7 @@ import { useBotDriver } from "@/lib/hooks/use-bot-driver";
 import { garbageBots, newBot } from "@/lib/bot-ai";
 import { PovSwitcher } from "@/components/table/PovSwitcher";
 import { GarbageTableScreen } from "./GarbageTableScreen";
+import { LocalRoomChat } from "@/components/RoomChat";
 
 function initialRoom(): GarbageState {
   let s = createGarbageRoom({ roomId: "local-garbage", host: { id: "p1", name: "Player 1" } });
@@ -60,41 +61,44 @@ export default function LocalGarbage() {
   const actingId = viewer === "god" ? toAct : viewer;
 
   return (
-    <GarbageTableScreen
-      view={view}
-      actingId={actingId}
-      isHost
-      onAction={dispatch}
-      onStartGame={() => dispatch({ type: "START_GAME", playerId: state.hostId, seed: randomSeed() })}
-      exit={
-        state.phase === "lobby"
-          ? undefined
-          : { label: "End game", confirm: "End this game?", onExit: () => dispatch({ type: "RETURN_TO_LOBBY", playerId: state.hostId }) }
-      }
-      error={error}
-      lobby={{
-        canRename: () => true,
-        canRemove: (id) => id !== state.hostId,
-        onRemove: (id) => dispatch({ type: "LEAVE_ROOM", playerId: id }),
-        onRename: (id, name) => dispatch({ type: "RENAME_PLAYER", playerId: id, name }),
-        onAddBot: (difficulty) => dispatch({ type: "JOIN_ROOM", player: newBot(difficulty, state.players.map((p) => p.name)) }),
-        onAddPlayer: () => {
-          const n = nextIdRef.current++;
-          dispatch({ type: "JOIN_ROOM", player: { id: `p${n}`, name: `Player ${state.players.length + 1}` } });
-        },
-      }}
-      topBar={
-        state.phase === "lobby" ? undefined : (
-          <PovSwitcher
-            players={view.players.map((p) => ({ ...p, status: "active" }))}
-            viewer={viewer}
-            currentTurnId={state.currentTurnId}
-            followTurn={followTurn}
-            onSelect={setViewer}
-            onFollowTurnChange={setFollowTurn}
-          />
-        )
-      }
-    />
+    <>
+      <GarbageTableScreen
+        view={view}
+        actingId={actingId}
+        isHost
+        onAction={dispatch}
+        onStartGame={() => dispatch({ type: "START_GAME", playerId: state.hostId, seed: randomSeed() })}
+        exit={
+          state.phase === "lobby"
+            ? undefined
+            : { label: "End game", confirm: "End this game?", onExit: () => dispatch({ type: "RETURN_TO_LOBBY", playerId: state.hostId }) }
+        }
+        error={error}
+        lobby={{
+          canRename: () => true,
+          canRemove: (id) => id !== state.hostId,
+          onRemove: (id) => dispatch({ type: "LEAVE_ROOM", playerId: id }),
+          onRename: (id, name) => dispatch({ type: "RENAME_PLAYER", playerId: id, name }),
+          onAddBot: (difficulty) => dispatch({ type: "JOIN_ROOM", player: newBot(difficulty, state.players.map((p) => p.name)) }),
+          onAddPlayer: () => {
+            const n = nextIdRef.current++;
+            dispatch({ type: "JOIN_ROOM", player: { id: `p${n}`, name: `Player ${state.players.length + 1}` } });
+          },
+        }}
+        topBar={
+          state.phase === "lobby" ? undefined : (
+            <PovSwitcher
+              players={view.players.map((p) => ({ ...p, status: "active" }))}
+              viewer={viewer}
+              currentTurnId={state.currentTurnId}
+              followTurn={followTurn}
+              onSelect={setViewer}
+              onFollowTurnChange={setFollowTurn}
+            />
+          )
+        }
+      />
+      <LocalRoomChat state={state} speakerId={viewer === "god" ? state.hostId : viewer} />
+    </>
   );
 }

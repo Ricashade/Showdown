@@ -10,6 +10,7 @@ import { newBot, type BotRunner } from "@/lib/bot-ai";
 import { useBotDriver } from "@/lib/hooks/use-bot-driver";
 import { useTableClock, type TableClock } from "@/lib/hooks/use-table-clock";
 import type { HeaderExit } from "@/components/table/chrome";
+import type { ChatMessage } from "@/lib/chat";
 import { NameField, rememberName, useRememberedName } from "@/components/bs-poker/NameField";
 import { RoomLink, useRoomTransition } from "@/components/ui/RoomTransition";
 
@@ -26,7 +27,7 @@ const GUEST_MESSAGES: Partial<Record<GuestStatus, { title: string; body: string;
   closed: { title: "This room is closed", body: "Ask the host for a new code to play again." },
 };
 
-export interface ReadyRoom<V, A> {
+export interface ReadyRoom<V, A, S = unknown> {
   view: V;
   me: string;
   isHost: boolean;
@@ -39,6 +40,13 @@ export interface ReadyRoom<V, A> {
   /** The header's way out, right for this player and phase. */
   exit: HeaderExit;
   notices: string[];
+  chat: ChatMessage[];
+  say: (kind: "chat" | "reaction", text: string) => void;
+  /** Host only: the full state (bots read it) and a way to speak for a bot. */
+  hostState: S | null;
+  postAsBot: (botId: string, text: string) => void;
+  /** Whether this player is in touch with the room right now. */
+  live: boolean;
 }
 
 interface ShellProps<S extends RoomState & { version: number }, A extends RoomAction, V extends { phase: string }> {
@@ -50,7 +58,7 @@ interface ShellProps<S extends RoomState & { version: number }, A extends RoomAc
   code: string;
   createState: (host: { id: string; name: string }) => S;
   returnToLobby: (hostId: string) => A;
-  children: (room: ReadyRoom<V, A>) => React.ReactNode;
+  children: (room: ReadyRoom<V, A, S>) => React.ReactNode;
 }
 
 /** Everything an online room needs around the table: joining, connection states, leaving. */
@@ -66,7 +74,7 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
 }: ShellProps<S, A, V>) {
   const rooms = useRoomTransition();
   const roomKey = info.roomKey(code);
-  const { room, transport, setSession, act, removePlayer, leave } = useOnlineRoom(game, { roomKey, code, createState });
+  const { room, transport, setSession, act, removePlayer, leave, say, postAsBot } = useOnlineRoom(game, { roomKey, code, createState });
   // Bots are played by the host's tab only, from the full state it holds.
   const hostState = room.phase === "ready" ? room.hostState : null;
   useBotDriver(hostState, bots, act);
@@ -119,7 +127,8 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
     act(game.join(newBot(difficulty, names)));
   };
 
-  return <>{children({ view, me, isHost, act, removePlayer, addBot, connectedIds, error, exit, notices })}</>;
+  const live = status === "hosting" || status === "seated";
+  return <>{children({ view, me, isHost, act, removePlayer, addBot, connectedIds, error, exit, notices, chat: room.chat, say, hostState, postAsBot, live })}</>;
 }
 
 function StatusScreen({
