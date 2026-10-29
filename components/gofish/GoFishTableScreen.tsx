@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { History, X } from "lucide-react";
 import type { GoFishAction, GoFishSettings } from "@/types/gofish";
 import { getGoFishLegal, type GoFishView } from "@/lib/gofish-engine";
 import { ScreenHeader, Toast, type HeaderExit } from "@/components/table/chrome";
 import type { LobbyOptions } from "@/components/table/SeatsPanel";
+import { RoomLink, RoomStage } from "@/components/ui/RoomTransition";
+import { TableLoader } from "@/components/table/TableLoader";
 import { GoFishLobby } from "./GoFishLobby";
 import { GoFishTable } from "./GoFishTable";
 import { describeEvent } from "./words";
@@ -54,39 +55,41 @@ export function GoFishTableScreen({ view, actingId, isHost, onAction, onStartGam
         <ScreenHeader title="Go Fish" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
-        {view.phase === "lobby" ? (
-          <GoFishLobby
-            view={view}
-            isHost={isHost}
-            options={lobby}
-            connectedIds={connectedIds}
-            onUpdateSettings={(patch: Partial<GoFishSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
-            onStart={onStartGame}
-          />
-        ) : (
-          <main className="mx-auto max-w-6xl space-y-4 pt-6 sm:px-4">
-            <div className="mx-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0 flex-1" aria-live="polite">
-                <AnimatePresence mode="wait">
-                  {lastAsk && (
-                    <motion.p key={lastAsk.n} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-lg text-parchment">
-                      {describeEvent(lastAsk, name)}
-                      {latest && latest.kind === "book" && <span className="ml-2 font-bold text-brass-lit">{describeEvent(latest, name)}</span>}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-                <p className="font-display text-2xl font-bold text-bone">{prompt}</p>
+        <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="go-fish" />}>
+          {view.phase === "lobby" ? (
+            <GoFishLobby
+              view={view}
+              isHost={isHost}
+              options={lobby}
+              connectedIds={connectedIds}
+              onUpdateSettings={(patch: Partial<GoFishSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
+              onStart={onStartGame}
+            />
+          ) : (
+            <main className="mx-auto max-w-6xl space-y-4 pt-6 sm:px-4">
+              <div className="mx-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0 flex-1" aria-live="polite">
+                  <AnimatePresence mode="wait">
+                    {lastAsk && (
+                      <motion.p key={lastAsk.n} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-lg text-parchment">
+                        {describeEvent(lastAsk, name)}
+                        {latest && latest.kind === "book" && <span className="ml-2 font-bold text-brass-lit">{describeEvent(latest, name)}</span>}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                  <p className="font-display text-2xl font-bold text-bone">{prompt}</p>
+                </div>
+                <button
+                  onClick={() => setShowLog(true)}
+                  className="flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-bold text-parchment ring-1 ring-leather-lit transition hover:text-bone hover:ring-brass"
+                >
+                  <History className="size-4" aria-hidden /> Table history
+                </button>
               </div>
-              <button
-                onClick={() => setShowLog(true)}
-                className="flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-bold text-parchment ring-1 ring-leather-lit transition hover:text-bone hover:ring-brass"
-              >
-                <History className="size-4" aria-hidden /> Table history
-              </button>
-            </div>
-            <GoFishTable view={view} focusId={focusId} legal={myTurn ? legal : { ...legal, isMyTurn: false }} actingId={actingId} onAction={onAction} connectedIds={connectedIds} />
-          </main>
-        )}
+              <GoFishTable view={view} focusId={focusId} legal={myTurn ? legal : { ...legal, isMyTurn: false }} actingId={actingId} onAction={onAction} connectedIds={connectedIds} />
+            </main>
+          )}
+        </RoomStage>
       </div>
 
       {showLog && <HistoryPanel view={view} name={name} onClose={() => setShowLog(false)} />}
@@ -170,9 +173,9 @@ function GameOver({ view, actions, canPlayAgain, onPlayAgain }: { view: GoFishVi
                 Play again
               </button>
             )}
-            <Link ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
+            <RoomLink ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
               Main menu
-            </Link>
+            </RoomLink>
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import { motion, type PanInfo } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { GAMES, type GameId } from "@/lib/games";
 import { PlayingCard } from "@/components/ui/PlayingCard";
+import { RoomLink } from "@/components/ui/RoomTransition";
 import { cards } from "@/components/rules/sample-cards";
 import { BlackjackHowTo } from "@/components/blackjack/BlackjackHowTo";
 import { HoldemHowTo } from "@/components/holdem/HoldemHowTo";
@@ -69,8 +70,8 @@ const SLIDES: Slide[] = [
 
 const SLIDE_KEY = "showdown:menu-slide";
 
-/** How the side games sit: pushed out most of a card's width, smaller and dimmed. */
-const PEEK = { x: 92, scale: 0.8, opacity: 0.35 };
+/** How the side games sit: pushed out most of a card's width, smaller and dimmed (darkened, not see-through, so the background stays behind them). */
+const PEEK = { x: 92, scale: 0.8, brightness: 0.35 };
 
 /** Where each game sits relative to the current one: 0 in front, −1 / +1 peeking at the sides. */
 function offsetOf(i: number, index: number) {
@@ -147,12 +148,12 @@ export function GameCarousel() {
             const front = offset === 0;
             const last = lastOffsets.current[s.id];
             const wrapped = last !== undefined && Math.abs(offset - last) > 1;
-            const opacity = front ? 1 : Math.abs(offset) === 1 ? PEEK.opacity : 0;
+            const opacity = Math.abs(offset) <= 1 ? 1 : 0;
             return (
               <motion.div
                 key={s.id}
                 initial={false}
-                animate={{ x: `${offset * PEEK.x}%`, scale: front ? 1 : PEEK.scale, opacity: wrapped ? [0, opacity] : opacity }}
+                animate={{ x: `${offset * PEEK.x}%`, scale: front ? 1 : PEEK.scale, filter: `brightness(${front ? 1 : PEEK.brightness})`, opacity: wrapped ? [0, opacity] : opacity }}
                 transition={!settled ? { duration: 0 } : wrapped ? { duration: 0.25 } : { type: "spring", stiffness: 260, damping: 32 }}
                 style={{ zIndex: front ? 10 : 0 }}
                 drag={front ? "x" : false}
@@ -222,9 +223,9 @@ function SlideFace({ slide, onJoin, onHowTo }: { slide: Slide; onJoin: () => voi
       </div>
 
       <div className="mt-8 flex flex-wrap gap-3">
-        <Link href={info.path} className="flex min-h-14 items-center rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit">
+        <RoomLink href={info.path} className="flex min-h-14 items-center rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit">
           Play
-        </Link>
+        </RoomLink>
         <button onClick={onJoin} className={secondary}>
           Join with code
         </button>
@@ -282,7 +283,7 @@ function PointerLight() {
       ref={ref}
       aria-hidden
       className="pointer-events-none absolute inset-0"
-      style={{ background: "radial-gradient(560px circle at var(--lx, 50%) var(--ly, 30%), rgba(214, 182, 127, 0.13), transparent 70%)" }}
+      style={{ background: "radial-gradient(240px circle at var(--lx, 50%) var(--ly, 30%), rgba(214, 182, 127, 0.11), rgba(214, 182, 127, 0.06) 25%, rgba(214, 182, 127, 0.025) 50%, rgba(214, 182, 127, 0.008) 75%, transparent)" }}
     />
   );
 }

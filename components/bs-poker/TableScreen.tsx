@@ -13,6 +13,8 @@ import { ShowdownModal } from "./ShowdownModal";
 import { GameOver } from "./GameOver";
 import type { SeatHighlights } from "./PlayerSeat";
 import { DealProvider, useDealClock } from "@/components/table/deal";
+import { RoomStage } from "@/components/ui/RoomTransition";
+import { TableLoader } from "@/components/table/TableLoader";
 import { planDeal } from "@/lib/deal-plan";
 
 export type { HeaderExit };
@@ -135,56 +137,58 @@ export function TableScreen({
 
           {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
-          {view.phase === "lobby" ? (
-            <Lobby
-              view={view}
-              isHost={isHost}
-              options={lobby}
-              connectedIds={connectedIds}
-              onUpdateSettings={(patch: Partial<BsPokerSettings>) =>
-                onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })
-              }
-              onStart={onStartGame}
-            />
-          ) : (
-            <main className="mx-auto max-w-6xl space-y-6 pt-5 sm:px-4">
-              <GameTable view={view} highlights={highlights} connectedIds={connectedIds} />
+          <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="bs-poker" />}>
+            {view.phase === "lobby" ? (
+              <Lobby
+                view={view}
+                isHost={isHost}
+                options={lobby}
+                connectedIds={connectedIds}
+                onUpdateSettings={(patch: Partial<BsPokerSettings>) =>
+                  onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })
+                }
+                onStart={onStartGame}
+              />
+            ) : (
+              <main className="mx-auto max-w-6xl space-y-6 pt-5 sm:px-4">
+                <GameTable view={view} highlights={highlights} connectedIds={connectedIds} />
 
-              {view.phase === "bidding" && (
-                <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
-                  {dealing ? (
-                    <p role="status" className="text-lg text-parchment">
-                      {shuffling ? "Shuffling the deck…" : `Dealing round ${view.round}…`}
-                    </p>
-                  ) : legal.isMyTurn && acting && !acting.isBot ? (
-                    <BidBuilder
-                      key={`${view.round}-${view.bidHistory.length}-${acting.id}`}
-                      legalBids={legal.legalBids}
-                      currentBid={view.currentBid}
-                      currentBidderName={bidder?.name}
-                      disabledHandTypes={view.disabledHandTypes}
-                      canCallBS={legal.canCallBS}
-                      actingName={acting.name}
-                      onBid={(bid) => onAction({ type: "PLACE_BID", playerId: acting.id, bid })}
-                      onCallBS={() => onAction({ type: "CALL_BS", playerId: acting.id })}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
-                      {turnPlayer && onViewAs && !turnPlayer.isBot && (
-                        <button
-                          onClick={() => onViewAs(turnPlayer.id)}
-                          className="min-h-11 rounded-full border border-dashed border-ash/60 px-4 text-sm text-parchment hover:text-bone"
-                        >
-                          View as {turnPlayer.name}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </main>
-          )}
+                {view.phase === "bidding" && (
+                  <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
+                    {dealing ? (
+                      <p role="status" className="text-lg text-parchment">
+                        {shuffling ? "Shuffling the deck…" : `Dealing round ${view.round}…`}
+                      </p>
+                    ) : legal.isMyTurn && acting && !acting.isBot ? (
+                      <BidBuilder
+                        key={`${view.round}-${view.bidHistory.length}-${acting.id}`}
+                        legalBids={legal.legalBids}
+                        currentBid={view.currentBid}
+                        currentBidderName={bidder?.name}
+                        disabledHandTypes={view.disabledHandTypes}
+                        canCallBS={legal.canCallBS}
+                        actingName={acting.name}
+                        onBid={(bid) => onAction({ type: "PLACE_BID", playerId: acting.id, bid })}
+                        onCallBS={() => onAction({ type: "CALL_BS", playerId: acting.id })}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
+                        {turnPlayer && onViewAs && !turnPlayer.isBot && (
+                          <button
+                            onClick={() => onViewAs(turnPlayer.id)}
+                            className="min-h-11 rounded-full border border-dashed border-ash/60 px-4 text-sm text-parchment hover:text-bone"
+                          >
+                            View as {turnPlayer.name}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </main>
+            )}
+          </RoomStage>
         </div>
 
         <p className="sr-only" aria-live="polite">

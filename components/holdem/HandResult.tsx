@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Link from "next/link";
+import { RoomLink } from "@/components/ui/RoomTransition";
 import { motion } from "framer-motion";
 import type { HoldemView } from "@/lib/holdem-game";
 import { PlayingCard } from "@/components/ui/PlayingCard";
@@ -154,13 +154,14 @@ export function HoldemGameOver({ view, actions, canPlayAgain, onPlayAgain }: { v
                   Play again
                 </button>
               )}
-              <Link
+              <RoomLink
+               
                 ref={menuRef}
                 href="/"
                 className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone"
               >
                 Main menu
-              </Link>
+              </RoomLink>
             </div>
           </>
         )}

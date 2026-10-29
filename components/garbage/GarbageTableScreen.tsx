@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { LayoutGroup, motion } from "framer-motion";
 import type { GarbageAction, GarbageSettings } from "@/types/garbage";
 import { getGarbageLegal, revealComplete, slotLabel, type GarbageView } from "@/lib/garbage-engine";
 import { cardLabel } from "@/lib/cards";
 import { ScreenHeader, Toast, type HeaderExit } from "@/components/table/chrome";
 import type { LobbyOptions } from "@/components/table/SeatsPanel";
+import { RoomLink, RoomStage } from "@/components/ui/RoomTransition";
+import { TableLoader } from "@/components/table/TableLoader";
 import { GarbageLobby } from "./GarbageLobby";
 import { GarbageTable } from "./GarbageTable";
 
@@ -94,45 +95,47 @@ export function GarbageTableScreen({ view, actingId, isHost, onAction, onStartGa
         <ScreenHeader title="Garbage" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
-        {view.phase === "lobby" ? (
-          <GarbageLobby
-            view={view}
-            isHost={isHost}
-            options={lobby}
-            connectedIds={connectedIds}
-            onUpdateSettings={(patch: Partial<GarbageSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
-            onStart={onStartGame}
-          />
-        ) : (
-          <main className="mx-auto max-w-6xl space-y-5 pt-6 sm:px-4">
-            <p className="min-h-8 text-center font-display text-2xl font-bold text-bone">
-              {prompt}
-            </p>
-            {view.phase === "reveal" && (
-              <div className="flex flex-wrap justify-center gap-3">
-                {legal.canRearrange && acting && !acting.isBot && (
-                  <button
-                    onClick={() => onAction({ type: "REVEAL_DONE", playerId: acting.id })}
-                    className="min-h-12 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
-                  >
-                    Done
-                  </button>
-                )}
-                {isHost && (!legal.canRearrange || stillArranging.length > 1) && (
-                  <button
-                    onClick={() => onAction({ type: "FINISH_REVEAL", playerId: view.hostId })}
-                    className="min-h-12 rounded-full border-2 border-bone/60 px-6 text-base font-bold text-bone hover:border-bone"
-                  >
-                    End the round now
-                  </button>
-                )}
-              </div>
-            )}
-            <LayoutGroup>
-              <GarbageTable view={view} focusId={focusId} legal={humanTurn ? legal : { ...legal, isMyTurn: false }} actingId={actingId} onAction={onAction} connectedIds={connectedIds} />
-            </LayoutGroup>
-          </main>
-        )}
+        <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="garbage" />}>
+          {view.phase === "lobby" ? (
+            <GarbageLobby
+              view={view}
+              isHost={isHost}
+              options={lobby}
+              connectedIds={connectedIds}
+              onUpdateSettings={(patch: Partial<GarbageSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
+              onStart={onStartGame}
+            />
+          ) : (
+            <main className="mx-auto max-w-6xl space-y-5 pt-6 sm:px-4">
+              <p className="min-h-8 text-center font-display text-2xl font-bold text-bone">
+                {prompt}
+              </p>
+              {view.phase === "reveal" && (
+                <div className="flex flex-wrap justify-center gap-3">
+                  {legal.canRearrange && acting && !acting.isBot && (
+                    <button
+                      onClick={() => onAction({ type: "REVEAL_DONE", playerId: acting.id })}
+                      className="min-h-12 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
+                    >
+                      Done
+                    </button>
+                  )}
+                  {isHost && (!legal.canRearrange || stillArranging.length > 1) && (
+                    <button
+                      onClick={() => onAction({ type: "FINISH_REVEAL", playerId: view.hostId })}
+                      className="min-h-12 rounded-full border-2 border-bone/60 px-6 text-base font-bold text-bone hover:border-bone"
+                    >
+                      End the round now
+                    </button>
+                  )}
+                </div>
+              )}
+              <LayoutGroup>
+                <GarbageTable view={view} focusId={focusId} legal={humanTurn ? legal : { ...legal, isMyTurn: false }} actingId={actingId} onAction={onAction} connectedIds={connectedIds} />
+              </LayoutGroup>
+            </main>
+          )}
+        </RoomStage>
       </div>
 
       <p className="sr-only" aria-live="polite">
@@ -237,9 +240,9 @@ function GameOver({ view, actions, canPlayAgain, hostName, onPlayAgain }: { view
                   Play again
                 </button>
               )}
-              <Link ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
+              <RoomLink ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
                 Main menu
-              </Link>
+              </RoomLink>
             </div>
           </>
         )}

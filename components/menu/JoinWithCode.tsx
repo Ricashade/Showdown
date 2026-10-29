@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { ROOM, ROOM_PATH } from "@/lib/games";
 import { createSession } from "@/lib/multiplayer/session";
 import { isRoomCode, normalizeRoomCode } from "@/lib/multiplayer/room-code";
 import { NameField, rememberName, useRememberedName } from "@/components/bs-poker/NameField";
+import { useRoomTransition } from "@/components/ui/RoomTransition";
 
 /** Name and room code, then straight to the table (whichever game the host has on). */
 export function JoinWithCode({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
+  const rooms = useRoomTransition();
+  const formRef = useRef<HTMLFormElement>(null);
   const [name, setName] = useRememberedName();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,13 +30,13 @@ export function JoinWithCode({ onClose }: { onClose: () => void }) {
     if (!ok) return;
     setBusy(true);
     rememberName(name);
-    await createSession(ROOM.roomKey(code), code, name, "guest");
-    router.push(`${ROOM_PATH}/${code}`);
+    await rooms.go(`${ROOM_PATH}/${code}`, { from: formRef.current, ready: createSession(ROOM.roomKey(code), code, name, "guest") });
   };
 
   return (
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
       <form
+        ref={formRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="join-title"

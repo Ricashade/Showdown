@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { RoomLink } from "@/components/ui/RoomTransition";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Card } from "@/types/cards";
@@ -136,9 +136,9 @@ function Lesson({ onExit }: { onExit: () => void }) {
             <span key={s} className={clsx("h-1.5 flex-1 rounded-full", i <= at ? "bg-brass" : "bg-smoke")} />
           ))}
         </div>
-        <Link href={VS_BOTS} className="flex min-h-10 items-center rounded-full bg-brass px-4 text-sm font-bold text-smoke hover:bg-brass-lit">
+        <RoomLink href={VS_BOTS} className="flex min-h-10 items-center rounded-full bg-brass px-4 text-sm font-bold text-smoke hover:bg-brass-lit">
           Start playing vs. bots
-        </Link>
+        </RoomLink>
         <button onClick={onExit} className="min-h-10 rounded-full bg-bone px-4 text-sm font-bold text-smoke hover:bg-parchment">
           Exit demo
         </button>
@@ -221,9 +221,9 @@ function Lesson({ onExit }: { onExit: () => void }) {
         )}
         {step === "end" && (
           <>
-            <Link href={VS_BOTS} className="flex min-h-14 items-center rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke hover:bg-brass-lit">
+            <RoomLink href={VS_BOTS} className="flex min-h-14 items-center rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke hover:bg-brass-lit">
               Start playing vs. bots
-            </Link>
+            </RoomLink>
             <button ref={primaryRef} onClick={() => setStep("pickClara")} className="min-h-12 rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
               Replay the lesson
             </button>

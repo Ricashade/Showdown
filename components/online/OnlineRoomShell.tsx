@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { GameInfo } from "@/lib/games";
 import { useOnlineRoom } from "@/lib/hooks/use-online-room";
 import { createSession, type RoomSession } from "@/lib/multiplayer/session";
@@ -13,6 +11,7 @@ import { useBotDriver } from "@/lib/hooks/use-bot-driver";
 import { useTableClock, type TableClock } from "@/lib/hooks/use-table-clock";
 import type { HeaderExit } from "@/components/table/chrome";
 import { NameField, rememberName, useRememberedName } from "@/components/bs-poker/NameField";
+import { RoomLink, useRoomTransition } from "@/components/ui/RoomTransition";
 
 const GUEST_MESSAGES: Partial<Record<GuestStatus, { title: string; body: string; retry?: boolean }>> = {
   connecting: { title: "Connecting…", body: "Opening the room." },
@@ -65,7 +64,7 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
   returnToLobby,
   children,
 }: ShellProps<S, A, V>) {
-  const router = useRouter();
+  const rooms = useRoomTransition();
   const roomKey = info.roomKey(code);
   const { room, transport, setSession, act, removePlayer, leave } = useOnlineRoom(game, { roomKey, code, createState });
   // Bots are played by the host's tab only, from the full state it holds.
@@ -74,8 +73,7 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
   useTableClock(hostState, clock, act);
 
   const leaveAndGoBack = async () => {
-    await leave();
-    router.push(info.path);
+    await rooms.go(info.path, { ready: leave() });
   };
 
   if (room.phase === "needs-name") {
@@ -161,9 +159,9 @@ function StatusScreen({
             {back}
           </button>
         ) : (
-          <Link href={info.path} className="flex min-h-12 items-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
+          <RoomLink href={info.path} className="flex min-h-12 items-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
             {back}
-          </Link>
+          </RoomLink>
         )}
       </div>
     </main>
@@ -196,9 +194,9 @@ function JoinFromLink({ info, code, onJoined }: { info: GameInfo; code: string; 
           Take a seat
         </button>
       </form>
-      <Link href={info.path} className="mt-6 text-base text-parchment underline underline-offset-4 hover:text-bone">
+      <RoomLink href={info.path} className="mt-6 text-base text-parchment underline underline-offset-4 hover:text-bone">
         {info.path === "/" ? "Main menu" : `Back to ${info.title}`}
-      </Link>
+      </RoomLink>
     </main>
   );
 }

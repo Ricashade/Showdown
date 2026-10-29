@@ -11,10 +11,11 @@ import { motion, useReducedMotion } from "framer-motion";
 import { burnSlot, type DealPlan } from "@/lib/deal-plan";
 import { PlayingCard } from "@/components/ui/PlayingCard";
 
-const SHUFFLE_MS = 1300;
-const FLIGHT_MS = 420;
+/** A new hand's shuffle. Starting a game, it plays out behind the table-setting cover. */
+const SHUFFLE_MS = 700;
+const FLIGHT_MS = 360;
 /** The whole deal (after the shuffle) takes about this long, however many cards there are. */
-const DEAL_BUDGET_MS = 2600;
+const DEAL_BUDGET_MS = 1300;
 
 export interface DealClock {
   /** ms timestamp the deal began; -Infinity when there's nothing to animate. */
@@ -64,7 +65,7 @@ export function useDealClock(spec: DealSpec): DealClock {
   const plan = t?.plan ?? EMPTY_PLAN;
   const startedAt = t?.startedAt ?? -Infinity;
   const shuffleMs = t?.shuffleMs ?? 0;
-  const staggerMs = Math.min(150, Math.max(70, DEAL_BUDGET_MS / Math.max(plan.count, 1)));
+  const staggerMs = Math.min(110, Math.max(50, DEAL_BUDGET_MS / Math.max(plan.count, 1)));
   return {
     startedAt,
     shuffleMs,

@@ -110,3 +110,37 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Moving between rooms (components/ui/RoomTransition.tsx). Only the page is captured; the root
+ * (the idle background) stays live underneath. The two pages cross on the same clock, so where
+ * they overlap they stay solid.
+ */
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(page) {
+  animation-duration: 0s;
+}
+::view-transition-old(page) {
+  animation: page-out 300ms cubic-bezier(0.3, 0, 0.2, 1) both;
+}
+::view-transition-new(page) {
+  animation: page-in 300ms cubic-bezier(0.3, 0, 0.2, 1) both;
+}
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: scale(1.012);
+  }
+}
+

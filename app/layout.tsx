@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible_Next, Big_Shoulders } from "next/font/google";
 import { MotionProvider } from "@/components/ui/MotionProvider";
+import { IdleBackground } from "@/components/IdleBackground";
+import { RoomTransitionProvider } from "@/components/ui/RoomTransition";
 import "./globals.css";
 
 const atkinson = Atkinson_Hyperlegible_Next({ subsets: ["latin"], variable: "--font-atkinson" });
@@ -15,7 +17,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${atkinson.variable} ${shoulders.variable}`}>
       <body className="font-sans antialiased">
-        <MotionProvider>{children}</MotionProvider>
+        <MotionProvider>
+          <IdleBackground />
+          <RoomTransitionProvider>{children}</RoomTransitionProvider>
+        </MotionProvider>
       </body>
     </html>
   );

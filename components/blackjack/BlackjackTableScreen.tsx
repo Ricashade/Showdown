@@ -5,6 +5,8 @@ import type { BlackjackAction, BlackjackSettings } from "@/types/blackjack";
 import { dealerShowing, getBlackjackLegal, TURN_SECONDS, type BlackjackView } from "@/lib/blackjack-engine";
 import { ScreenHeader, Toast, type HeaderExit } from "@/components/table/chrome";
 import type { LobbyOptions } from "@/components/table/SeatsPanel";
+import { RoomStage } from "@/components/ui/RoomTransition";
+import { TableLoader } from "@/components/table/TableLoader";
 import { BlackjackLobby } from "./BlackjackLobby";
 import { BlackjackTable, totalLabel } from "./BlackjackTable";
 import { BettingPanel, Countdown, InsurancePanel, PlayPanel } from "./BlackjackActions";
@@ -113,30 +115,32 @@ export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStart
         <ScreenHeader title="Blackjack" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
-        {view.phase === "lobby" ? (
-          <BlackjackLobby
-            view={view}
-            isHost={isHost}
-            options={lobby}
-            connectedIds={connectedIds}
-            onUpdateSettings={(patch: Partial<BlackjackSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
-            onStart={onStartGame}
-          />
-        ) : (
-          <main className="mx-auto max-w-6xl space-y-6 pt-6 sm:px-4">
-            <BlackjackTable view={view} connectedIds={connectedIds} />
-            {view.phase !== "game_over" && (
-              <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
-                {timer && (
-                  <div className="mb-4 flex justify-end">
-                    <Countdown deadline={view.deadline} total={timer.total} label={timer.label} />
-                  </div>
-                )}
-                {panel}
-              </div>
-            )}
-          </main>
-        )}
+        <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="blackjack" />}>
+          {view.phase === "lobby" ? (
+            <BlackjackLobby
+              view={view}
+              isHost={isHost}
+              options={lobby}
+              connectedIds={connectedIds}
+              onUpdateSettings={(patch: Partial<BlackjackSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
+              onStart={onStartGame}
+            />
+          ) : (
+            <main className="mx-auto max-w-6xl space-y-6 pt-6 sm:px-4">
+              <BlackjackTable view={view} connectedIds={connectedIds} />
+              {view.phase !== "game_over" && (
+                <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
+                  {timer && (
+                    <div className="mb-4 flex justify-end">
+                      <Countdown deadline={view.deadline} total={timer.total} label={timer.label} />
+                    </div>
+                  )}
+                  {panel}
+                </div>
+              )}
+            </main>
+          )}
+        </RoomStage>
       </div>
 
       <p className="sr-only" aria-live="polite">

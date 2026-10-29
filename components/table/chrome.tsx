@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { RoomLink } from "@/components/ui/RoomTransition";
 import { AnimatePresence, motion } from "framer-motion";
 
 export interface HeaderExit {
@@ -25,9 +25,9 @@ export function ScreenHeader({ title, exit, extra }: { title: string; exit?: Hea
         <h1 className="font-display text-4xl font-extrabold text-bone">{title}</h1>
       )}
       {!exit ? (
-        <Link href="/" className="flex min-h-11 items-center px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline">
+        <RoomLink href="/" className="flex min-h-11 items-center px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline">
           Main menu
-        </Link>
+        </RoomLink>
       ) : confirming && exit.confirm ? (
         <div role="group" aria-label={exit.confirm} className="flex flex-wrap items-center gap-2">
           <span className="text-base text-parchment">{exit.confirm}</span>

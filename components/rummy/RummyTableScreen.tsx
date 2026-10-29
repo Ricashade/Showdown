@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import clsx from "clsx";
 import { LayoutGroup, motion } from "framer-motion";
 import type { RummyAction, RummySettings } from "@/types/rummy";
@@ -10,6 +9,8 @@ import { cardLabel } from "@/lib/cards";
 import { ScreenHeader, Toast, type HeaderExit } from "@/components/table/chrome";
 import type { LobbyOptions } from "@/components/table/SeatsPanel";
 import { PlayingCard } from "@/components/ui/PlayingCard";
+import { RoomLink, RoomStage } from "@/components/ui/RoomTransition";
+import { TableLoader } from "@/components/table/TableLoader";
 import { RummyLobby } from "./RummyLobby";
 import { RummyTable } from "./RummyTable";
 
@@ -85,23 +86,25 @@ export function RummyTableScreen({ view, actingId, isHost, onAction, onStartGame
         <ScreenHeader title="Rummy" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
-        {view.phase === "lobby" ? (
-          <RummyLobby
-            view={view}
-            isHost={isHost}
-            options={lobby}
-            connectedIds={connectedIds}
-            onUpdateSettings={(patch: Partial<RummySettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
-            onStart={onStartGame}
-          />
-        ) : (
-          <main className="mx-auto max-w-6xl space-y-5 pt-6 sm:px-4">
-            <p className="min-h-8 text-center font-display text-2xl font-bold text-bone">{prompt}</p>
-            <LayoutGroup>
-              <RummyTable view={view} focusId={focusId} legal={humanTurn ? legal : { ...legal, isMyTurn: false, mustDraw: false, canPlay: false }} actingId={actingId} onAction={onAction} connectedIds={connectedIds} />
-            </LayoutGroup>
-          </main>
-        )}
+        <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="rummy" />}>
+          {view.phase === "lobby" ? (
+            <RummyLobby
+              view={view}
+              isHost={isHost}
+              options={lobby}
+              connectedIds={connectedIds}
+              onUpdateSettings={(patch: Partial<RummySettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
+              onStart={onStartGame}
+            />
+          ) : (
+            <main className="mx-auto max-w-6xl space-y-5 pt-6 sm:px-4">
+              <p className="min-h-8 text-center font-display text-2xl font-bold text-bone">{prompt}</p>
+              <LayoutGroup>
+                <RummyTable view={view} focusId={focusId} legal={humanTurn ? legal : { ...legal, isMyTurn: false, mustDraw: false, canPlay: false }} actingId={actingId} onAction={onAction} connectedIds={connectedIds} />
+              </LayoutGroup>
+            </main>
+          )}
+        </RoomStage>
       </div>
 
       <p className="sr-only" aria-live="polite">
@@ -219,9 +222,9 @@ function GameOver({ view, actions, canPlayAgain, hostName, onPlayAgain }: { view
                   Play again
                 </button>
               )}
-              <Link ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
+              <RoomLink ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
                 Main menu
-              </Link>
+              </RoomLink>
             </div>
           </>
         )}

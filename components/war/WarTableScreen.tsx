@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { WarAction, WarSettings } from "@/types/war";
@@ -11,6 +10,8 @@ import { ScreenHeader, Toast, type HeaderExit } from "@/components/table/chrome"
 import type { LobbyOptions } from "@/components/table/SeatsPanel";
 import { Segmented, Toggle } from "@/components/ui/controls";
 import { cardName, PlayingCard } from "@/components/ui/PlayingCard";
+import { RoomLink, RoomStage } from "@/components/ui/RoomTransition";
+import { TableLoader } from "@/components/table/TableLoader";
 import { WarLobby } from "./WarLobby";
 import { TugOfWar, WarTable, type WarSpeed } from "./WarTable";
 
@@ -85,82 +86,84 @@ export function WarTableScreen({ view, controlIds, actingId, isHost, onAction, o
         <ScreenHeader title="War" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
-        {view.phase === "lobby" ? (
-          <WarLobby
-            view={view}
-            isHost={isHost}
-            options={lobby}
-            connectedIds={connectedIds}
-            onUpdateSettings={(patch: Partial<WarSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
-            onStart={onStartGame}
-          />
-        ) : view.sides ? (
-          <main className="mx-auto max-w-6xl space-y-5 pt-6 sm:px-4">
-            <TugOfWar view={view} leftId={leftId} />
-            <WarTable view={view} leftId={leftId} speed={speed} connectedIds={connectedIds} />
+        <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="war" />}>
+          {view.phase === "lobby" ? (
+            <WarLobby
+              view={view}
+              isHost={isHost}
+              options={lobby}
+              connectedIds={connectedIds}
+              onUpdateSettings={(patch: Partial<WarSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
+              onStart={onStartGame}
+            />
+          ) : view.sides ? (
+            <main className="mx-auto max-w-6xl space-y-5 pt-6 sm:px-4">
+              <TugOfWar view={view} leftId={leftId} />
+              <WarTable view={view} leftId={leftId} speed={speed} connectedIds={connectedIds} />
 
-            <div className="mx-4 flex flex-col items-center gap-5 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
-              {tactical ? (
-                legal.canAct && acting && !acting.isBot ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <h2 className="font-display text-3xl font-bold text-bone">{view.stage === "war" ? "Pick the card that settles the War" : `Pick a card, ${acting.name}`}</h2>
-                    <ul className="flex gap-3">
-                      {legal.hand.map((c) => (
-                        <li key={c.id}>
-                          <button
-                            onClick={() => onAction({ type: "PLAY", playerId: acting.id, cardId: c.id })}
-                            aria-label={`Play the ${cardName(c, true)}`}
-                            className="block rounded-xl transition hover:-translate-y-2 focus-visible:-translate-y-2"
-                          >
-                            <PlayingCard card={c} size="lg" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              <div className="mx-4 flex flex-col items-center gap-5 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
+                {tactical ? (
+                  legal.canAct && acting && !acting.isBot ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <h2 className="font-display text-3xl font-bold text-bone">{view.stage === "war" ? "Pick the card that settles the War" : `Pick a card, ${acting.name}`}</h2>
+                      <ul className="flex gap-3">
+                        {legal.hand.map((c) => (
+                          <li key={c.id}>
+                            <button
+                              onClick={() => onAction({ type: "PLAY", playerId: acting.id, cardId: c.id })}
+                              aria-label={`Play the ${cardName(c, true)}`}
+                              className="block rounded-xl transition hover:-translate-y-2 focus-visible:-translate-y-2"
+                            >
+                              <PlayingCard card={c} size="lg" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="text-lg text-parchment">{others.length ? `Waiting for ${others.join(" and ")}.` : "Watching."}</p>
+                  )
+                ) : waitingOn.length > 0 ? (
+                  <motion.button
+                    key={view.version}
+                    initial={{ scale: 0.96 }}
+                    animate={{ scale: 1 }}
+                    onClick={flip}
+                    className={clsx(
+                      "min-h-16 rounded-full px-12 font-display text-3xl font-extrabold shadow-lg transition",
+                      view.stage === "war" ? "bg-chip text-bone hover:bg-chip/85" : "bg-brass text-smoke hover:bg-brass-lit",
+                    )}
+                  >
+                    {view.stage === "war" ? "Flip for the War" : "Flip"}
+                    <kbd className="ml-3 rounded-md bg-black/20 px-2 py-0.5 align-middle font-sans text-sm font-bold">Space</kbd>
+                  </motion.button>
                 ) : (
-                  <p className="text-lg text-parchment">{others.length ? `Waiting for ${others.join(" and ")}.` : "Watching."}</p>
-                )
-              ) : waitingOn.length > 0 ? (
-                <motion.button
-                  key={view.version}
-                  initial={{ scale: 0.96 }}
-                  animate={{ scale: 1 }}
-                  onClick={flip}
-                  className={clsx(
-                    "min-h-16 rounded-full px-12 font-display text-3xl font-extrabold shadow-lg transition",
-                    view.stage === "war" ? "bg-chip text-bone hover:bg-chip/85" : "bg-brass text-smoke hover:bg-brass-lit",
-                  )}
-                >
-                  {view.stage === "war" ? "Flip for the War" : "Flip"}
-                  <kbd className="ml-3 rounded-md bg-black/20 px-2 py-0.5 align-middle font-sans text-sm font-bold">Space</kbd>
-                </motion.button>
-              ) : (
-                <p className="text-lg text-parchment">{controlIds.length === 0 ? "Watching." : others.length ? `Waiting for ${others.join(" and ")} to flip.` : ""}</p>
-              )}
-
-              <div className="flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-3">
-                <div className="w-64">
-                  <Segmented<WarSpeed>
-                    label="Speed"
-                    value={speed}
-                    options={[
-                      { value: "normal", label: "1×" },
-                      { value: "fast", label: "2×" },
-                      { value: "turbo", label: "⚡ Turbo" },
-                    ]}
-                    onChange={setSpeed}
-                  />
-                </div>
-                {!tactical && controlIds.length > 0 && (
-                  <div className="w-44">
-                    <Toggle label="Auto-flip" checked={autoFlip} onChange={setAutoFlip} />
-                  </div>
+                  <p className="text-lg text-parchment">{controlIds.length === 0 ? "Watching." : others.length ? `Waiting for ${others.join(" and ")} to flip.` : ""}</p>
                 )}
+
+                <div className="flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-3">
+                  <div className="w-64">
+                    <Segmented<WarSpeed>
+                      label="Speed"
+                      value={speed}
+                      options={[
+                        { value: "normal", label: "1×" },
+                        { value: "fast", label: "2×" },
+                        { value: "turbo", label: "⚡ Turbo" },
+                      ]}
+                      onChange={setSpeed}
+                    />
+                  </div>
+                  {!tactical && controlIds.length > 0 && (
+                    <div className="w-44">
+                      <Toggle label="Auto-flip" checked={autoFlip} onChange={setAutoFlip} />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </main>
-        ) : null}
+            </main>
+          ) : null}
+        </RoomStage>
       </div>
 
       {view.phase === "game_over" && <GameOver view={view} canPlayAgain={isHost} actions={postGameActions} hostName={hostName} onPlayAgain={() => onAction({ type: "RETURN_TO_LOBBY", playerId: view.hostId })} />}
@@ -204,9 +207,9 @@ function GameOver({ view, actions, canPlayAgain, hostName, onPlayAgain }: { view
                   Play again
                 </button>
               )}
-              <Link ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
+              <RoomLink ref={menuRef} href="/" className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
                 Main menu
-              </Link>
+              </RoomLink>
             </div>
           </>
         )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Link from "next/link";
+import { RoomLink } from "@/components/ui/RoomTransition";
 import clsx from "clsx";
 import { bestHand } from "@/lib/holdem-hand";
 import { PlayingCard } from "@/components/ui/PlayingCard";
@@ -170,9 +170,9 @@ function Demo({ onExit }: { onExit: () => void }) {
         )}
         {last && (
           <>
-            <Link href="/texas-holdem" className="flex min-h-12 items-center rounded-full bg-brass px-7 font-display text-2xl font-bold text-smoke hover:bg-brass-lit">
+            <RoomLink href="/texas-holdem" className="flex min-h-12 items-center rounded-full bg-brass px-7 font-display text-2xl font-bold text-smoke hover:bg-brass-lit">
               Play Texas Hold&apos;em
-            </Link>
+            </RoomLink>
             <button ref={primaryRef} onClick={restart} className="min-h-12 rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
               Replay
             </button>

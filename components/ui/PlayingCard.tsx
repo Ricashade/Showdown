@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useRef } from "react";
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import clsx from "clsx";
 import type { Card } from "@/types/cards";
 import { isRedSuit, rankName, rankShort, suitName, suitSymbol } from "@/lib/cards";
@@ -56,6 +57,24 @@ export function PlayingCard({
   const showFront = faceUp && card !== null;
   const label = cardName(card, faceUp, isWild) + (wildAs && showFront ? `, counting as ${wildAs}` : "");
 
+  // Turning over, done flat: the card squeezes to its edge and the other side shows from there.
+  // (A real 3D flip can leave the whole page painting wrong after a scroll in Chromium.)
+  // 0 is face up, 1 face down.
+  const reduceMotion = useReducedMotion();
+  const side = useMotionValue(showFront && !startFaceDown ? 0 : 1);
+  const width = useTransform(side, (v) => Math.max(0.04, Math.abs(Math.cos(v * Math.PI))));
+  const front = useTransform(side, (v) => (v < 0.5 ? 1 : 0));
+  // A freshly dealt card waits for its reveal, however often the effect re-runs.
+  const revealAt = useRef(startFaceDown ? performance.now() + revealDelay * 1000 : 0);
+  useEffect(() => {
+    const controls = animate(side, showFront ? 0 : 1, {
+      duration: reduceMotion ? 0 : 0.5,
+      ease: [0.4, 0, 0.2, 1],
+      delay: Math.max(0, revealAt.current - performance.now()) / 1000,
+    });
+    return () => controls.stop();
+  }, [showFront, side, reduceMotion]);
+
   return (
     <motion.div
       role="img"
@@ -64,33 +83,22 @@ export function PlayingCard({
       animate={{ opacity: dimmed ? 0.4 : 1, y: 0 }}
       transition={{ delay: dealDelay, type: "spring", stiffness: 300, damping: 26 }}
       className={clsx("relative shrink-0", s.box)}
-      style={{ perspective: 800 }}
     >
-      <motion.div
-        aria-hidden
-        className="relative size-full"
-        style={{ transformStyle: "preserve-3d" }}
-        initial={startFaceDown ? { rotateY: 180 } : false}
-        animate={{ rotateY: showFront ? 0 : 180 }}
-        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1], delay: startFaceDown ? revealDelay : 0 }}
-      >
-        <div
+      <motion.div aria-hidden className="relative size-full" style={{ scaleX: width }}>
+        <div className={clsx("card-back absolute inset-0 shadow-md ring-1 ring-black/40", s.box)}>
+          <div className="absolute inset-1 rounded-[inherit] border border-bone/25" />
+        </div>
+        <motion.div
           className={clsx(
             "absolute inset-0 overflow-hidden bg-bone shadow-md",
             s.box,
             highlight === "match" && "ring-3 ring-brass-lit shadow-[0_0_16px_rgba(214,182,127,0.7)]",
             highlight === "partial" && "outline-2 outline-offset-2 outline-dashed outline-ash",
           )}
-          style={{ backfaceVisibility: "hidden" }}
+          style={{ opacity: front }}
         >
           {card && <CardFace card={card} size={size} isWild={isWild} />}
-        </div>
-        <div
-          className={clsx("card-back absolute inset-0 shadow-md ring-1 ring-black/40", s.box)}
-          style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
-        >
-          <div className="absolute inset-1 rounded-[inherit] border border-bone/25" />
-        </div>
+        </motion.div>
       </motion.div>
 
       {wildAs && showFront && (

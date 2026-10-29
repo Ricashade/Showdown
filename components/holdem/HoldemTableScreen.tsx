@@ -8,6 +8,8 @@ import { cardLabel } from "@/lib/cards";
 import { ScreenHeader, Toast, type HeaderExit } from "@/components/table/chrome";
 import { DealProvider, useDealClock } from "@/components/table/deal";
 import type { LobbyOptions } from "@/components/table/SeatsPanel";
+import { RoomStage } from "@/components/ui/RoomTransition";
+import { TableLoader } from "@/components/table/TableLoader";
 import { HoldemLobby } from "./HoldemLobby";
 import { HoldemTable } from "./HoldemTable";
 import { HoldemActions } from "./HoldemActions";
@@ -139,36 +141,38 @@ export function HoldemTableScreen({
           <ScreenHeader title="Texas Hold'em" exit={exit} extra={headerExtra} />
           {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
-          {view.phase === "lobby" ? (
-            <HoldemLobby
-              view={view}
-              isHost={isHost}
-              options={lobby}
-              connectedIds={connectedIds}
-              onUpdateSettings={(patch: Partial<HoldemSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
-              onStart={onStartGame}
-            />
-          ) : (
-            <main className="mx-auto max-w-6xl space-y-6 pt-5 sm:px-4">
-              <div className="flex justify-end px-4 sm:px-0">
-                <HandRankingsButton myCards={myCards} />
-              </div>
-              <HoldemTable view={view} winningCardIds={winningCardIds} connectedIds={connectedIds} />
-              {view.phase === "betting" && (
-                <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
-                  {dealing ? (
-                    <p role="status" className="text-lg text-parchment">
-                      Dealing…
-                    </p>
-                  ) : legal.isMyTurn && acting && !acting.isBot ? (
-                    <HoldemActions key={`${view.version}-${acting.id}`} view={view} legal={legal} actingId={acting.id} actingName={acting.name} onAction={onAction} />
-                  ) : (
-                    <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
-                  )}
+          <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="texas-holdem" />}>
+            {view.phase === "lobby" ? (
+              <HoldemLobby
+                view={view}
+                isHost={isHost}
+                options={lobby}
+                connectedIds={connectedIds}
+                onUpdateSettings={(patch: Partial<HoldemSettings>) => onAction({ type: "UPDATE_SETTINGS", playerId: view.hostId, settings: patch })}
+                onStart={onStartGame}
+              />
+            ) : (
+              <main className="mx-auto max-w-6xl space-y-6 pt-5 sm:px-4">
+                <div className="flex justify-end px-4 sm:px-0">
+                  <HandRankingsButton myCards={myCards} />
                 </div>
-              )}
-            </main>
-          )}
+                <HoldemTable view={view} winningCardIds={winningCardIds} connectedIds={connectedIds} />
+                {view.phase === "betting" && (
+                  <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
+                    {dealing ? (
+                      <p role="status" className="text-lg text-parchment">
+                        Dealing…
+                      </p>
+                    ) : legal.isMyTurn && acting && !acting.isBot ? (
+                      <HoldemActions key={`${view.version}-${acting.id}`} view={view} legal={legal} actingId={acting.id} actingName={acting.name} onAction={onAction} />
+                    ) : (
+                      <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
+                    )}
+                  </div>
+                )}
+              </main>
+            )}
+          </RoomStage>
         </div>
 
         <p className="sr-only" aria-live="polite">

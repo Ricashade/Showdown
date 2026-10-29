@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { GAMES, ROOM, ROOM_PATH, type GameId } from "@/lib/games";
 import { createSession, getTransport, type TransportKind } from "@/lib/multiplayer/session";
 import { generateRoomCode, isRoomCode, normalizeRoomCode } from "@/lib/multiplayer/room-code";
+import { RoomLink, useRoomTransition } from "@/components/ui/RoomTransition";
 import { NameField, rememberName, useRememberedName } from "./NameField";
 
 /** Create a room starting on this game, join one by code, or open this game's local simulator. */
 export default function PlayModeChooser({ game }: { game: GameId }) {
   const info = GAMES[game];
-  const router = useRouter();
+  const rooms = useRoomTransition();
+  const onlineRef = useRef<HTMLElement>(null);
   const [name, setName] = useRememberedName();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<"create" | "join" | null>(null);
@@ -26,22 +26,24 @@ export default function PlayModeChooser({ game }: { game: GameId }) {
     setBusy(kind);
     rememberName(name);
     const roomCode = kind === "create" ? generateRoomCode() : code;
-    await createSession(ROOM.roomKey(roomCode), roomCode, name, kind === "create" ? "host" : "guest");
     // The room opens on this game; a guest gets whatever the host has on.
-    router.push(kind === "create" ? `${ROOM_PATH}/${roomCode}?game=${game}` : `${ROOM_PATH}/${roomCode}`);
+    await rooms.go(kind === "create" ? `${ROOM_PATH}/${roomCode}?game=${game}` : `${ROOM_PATH}/${roomCode}`, {
+      from: onlineRef.current,
+      ready: createSession(ROOM.roomKey(roomCode), roomCode, name, kind === "create" ? "host" : "guest"),
+    });
   };
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
       <header className="flex items-center justify-between gap-3">
         <h1 className="font-display text-4xl font-extrabold text-bone">{info.title}</h1>
-        <Link href="/" className="flex min-h-11 items-center px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline">
+        <RoomLink href="/" className="flex min-h-11 items-center px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline">
           Main menu
-        </Link>
+        </RoomLink>
       </header>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1.2fr_1fr]">
-        <section aria-labelledby="online-heading" className="felt rounded-[2rem] p-6 sm:p-9">
+        <section ref={onlineRef} aria-labelledby="online-heading" className="felt rounded-[2rem] p-6 sm:p-9">
           <h2 id="online-heading" className="font-display text-5xl font-extrabold text-bone">
             Play online
           </h2>
@@ -101,12 +103,12 @@ export default function PlayModeChooser({ game }: { game: GameId }) {
           <h2 id="local-heading" className="font-display text-4xl font-bold text-bone">
             Local simulator
           </h2>
-          <Link
+          <RoomLink
             href={`${info.path}/local`}
             className="mt-5 inline-flex min-h-12 items-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone"
           >
             Open the simulator
-          </Link>
+          </RoomLink>
         </section>
       </div>
     </main>

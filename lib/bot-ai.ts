@@ -56,7 +56,7 @@ export const bsPokerBots: BotRunner<BsPokerState, BsPokerAction> = {
     const p = s.players.find((x) => x.id === s.currentTurnPlayerId);
     if (!p?.isBot) return null;
     // A fresh round is still being shuffled and dealt on everyone's screen.
-    return { botId: p.id, justDealt: s.bidHistory.length === 0 ? 3600 : 0 };
+    return { botId: p.id, justDealt: s.bidHistory.length === 0 ? 2000 : 0 };
   },
   decide(s, botId, rng) {
     const obs = observeBsPoker(getPlayerView(s, botId), botId);
@@ -72,7 +72,7 @@ export const holdemBots: BotRunner<HoldemState, HoldemAction> = {
     const moves = Object.values(s.lastActions).map((a) => a.move);
     const handJustDealt = s.street === "preflop" && moves.every((m) => m === "small_blind" || m === "big_blind");
     const streetJustDealt = s.street !== "preflop" && !moves.some((m) => m === "check" || m === "call" || m === "bet" || m === "raise");
-    return { botId: p.id, justDealt: handJustDealt ? 3600 : streetJustDealt ? 1400 : 0 };
+    return { botId: p.id, justDealt: handJustDealt ? 2000 : streetJustDealt ? 900 : 0 };
   },
   decide(s, botId, rng) {
     const obs = observeHoldem(getHoldemView(s, botId), botId);
