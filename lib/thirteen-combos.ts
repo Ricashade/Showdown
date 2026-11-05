@@ -255,9 +255,9 @@ export function describeCombo(c: Combo): string {
   }
 }
 
-/** "chops one 2", "chops up to three 2s", "chops any 2s". */
+/** "beats one 2", "beats up to three 2s", "beats any 2s". */
 export function chopWords(tier: number): string {
   const cap = bombOf(tier).cap;
-  if (cap === Infinity) return "chops any 2s";
-  return cap === 1 ? "chops one 2" : `chops up to ${["", "one", "two", "three", "four", "five"][cap]} 2s`;
+  if (cap === Infinity) return "beats any 2s";
+  return cap === 1 ? "beats one 2" : `beats up to ${["", "one", "two", "three", "four", "five"][cap]} 2s`;
 }

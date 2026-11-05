@@ -33,7 +33,7 @@ export function describeEvent(e: ThirteenEvent, name: (id: string) => string): s
   if (e.kind === "pass") return `${name(e.by)} passed`;
   if (e.kind === "clear") return `Everyone passed, back to ${name(e.leader)}`;
   const what = describeCombo(e.combo);
-  if (e.chop === "twos") return `${name(e.by)} chopped with ${what}`;
+  if (e.chop === "twos") return `${name(e.by)} beat the 2s with ${what}`;
   if (e.chop === "bomb") return `${name(e.by)} bombed over it with ${what}`;
   return `${name(e.by)} played ${what}`;
 }

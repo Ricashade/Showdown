@@ -19,7 +19,7 @@ const CAP_TINT: Record<string, string> = {
 };
 const capKey = (cap: number) => (cap === Infinity ? "all" : String(cap));
 
-/** The seventeen bombs, weakest to strongest, with how many 2s each can chop. */
+/** The seventeen bombs, weakest to strongest, with how many 2s each can beat. */
 export function BombTable({ highlight }: { highlight?: number }) {
   return (
     <table className="w-full border-separate border-spacing-y-1 text-left">
@@ -35,7 +35,7 @@ export function BombTable({ highlight }: { highlight?: number }) {
             Like
           </th>
           <th scope="col" className="pb-1 text-right font-normal">
-            Chops
+            Beats
           </th>
         </tr>
       </thead>

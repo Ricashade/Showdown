@@ -34,12 +34,13 @@ export const SETTLE_MS = 7000;
 
 /** The usual casino shoe: six decks, 312 cards. */
 export const CASINO_DECKS = 6;
-export const BLACKJACK_DEFAULTS: BlackjackSettings = { startingChips: 1000, decks: CASINO_DECKS, betSeconds: 15 };
+export const BLACKJACK_DEFAULTS: BlackjackSettings = { startingChips: 1000, decks: CASINO_DECKS, betSeconds: 0 };
 
 /** Choices offered in the lobby. */
 export const STARTING_CHIP_OPTIONS = [250, 500, 1000, 2500, 5000, 10000];
 export const DECK_OPTIONS = [1, 2, 4, 6, 8];
-export const BET_SECONDS_OPTIONS = [10, 15, 20, 30];
+/** 0 is no limit: nobody gets hurried (people chatting on a call, say). */
+export const BET_SECONDS_OPTIONS = [0, 10, 15, 20, 30, 45, 60];
 
 type Result = ActionResult<BlackjackState>;
 const fail = (state: BlackjackState, error: string): Result => ({ ok: false, error, state });
@@ -194,7 +195,7 @@ function beginBetting(s: BlackjackState, now: number): BlackjackState {
   s.currentHand = 0;
   s.result = null;
   for (const p of s.players) Object.assign(p, { hands: [], bet: 0, insurance: null });
-  s.deadline = now + s.settings.betSeconds * 1000;
+  s.deadline = timer(s, now, s.settings.betSeconds);
   return s;
 }
 
@@ -227,7 +228,7 @@ function deal(s: BlackjackState, now: number): BlackjackState {
     }
     if (anyone) {
       s.phase = "insurance";
-      s.deadline = now + s.settings.betSeconds * 1000;
+      s.deadline = timer(s, now, s.settings.betSeconds);
       return s;
     }
   }
@@ -252,6 +253,9 @@ function nextHand(s: BlackjackState): { playerId: string; hand: number } | null 
   return null;
 }
 
+/** When a decision times out, or null when the table has no time limit. */
+const timer = (s: BlackjackState, now: number, seconds: number) => (s.settings.betSeconds > 0 ? now + seconds * 1000 : null);
+
 /** Hand the turn to the next unfinished hand, or over to the dealer. */
 function advance(s: BlackjackState, now: number): BlackjackState {
   const next = nextHand(s);
@@ -259,7 +263,7 @@ function advance(s: BlackjackState, now: number): BlackjackState {
     s.phase = "playing";
     s.currentTurnId = next.playerId;
     s.currentHand = next.hand;
-    s.deadline = now + TURN_SECONDS * 1000;
+    s.deadline = timer(s, now, TURN_SECONDS);
     return s;
   }
   s.phase = "dealer";
@@ -465,7 +469,7 @@ export function applyBlackjackAction(state: BlackjackState, action: BlackjackAct
       if (s.phase === "betting") {
         // Nobody bet: keep the table open for another round of betting.
         if (!s.players.some((p) => p.bet > 0)) {
-          s.deadline = now + s.settings.betSeconds * 1000;
+          s.deadline = timer(s, now, s.settings.betSeconds);
           return succeed(s);
         }
         return succeed(deal(s, now));

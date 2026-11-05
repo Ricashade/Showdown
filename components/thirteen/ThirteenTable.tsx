@@ -193,7 +193,7 @@ function Pile({ view, name, chop }: { view: ThirteenView; name: (id: string) => 
             transition={{ type: "spring", stiffness: 420, damping: 20 }}
           >
             <span className="rounded-full bg-chip px-6 py-0.5 font-display text-3xl leading-tight font-extrabold text-bone shadow-[0_6px_30px_rgba(200,16,46,0.45)]">
-              Chopped<span className="sr-only">: {bombOf(chop.combo.tier).name}, tier {chop.combo.tier}</span>
+              Bomb!<span className="sr-only">: {bombOf(chop.combo.tier).name}, tier {chop.combo.tier}</span>
             </span>
           </motion.div>
         )}
@@ -365,7 +365,7 @@ function MyHand({
                 chopping ? "bg-chip text-bone hover:bg-chip/85" : "bg-brass text-smoke hover:bg-brass-lit",
               )}
             >
-              {chopping ? "Chop" : "Play"}
+              Play
             </button>
           </div>
         )}

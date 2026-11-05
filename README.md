@@ -1,6 +1,6 @@
 # Showdown
 
-Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage**, **Rummy**, **War**, **Go Fish** and **13**, online or on one screen.
+Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage**, **Rummy**, **War**, **Go Fish** and **Thirteen**, online or on one screen.
 
 ```bash
 npm install
@@ -25,7 +25,7 @@ app/
   rummy/                    Rummy: same three routes
   war/                      War: same three routes
   go-fish/                  Go Fish: same three routes (local/?bots=1 seats you against two bots)
-  thirteen/                 13: chooser and local/ (local/?bots=1 seats you against two bots)
+  thirteen/                 Thirteen: chooser and local/ (local/?bots=1 seats you against two bots)
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -43,8 +43,8 @@ lib/
   rummy-engine.ts           Rummy reducer: draw (incl. Rummy 500 digs), meld, lay off, discard, scoring
   war-engine.ts             War: battles, Wars and short stacks, Classic and Tactical, win conditions
   gofish-engine.ts          Go Fish: asks, go fish and lucky catches, books, empty-hand refills, memory
-  thirteen-combos.ts        13: reading plays (Jokers wild), beating them, the 17 bombs, finding bombs in a hand
-  thirteen-engine.ts        13 reducer: dealing, the 3♠ opening, tricks, passing and lockout, chops, winner stays on
+  thirteen-combos.ts        Thirteen: reading plays (Jokers wild), beating them, the 17 bombs, finding bombs in a hand
+  thirteen-engine.ts        Thirteen reducer: dealing, the 3♠ opening, tricks, passing and lockout, bombs on 2s, winner stays on
   sound-effects.ts          Web Audio table sounds (the bomb thump), with an on/off switch each browser remembers
   party-engine.ts           Shared rooms: the roster and tonight's wins around whichever game is on
                             (switch game, play again, back to lobby), plus their bots and timers
@@ -68,8 +68,8 @@ components/
   war/                      Tug-of-war counter, battle zone, WAR! banner, flip/auto-flip/speed, how-to
   gofish/                   Seats with speech bubbles and memory, hand grouped by rank, history log,
                             and a click-through lesson for first-timers
-  thirteen/                 Seats, the trick pile and the chop moment, an 18-card hand with sorting, bomb
-                            finder and live preview, the bomb ladder drawer, and a three-step chop demo
+  thirteen/                 Seats, the trick pile and the bomb moment, an 18-card hand with sorting, bomb
+                            finder and live preview, the bomb ladder drawer, and a three-step bomb demo
 tests/                      Engine, game-loop and online-room tests
 ```
 
@@ -116,12 +116,13 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
 
 - **Table:** 1–7 players against an automated dealer; 1,000 chips, 6-deck shoe reshuffled at 75%,
   minimum bet 10 (quick chips 10/25/50/100). The host can change chips, decks and betting time.
-- **Round:** 15 s to bet (deals as soon as everyone has bet; nobody bet means a fresh timer), then
+- **Round:** betting has no time limit by default, so nobody is hurried; the host can set 10 s to a minute
+  (then nobody betting in time means a fresh timer). Cards come out as soon as everyone has bet, then
   two cards each and one face up for the dealer. With an Ace showing, insurance is offered (half
   the bet, pays 2:1); with an Ace or ten showing, the dealer checks for blackjack first.
 - **Moves:** hit, stand, double (first two cards; one card, then stand), split (same rank, up to 4
-  hands; split Aces get one card each, and 21 after a split isn't a blackjack). Each decision has
-  30 s, then you stand.
+  hands; split Aces get one card each, and 21 after a split isn't a blackjack). With a betting time
+  set, each decision also has 30 s, then you stand.
 - **Dealer:** turns the hole card and draws one card at a time, hitting soft 17.
 - **Payouts:** natural 3:2 (rounded down), win 1:1, tie pushes. Results show for 7 s, then the next
   betting round opens on its own; the host can deal sooner. Under 10 chips you're out; when
@@ -185,7 +186,7 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
 - **Memory helper:** marks the ranks each player is known to hold, from what they've asked for and
   taken. The host can turn it off.
 
-## 13 (as implemented)
+## Thirteen (as implemented)
 
 - **Table:** three play, 18 cards each from 54 (two Jokers). With more in the room the host picks the three;
   with *Winner stays on*, whoever held the most cards at the end gives their seat to the next in line.
@@ -200,7 +201,7 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
   below every natural suit.
 - **Bombs:** come down only on 2s (as many as the tier allows) or on a weaker bomb, or lead an empty table.
 
-  | Tier | Bomb | Chops | Tier | Bomb | Chops |
+  | Tier | Bomb | Beats | Tier | Bomb | Beats |
   | --- | --- | --- | --- | --- | --- |
   | 1 | 3 consecutive pairs | one 2 | 10 | Dragon (3 to A) | four 2s |
   | 2 | Four of a kind | one 2 | 11 | 2 consecutive quads | four 2s |
@@ -249,9 +250,9 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
 - **Go Fish:** asks come 1.2 s apart. Easy asks anyone for anything it holds; Medium remembers the
   last four asks and goes after whoever just asked for a rank it holds; Hard remembers every ask,
   steal and book, then goes for the rank it holds most of, from whoever has the most cards.
-- **13:** Easy leads its lowest card (alone or in whatever it makes), follows with the lowest play that
+- **Thirteen:** Easy leads its lowest card (alone or in whatever it makes), follows with the lowest play that
   beats the table, and drops a bomb on a 2 half the time. Medium keeps its bombs, 2s and Jokers together until
-  someone is down to four cards, then chops 2s. Hard splits its hand into the fewest plays (Jokers included),
+  someone is down to four cards, then bombs 2s. Hard splits its hand into the fewest plays (Jokers included),
   follows only when it doesn't break that up, cashes cards nobody can beat when it's nearly out, and counts the
   2s already played.
 

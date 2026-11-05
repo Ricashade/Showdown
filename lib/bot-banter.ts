@@ -20,7 +20,7 @@ const LINES = {
   /** Go Fish: someone took a bot's cards. */
   robbed: ["Hey! Those were mine.", "{name}, really? All of them?", "I was saving those.", "Rude.", "Fine. Take them. See if I care."],
   /** 13: someone dropped a bomb on a bot's 2s (or its bomb). */
-  chopped: ["My 2! You chopped my 2.", "Was that necessary, {name}?", "I'll get you back, {name}.", "Okay. Noted.", "Where were you hiding that?"],
+  chopped: ["My 2! You bombed my 2.", "Was that necessary, {name}?", "I'll get you back, {name}.", "Okay. Noted.", "Where were you hiding that?"],
 };
 
 const pick = (lines: string[], name: string) => lines[Math.floor(Math.random() * lines.length)].replace("{name}", name);

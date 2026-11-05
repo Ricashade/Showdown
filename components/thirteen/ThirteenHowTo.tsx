@@ -13,9 +13,9 @@ import { DemoBar, HowToDialog, Panel, Tips } from "@/components/rules/HowToDialo
 import { playBombImpact } from "@/lib/sound-effects";
 import { BombTable } from "./BombSheet";
 
-/** 13's rules (climbing, Jokers, the bomb ladder) and a three-step demo of a chop. */
+/** Thirteen's rules (climbing, Jokers, the bomb ladder) and a three-step demo of a bomb beating a 2. */
 export function ThirteenHowTo({ onClose }: { onClose: () => void }) {
-  return <HowToDialog title="How to play 13" guide={(showDemo) => <Guide onDemo={showDemo} />} demo={(exit) => <Demo onExit={exit} />} onClose={onClose} />;
+  return <HowToDialog title="How to play Thirteen" guide={(showDemo) => <Guide onDemo={showDemo} />} demo={(exit) => <Demo onExit={exit} />} onClose={onClose} />;
 }
 
 /** "9S 9D X": cards for the examples, X a Joker. */
@@ -64,7 +64,7 @@ function Guide({ onDemo }: { onDemo: () => void }) {
           />
         </div>
         <button onClick={onDemo} className="min-h-11 rounded-full bg-brass px-5 text-base font-bold text-smoke hover:bg-brass-lit">
-          Try a chop
+          Try the demo
         </button>
       </div>
       {topic === "climbing" ? <Climbing /> : topic === "jokers" ? <Jokers /> : <Bombs />}
@@ -154,11 +154,11 @@ function Jokers() {
 function Bombs() {
   return (
     <div className="grid items-start gap-4">
-      <Panel title="Chopping 2s">
+      <Panel title="Bombs beat 2s">
         <Tips
           items={[
             "A bomb only comes down on 2s or on a weaker bomb. It can lead an empty table too.",
-            "Each bomb chops up to a set number of 2s: a single 2, a pair, three…",
+            "Each bomb beats up to a set number of 2s: a single 2, a pair, three…",
             "A higher tier always wins. Same tier: the higher top card.",
             "Same tier and rank: the house rule decides (by default, no Jokers wins).",
             "Passed this trick? You can still bomb back in, unless the host turns it off.",
@@ -174,7 +174,7 @@ function Bombs() {
 }
 
 // ---------------------------------------------------------------------------
-// Demo: a 2 goes down → you chop it with four 9s (one a Joker) → a tier 3 bomb tops yours
+// Demo: a 2 goes down → you beat it with four 9s (one a Joker) → a tier 3 bomb tops yours
 // ---------------------------------------------------------------------------
 
 const YOUR_HAND = hand("4C 6D 9S 9D 9H JH KS X");
@@ -208,9 +208,9 @@ function Demo({ onExit }: { onExit: () => void }) {
   };
 
   const ready = picked.length === QUAD.length;
-  const title = ["Shark Vinnie plays a 2♠", "Chopped: your four 9s take the 2", "Ice Cold Ivy tops it with 333 444"][step];
+  const title = ["Shark Vinnie plays a 2♠", "Your four 9s beat the 2", "Ice Cold Ivy tops it with 333 444"][step];
   const hint = [
-    ready ? "Tier 2 · Four 9s · chops one 2" : "Tap the bomb above your hand.",
+    ready ? "Tier 2 · Four 9s · beats one 2" : "Tap the bomb above your hand.",
     "Three 9s and a Joker make four of a kind: a tier 2 bomb.",
     "Two triples in a row is tier 3. A higher tier always wins, whatever the cards.",
   ][step];
@@ -255,7 +255,7 @@ function Demo({ onExit }: { onExit: () => void }) {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: "spring", stiffness: 420, damping: 20 }}
               >
-                Chopped
+                Bomb!
               </motion.span>
             )}
           </AnimatePresence>
@@ -288,7 +288,7 @@ function Demo({ onExit }: { onExit: () => void }) {
       <div className="mt-6 flex min-h-14 flex-wrap items-center gap-3">
         {step === 0 && (
           <button ref={ready ? primaryRef : undefined} onClick={chop} disabled={!ready} className="min-h-14 rounded-full bg-chip px-8 font-display text-2xl font-bold text-bone hover:bg-chip/85 disabled:opacity-40">
-            Chop
+            Play
           </button>
         )}
         {step === 1 && (
@@ -302,7 +302,7 @@ function Demo({ onExit }: { onExit: () => void }) {
               Play against bots
             </RoomLink>
             <RoomLink href="/thirteen" className="flex min-h-12 items-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
-              Play 13
+              Play Thirteen
             </RoomLink>
             <button ref={primaryRef} onClick={restart} className="min-h-12 rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">
               Replay

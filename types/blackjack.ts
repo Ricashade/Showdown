@@ -5,7 +5,10 @@ export interface BlackjackSettings {
   startingChips: number;
   /** Decks in the shoe. */
   decks: number;
-  /** Seconds to place bets (and to decide on insurance). */
+  /**
+   * Seconds to place bets and decide on insurance; 0 (the default) means no limit. With a limit,
+   * each decision on your turn is timed too.
+   */
   betSeconds: number;
 }
 

@@ -25,8 +25,9 @@ const act = (s: BlackjackState, action: BlackjackAction, now = NOW) => must(appl
 const play = (s: BlackjackState, ...actions: BlackjackAction[]) => actions.reduce((st, a) => act(st, a), s);
 
 /** A started game in its first betting round. */
-function table(ids: string[], opts: { chips?: number; bots?: string[] } = {}) {
-  let s = createBlackjackRoom({ roomId: "t", host: { id: ids[0], name: ids[0].toUpperCase() }, settings: { startingChips: opts.chips ?? 1000 } });
+/** A started game; most tests run with the 15-second timers on, to check them. */
+function table(ids: string[], opts: { chips?: number; bots?: string[]; betSeconds?: number } = {}) {
+  let s = createBlackjackRoom({ roomId: "t", host: { id: ids[0], name: ids[0].toUpperCase() }, settings: { startingChips: opts.chips ?? 1000, betSeconds: opts.betSeconds ?? 15 } });
   for (const id of ids.slice(1)) s = act(s, { type: "JOIN_ROOM", player: { id, name: id.toUpperCase() } });
   for (const id of opts.bots ?? []) s = act(s, { type: "JOIN_ROOM", player: { id, name: id, isBot: true, botDifficulty: "hard" } });
   return act(s, { type: "START_GAME", playerId: ids[0], seed: 7 });
@@ -363,5 +364,22 @@ describe("blackjack bots", () => {
     expect(ins.phase).toBe("insurance");
     const iobs = observeBlackjack(getBlackjackView(ins, "bot"), "bot")!;
     expect(getBlackjackBotAction(iobs, "hard")).toEqual({ type: "INSURANCE", playerId: "bot", take: false });
+  });
+});
+
+describe("no time limit (the default)", () => {
+  it("waits as long as it takes to bet, decide on insurance and play", () => {
+    expect(createBlackjackRoom({ roomId: "t", host: { id: "a", name: "A" } }).settings.betSeconds).toBe(0);
+    let s = table(["a", "b"], { betSeconds: 0 });
+    expect(s.deadline).toBeNull();
+    expect(blackjackClock(s)).toBeNull();
+    expect(applyBlackjackAction(s, { type: "TIME_UP", playerId: "a" }, NOW + 3_600_000).ok).toBe(false);
+    // An Ace up opens insurance, untimed; then play, untimed.
+    s = dealt(s, "TS 9S AH 6D 9D 7C", { a: 10, b: 10 });
+    expect(s.phase).toBe("insurance");
+    expect(s.deadline).toBeNull();
+    s = act(act(s, { type: "INSURANCE", playerId: "a", take: false }), { type: "INSURANCE", playerId: "b", take: false });
+    expect(s.phase).toBe("playing");
+    expect(s.deadline).toBeNull();
   });
 });

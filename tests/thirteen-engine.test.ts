@@ -133,7 +133,7 @@ describe("beating plays", () => {
     expect(beats(best("2S"), best("AH"), "natural")).toBe(true);
   });
 
-  it("bombs chop only as many 2s as their tier allows", () => {
+  it("bombs beat only as many 2s as their tier allows", () => {
     const one = best("2S");
     const two = best("2S 2H");
     const three = best("2S 2H 2D");

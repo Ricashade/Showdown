@@ -198,6 +198,8 @@ describe("game moves", () => {
     s = act(s, { type: "SWITCH_GAME", playerId: "h", newGameType: "blackjack" });
     expect(partyBots.pending(s)).toBeNull();
     expect(partyClock(s)).toBeNull();
+    // Blackjack has no betting time limit unless the host sets one.
+    s = move(s, { type: "UPDATE_SETTINGS", playerId: "h", settings: { betSeconds: 15 } });
     s = move(s, { type: "START_GAME", playerId: "h", seed: 4 });
     expect(partyBots.pending(s)?.botId).toBe("bot");
     const decision = partyBots.decide(s, "bot", () => 0.5);

@@ -70,7 +70,7 @@ export function BlackjackLobby({ view, isHost, options, connectedIds, onUpdateSe
               label="Time to bet"
               value={settings.betSeconds}
               options={BET_SECONDS_OPTIONS}
-              format={(s) => `${s}s`}
+              format={(s) => (s === 0 ? "No limit" : s === 60 ? "1 min" : `${s}s`)}
               onChange={(betSeconds) => set({ betSeconds })}
               disabled={locked}
             />

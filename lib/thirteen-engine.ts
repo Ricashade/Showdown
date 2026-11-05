@@ -132,7 +132,7 @@ export function judgePlay(ctx: PlayContext, cards: readonly Card[]): Judgement {
   if (allowed.length > 0) return { readings, allowed, reason: null };
   if (ctx.passed) return { readings, allowed, reason: ctx.bombAfterPass ? "You passed: only a bomb gets you back in" : "You passed this trick" };
   if (top.type === "bomb") return { readings, allowed, reason: "Only a stronger bomb beats a bomb" };
-  if (readings.some((c) => c.type === "bomb")) return { readings, allowed, reason: isBombable(top) ? "This bomb can't chop that many 2s" : "Bombs only come down on 2s or a bomb" };
+  if (readings.some((c) => c.type === "bomb")) return { readings, allowed, reason: isBombable(top) ? "This bomb can't beat that many 2s" : "Bombs only come down on 2s or a bomb" };
   return { readings, allowed, reason: `Doesn't beat ${describeCombo(top)}` };
 }
 
@@ -266,7 +266,7 @@ export function applyThirteenAction(state: ThirteenState, action: ThirteenAction
     case "START_GAME": {
       if (state.phase !== "lobby") return fail(state, "Game already started");
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
-      if (state.players.length < THIRTEEN_MIN_PLAYERS) return fail(state, "13 needs three players");
+      if (state.players.length < THIRTEEN_MIN_PLAYERS) return fail(state, "Thirteen needs three players");
       const s = structuredClone(resetToLobby(state));
       const [, rng] = nextRandom(action.seed >>> 0);
       const { result, rngState } = shuffle(createDeck(true), rng);
@@ -345,7 +345,7 @@ export function standings(view: Pick<ThirteenView, "seats" | "winnerId">) {
   return [...(view.seats ?? [])].sort((a, b) => (a.id === view.winnerId ? -1 : b.id === view.winnerId ? 1 : a.count - b.count));
 }
 
-/** 13 as a game the online room can host. */
+/** Thirteen as a game the online room can host. */
 export const thirteenGame: GameDefinition<ThirteenState, ThirteenAction, ThirteenView> = {
   applyAction: applyThirteenAction,
   getPlayerView: getThirteenView,

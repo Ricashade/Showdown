@@ -87,7 +87,7 @@ export function ThirteenTableScreen({ view, actingId, isHost, onAction, onStartG
   return (
     <div className="min-h-screen pb-16">
       <div inert={view.phase === "game_over"}>
-        <ScreenHeader title="13" exit={exit} extra={headerExtra} />
+        <ScreenHeader title="Thirteen" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
         <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="thirteen" />}>

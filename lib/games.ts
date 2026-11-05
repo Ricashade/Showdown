@@ -19,7 +19,7 @@ export const WAR: GameInfo = { title: "War", path: "/war", roomKey: (code) => `w
 
 export const GO_FISH: GameInfo = { title: "Go Fish", path: "/go-fish", roomKey: (code) => `gofish:${code}` };
 
-export const THIRTEEN: GameInfo = { title: "13", path: "/thirteen", roomKey: (code) => `thirteen:${code}` };
+export const THIRTEEN: GameInfo = { title: "Thirteen", path: "/thirteen", roomKey: (code) => `thirteen:${code}` };
 
 /** A shared room: one code for the night, whichever game is on. */
 export const ROOM: GameInfo = { title: "Showdown", path: "/", roomKey: (code) => `room:${code}` };
