@@ -62,6 +62,34 @@ describe("hand values", () => {
   });
 });
 
+describe("the shoe", () => {
+  it("is six decks unless the host picks 1, 2, 4 or 8", () => {
+    expect(table(["a"]).settings.decks).toBe(6);
+    const s = createBlackjackRoom({ roomId: "t", host: { id: "a", name: "A" } });
+    const decks = (n: number) => act(s, { type: "UPDATE_SETTINGS", playerId: "a", settings: { decks: n } }).settings.decks;
+    expect([1, 2, 4, 8].map(decks)).toEqual([1, 2, 4, 8]);
+    expect(decks(3)).toBe(6);
+  });
+
+  it("deals from a fresh 312-card shoe with the cut card a quarter from the end", () => {
+    const s = act(table(["a"]), { type: "PLACE_BET", playerId: "a", amount: 10 });
+    expect(s.cutCard).toBe(78);
+    expect(s.shoe.length + 4).toBe(312);
+  });
+
+  it("reshuffles before the deal once a quarter of the shoe or less is left", () => {
+    const filler = act(table(["a"]), { type: "PLACE_BET", playerId: "a", amount: 10 }).shoe;
+    // A betting round whose shoe holds `left` cards, with the cut card at 78.
+    const withShoe = (left: number) => ({ ...table(["a"]), shoe: [...cards("9S 7H 8D TC"), ...filler.slice(-(left - 4))], cutCard: 78 });
+    const bet = (s: BlackjackState) => act(s, { type: "PLACE_BET", playerId: "a", amount: 10 });
+
+    // One card above the cut: dealt from this shoe.
+    expect(bet(withShoe(79)).shoe).toHaveLength(75);
+    // At the cut card: a fresh six-deck shoe first.
+    expect(bet(withShoe(78)).shoe).toHaveLength(312 - 4);
+  });
+});
+
 describe("betting", () => {
   it("opens with a timer and deals once everyone has bet", () => {
     const s = table(["a", "b"]);

@@ -5,6 +5,7 @@ import {
   BET_SECONDS_OPTIONS,
   BLACKJACK_MAX_PLAYERS,
   BLACKJACK_MIN_PLAYERS,
+  CASINO_DECKS,
   DECK_OPTIONS,
   STARTING_CHIP_OPTIONS,
   type BlackjackView,
@@ -57,9 +58,11 @@ export function BlackjackLobby({ view, isHost, options, connectedIds, onUpdateSe
               disabled={locked}
             />
             <ChoiceStepper
-              label="Decks in the shoe"
+              label="Shoe size"
               value={settings.decks}
               options={DECK_OPTIONS}
+              format={(d) => `${d} ${d === 1 ? "deck" : "decks"}`}
+              badge={settings.decks === CASINO_DECKS ? "Casino standard" : undefined}
               onChange={(decks) => set({ decks })}
               disabled={locked}
             />

@@ -32,7 +32,9 @@ export const TURN_SECONDS = 30;
 /** How long the round's results stay up before the next betting round. */
 export const SETTLE_MS = 7000;
 
-export const BLACKJACK_DEFAULTS: BlackjackSettings = { startingChips: 1000, decks: 6, betSeconds: 15 };
+/** The usual casino shoe: six decks, 312 cards. */
+export const CASINO_DECKS = 6;
+export const BLACKJACK_DEFAULTS: BlackjackSettings = { startingChips: 1000, decks: CASINO_DECKS, betSeconds: 15 };
 
 /** Choices offered in the lobby. */
 export const STARTING_CHIP_OPTIONS = [250, 500, 1000, 2500, 5000, 10000];

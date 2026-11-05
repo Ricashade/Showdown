@@ -129,6 +129,7 @@ export function ChoiceStepper({
   onChange,
   label,
   format = (v) => v.toLocaleString("en-US"),
+  badge,
   disabled,
 }: {
   value: number;
@@ -136,6 +137,8 @@ export function ChoiceStepper({
   onChange: (v: number) => void;
   label: string;
   format?: (v: number) => string;
+  /** A small muted note on the label's line. */
+  badge?: string;
   disabled?: boolean;
 }) {
   // If the value isn't one of the choices, step from the nearest one.
@@ -144,7 +147,10 @@ export function ChoiceStepper({
     "grid size-10 place-items-center rounded-full border border-leather-lit text-parchment transition hover:border-brass hover:text-bone disabled:opacity-35 disabled:hover:border-leather-lit";
   return (
     <div className={clsx("flex items-center justify-between gap-4", disabled && "opacity-50")}>
-      <span className="text-base text-bone">{label}</span>
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-bone">
+        {label}
+        {badge && <span className="rounded-full px-2 py-0.5 text-xs text-ash ring-1 ring-leather-lit">{badge}</span>}
+      </span>
       <div className="flex items-center gap-2" role="group" aria-label={label}>
         <button type="button" className={btn} disabled={disabled || index <= 0} onClick={() => onChange(options[index - 1])} aria-label={`Lower ${label.toLowerCase()}`}>
           <Minus className="size-4" />
