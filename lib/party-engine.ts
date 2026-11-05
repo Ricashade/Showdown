@@ -11,7 +11,7 @@ import type { BlackjackState } from "@/types/blackjack";
 import type { GameDefinition, RoomAction, RoomState } from "./multiplayer/room";
 import type { BotRunner } from "./bot-ai";
 import type { TableClock } from "./hooks/use-table-clock";
-import { blackjackBots, bsPokerBots, garbageBots, goFishBots, holdemBots, rummyBots, thirteenBots, warBots } from "./bot-ai";
+import { blackjackBots, bsPokerBots, garbageBots, goFishBots, holdemBots, rummyBots, speedBots, thirteenBots, warBots } from "./bot-ai";
 import { bsPokerGame, createRoom, MIN_PLAYERS } from "./bs-poker-game";
 import { createHoldemRoom, holdemGame, HOLDEM_MIN_PLAYERS } from "./holdem-game";
 import { BLACKJACK_MIN_PLAYERS, blackjackClock, blackjackGame, createBlackjackRoom } from "./blackjack-engine";
@@ -20,6 +20,7 @@ import { createRummyRoom, rummyGame, RUMMY_MIN_PLAYERS } from "./rummy-engine";
 import { createWarRoom, warGame, WAR_MIN_PLAYERS } from "./war-engine";
 import { createGoFishRoom, goFishGame, GOFISH_MIN_PLAYERS } from "./gofish-engine";
 import { createThirteenRoom, thirteenGame, THIRTEEN_MIN_PLAYERS } from "./thirteen-engine";
+import { createSpeedRoom, speedClock, speedGame, SPEED_MIN_PLAYERS } from "./speed-engine";
 import type { BlackjackView } from "./blackjack-engine";
 import type { BsPokerView } from "./bs-poker-game";
 import type { GarbageView } from "./garbage-engine";
@@ -28,12 +29,14 @@ import type { RummyView } from "./rummy-engine";
 import type { WarView } from "./war-engine";
 import type { GoFishView } from "./gofish-engine";
 import type { ThirteenView } from "./thirteen-engine";
+import type { SpeedView } from "./speed-engine";
+import type { SpeedState } from "@/types/speed";
 import type { GoFishState } from "@/types/gofish";
 
 /** Hold'em seats the most. */
 export const PARTY_MAX_PLAYERS = 9;
 
-export type ActiveGameView = BsPokerView | HoldemView | BlackjackView | GarbageView | RummyView | WarView | GoFishView | ThirteenView;
+export type ActiveGameView = BsPokerView | HoldemView | BlackjackView | GarbageView | RummyView | WarView | GoFishView | ThirteenView | SpeedView;
 
 // ---------------------------------------------------------------------------
 // The games, as the room drives them
@@ -86,6 +89,15 @@ const kits: Record<GameMode, unknown> = {
     winners: (s: GoFishState, finished: boolean) => (finished ? s.winnerIds : []),
   }),
   thirteen: defineKit({ def: thirteenGame, create: (roomId, host) => createThirteenRoom({ roomId, host }), minPlayers: THIRTEEN_MIN_PLAYERS, bots: thirteenBots, winners: winnerOf }),
+  // Out of cards with nothing left to turn, a tie for fewest crowns both.
+  speed: defineKit({
+    def: speedGame,
+    create: (roomId, host) => createSpeedRoom({ roomId, host }),
+    minPlayers: SPEED_MIN_PLAYERS,
+    bots: speedBots,
+    clock: speedClock,
+    winners: (s: SpeedState, finished: boolean) => (finished ? s.winnerIds : []),
+  }),
 };
 
 /** Each kit is typed for its own game; the room only ever hands a game its own state and moves. */

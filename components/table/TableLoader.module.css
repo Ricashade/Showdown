@@ -718,3 +718,33 @@
     transform: scale(1.05);
   }
 }
+
+/* ---------- Speed: two piles, slammed from both sides of the table in turn ---------- */
+
+.speed {
+  --period: 2.6s;
+  width: 140px;
+  height: 62px;
+}
+.slam {
+  animation-name: slam;
+}
+@keyframes slam {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(var(--from) * 70px)) rotate(0deg);
+  }
+  6% {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--r));
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--r));
+  }
+  90%,
+  100% {
+    opacity: 0;
+    transform: translateY(0) rotate(var(--r));
+  }
+}

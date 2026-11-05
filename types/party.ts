@@ -7,10 +7,11 @@ import type { RummyAction, RummyState } from "./rummy";
 import type { WarAction, WarState } from "./war";
 import type { GoFishAction, GoFishState } from "./gofish";
 import type { ThirteenAction, ThirteenState } from "./thirteen";
+import type { SpeedAction, SpeedState } from "./speed";
 
 /** Whichever game the room has on the table; `mode` says which. */
-export type ActiveGameState = BsPokerState | HoldemState | BlackjackState | GarbageState | RummyState | WarState | GoFishState | ThirteenState;
-export type ActiveGameAction = BsPokerAction | HoldemAction | BlackjackAction | GarbageAction | RummyAction | WarAction | GoFishAction | ThirteenAction;
+export type ActiveGameState = BsPokerState | HoldemState | BlackjackState | GarbageState | RummyState | WarState | GoFishState | ThirteenState | SpeedState;
+export type ActiveGameAction = BsPokerAction | HoldemAction | BlackjackAction | GarbageAction | RummyAction | WarAction | GoFishAction | ThirteenAction | SpeedAction;
 
 /** Someone in the room. They keep their seat and their wins across games. */
 export interface PartyPlayer extends BasePlayer {

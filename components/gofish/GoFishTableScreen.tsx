@@ -145,7 +145,7 @@ function GameOver({ view, actions, canPlayAgain, onPlayAgain }: { view: GoFishVi
   useEffect(() => (ref.current ?? menuRef.current)?.focus(), []);
   const winners = view.players.filter((p) => view.winnerIds.includes(p.id));
   const standings = [...view.players].sort((a, b) => b.books.length - a.books.length);
-  const title = winners.length === 1 ? `${winners[0].name} wins` : `${winners.map((p) => p.name).join(" and ")} tie`;
+  const title = winners.length === 1 ? `${winners[0].name} ${winners[0].name === "You" ? "win" : "wins"}` : `${winners.map((p) => p.name).join(" and ")} tie`;
 
   return (
     <motion.div className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-black/80 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

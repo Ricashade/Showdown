@@ -153,7 +153,7 @@ function GameOver({ view, actions, canPlayAgain, onPlayAgain }: { view: Thirteen
     <motion.div className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-black/80 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div role="dialog" aria-modal="true" aria-labelledby="winner-title" className="felt my-auto w-full max-w-md rounded-[2rem] p-7 sm:p-9">
         <h2 id="winner-title" className="font-display text-6xl leading-none font-extrabold text-bone">
-          {name(view.winnerId!)} wins
+          {name(view.winnerId!)} {name(view.winnerId!) === "You" ? "win" : "wins"}
         </h2>
         <ol className="mt-6 divide-y divide-baize-deep border-y border-baize-deep">
           {standings(view).map((x, i) => (

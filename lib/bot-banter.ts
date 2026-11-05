@@ -19,6 +19,8 @@ const LINES = {
   war: ["THIS. MEANS. WAR.", "Oh, it's on.", "Nobody blink.", "Three down, one up. Let's go.", "I've been waiting for this."],
   /** Go Fish: someone took a bot's cards. */
   robbed: ["Hey! Those were mine.", "{name}, really? All of them?", "I was saving those.", "Rude.", "Fine. Take them. See if I care."],
+  /** Speed: a bot ran out of cards but someone else slapped Speed first. */
+  slapped: ["Wait, I was out!", "{name}, you're too quick.", "Fine, I'll take the pile.", "My hand slipped.", "That was a warm-up."],
   /** 13: someone dropped a bomb on a bot's 2s (or its bomb). */
   chopped: ["My 2! You bombed my 2.", "Was that necessary, {name}?", "I'll get you back, {name}.", "Okay. Noted.", "Where were you hiding that?"],
 };
@@ -61,6 +63,12 @@ export function banterFor(prev: ActiveGameState | null, next: ActiveGameState): 
       const victim = next.log.slice(0, i).findLast((x) => x.kind === "play");
       if (victim?.kind === "play" && isBot(victim.by) && victim.by !== e.by) return [{ botId: victim.by, text: pick(LINES.chopped, nameOf(e.by)) }];
     }
+  }
+
+  if (next.mode === "speed" && prev.mode === "speed") {
+    const seen = prev.log.at(-1)?.n ?? -1;
+    const e = next.log.find((x) => x.n > seen && x.kind === "caught");
+    if (e?.kind === "caught" && isBot(e.caught)) return [{ botId: e.caught, text: pick(LINES.slapped, nameOf(e.by)) }];
   }
 
   return [];

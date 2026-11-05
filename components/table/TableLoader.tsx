@@ -49,6 +49,7 @@ const STAGE: Record<GameId, string> = {
   war: "war",
   "go-fish": "fish",
   thirteen: "thirteen",
+  speed: "speed",
 };
 
 const VIGNETTES: Record<GameId, () => ReactNode> = {
@@ -111,4 +112,15 @@ const VIGNETTES: Record<GameId, () => ReactNode> = {
       ))}
     </>
   ),
+  // Two piles, slammed from both sides of the table in turn.
+  speed: () =>
+    (
+      [
+        ["7s", "0px", "1", "-5deg"],
+        ["Kd", "96px", "-1", "4deg"],
+        ["8h", "0px", "1", "3deg"],
+        ["Ah", "96px", "-1", "-6deg"],
+        ["9c", "0px", "1", "-2deg"],
+      ] as const
+    ).map(([c, x, from, r], i) => <Card key={c} code={c} className={s.slam} style={{ left: x, "--from": from, "--r": r, ...delay(i * 0.32) } as CSSProperties} />),
 };

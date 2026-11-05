@@ -16,6 +16,7 @@ import { RummyTableScreen } from "@/components/rummy/RummyTableScreen";
 import { WarTableScreen } from "@/components/war/WarTableScreen";
 import { GoFishTableScreen } from "@/components/gofish/GoFishTableScreen";
 import { ThirteenTableScreen } from "@/components/thirteen/ThirteenTableScreen";
+import { SpeedTableScreen } from "@/components/speed/SpeedTableScreen";
 import { GamePicker } from "./GamePicker";
 import { PostGameActions } from "./PostGameActions";
 import { HOW_TO } from "./how-to";
@@ -151,6 +152,8 @@ function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, 
         <GoFishTableScreen view={game} {...common} />
       ) : game.mode === "thirteen" ? (
         <ThirteenTableScreen view={game} {...common} />
+      ) : game.mode === "speed" ? (
+        <SpeedTableScreen view={game} {...common} />
       ) : (
         <WarTableScreen view={game} controlIds={game.sides?.some((x) => x.id === me) ? [me] : []} {...common} />
       )}

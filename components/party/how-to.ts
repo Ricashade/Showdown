@@ -8,6 +8,7 @@ import { RummyHowTo } from "@/components/rummy/RummyHowTo";
 import { WarHowTo } from "@/components/war/WarHowTo";
 import { GoFishHowTo } from "@/components/gofish/GoFishHowTo";
 import { ThirteenHowTo } from "@/components/thirteen/ThirteenHowTo";
+import { SpeedHowTo } from "@/components/speed/SpeedHowTo";
 
 /** Every game's rules and demo as a dialog, so nobody has to leave the room to read them. */
 export const HOW_TO: Record<GameId, ComponentType<{ onClose: () => void }>> = {
@@ -19,4 +20,5 @@ export const HOW_TO: Record<GameId, ComponentType<{ onClose: () => void }>> = {
   war: WarHowTo,
   "go-fish": GoFishHowTo,
   thirteen: ThirteenHowTo,
+  speed: SpeedHowTo,
 };

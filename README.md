@@ -45,7 +45,9 @@ lib/
   gofish-engine.ts          Go Fish: asks, go fish and lucky catches, books, empty-hand refills, memory
   thirteen-combos.ts        Thirteen: reading plays (Jokers wild), beating them, the 17 bombs, finding bombs in a hand
   thirteen-engine.ts        Thirteen reducer: dealing, the 3♠ opening, tricks, passing and lockout, bombs on 2s, winner stays on
-  sound-effects.ts          Web Audio table sounds (the bomb thump), with an on/off switch each browser remembers
+  speed-engine.ts           Speed: real-time play in arrival order, stale moves, stalls and spare flips, slap mode,
+                            and the host's clock (countdown, flips)
+  sound-effects.ts          Web Audio table sounds (bomb thump, card slaps, runs, misses), with an on/off switch
   party-engine.ts           Shared rooms: the roster and tonight's wins around whichever game is on
                             (switch game, play again, back to lobby), plus their bots and timers
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
@@ -216,6 +218,22 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
   A higher tier always wins; the same tier goes to the higher top card. An exact tie follows the host's rule:
   no Jokers wins, then the higher suit (default); neither can beat the other; or the later bomb wins.
 
+## Speed (as implemented)
+
+- **Table:** two play, 20 cards each (5 in hand, 15 in a face-down stock), five spares either side and one card
+  on each middle pile. With more in the room the host picks the two; *Winner stays on* works as in War.
+- **Start:** 3, 2, 1 on the host's clock, then both middle cards turn up.
+- **Play:** no turns. A card goes on either pile one rank up or down, suits ignored, wrapping K–A–2. By default the
+  same rank goes on too, and two to four of a rank go down together. Your hand refills from your stock, or (house
+  rule) you draw yourself.
+- **Arrival order:** the host applies moves as they reach it. A move made against a pile that has changed still
+  lands if it fits the new top; otherwise it comes back as "Too slow!".
+- **Stalls:** when neither player can go (or both ask), a spare turns onto each pile after 600 ms. With no spares
+  left, everything under the two tops is shuffled into new ones; with nothing to shuffle, fewest cards wins.
+- **Winning:** your last card wins, or (arcade) you must then slap Speed first. Get beaten to it and you take back
+  the smaller pile (all but its top card).
+- **Hands are private:** you see how many cards the other player holds, not which.
+
 ## Bots
 
 The host can seat Easy, Medium or Hard bots in any game, mixed freely with people.
@@ -255,6 +273,10 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
   someone is down to four cards, then bombs 2s. Hard splits its hand into the fewest plays (Jokers included),
   follows only when it doesn't break that up, cashes cards nobody can beat when it's nearly out, and counts the
   2s already played.
+- **Speed:** no turns, so a bot is a reaction time after its own last card (and at least half that after the
+  piles change): Easy 1.8–2.6 s, playing one card at a time at random; Medium 1–1.5 s, sets together; Hard
+  0.55–0.9 s, starting the longest run it holds and running it at 450 ms a card. The times come from the
+  host-stamped state, so they don't restart when the other player moves.
 
 ## Shared rooms (as implemented)
 

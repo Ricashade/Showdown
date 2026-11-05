@@ -16,6 +16,7 @@ import { RummyHowTo } from "@/components/rummy/RummyHowTo";
 import { WarHowTo } from "@/components/war/WarHowTo";
 import { GoFishHowTo } from "@/components/gofish/GoFishHowTo";
 import { ThirteenHowTo } from "@/components/thirteen/ThirteenHowTo";
+import { SpeedHowTo } from "@/components/speed/SpeedHowTo";
 import { JoinWithCode } from "./JoinWithCode";
 import { GAME_ART } from "./game-art";
 
@@ -71,6 +72,11 @@ const SLIDES: Slide[] = [
     id: "thirteen",
     ...GAME_ART["thirteen"],
     howTo: { Dialog: ThirteenHowTo },
+  },
+  {
+    id: "speed",
+    ...GAME_ART["speed"],
+    howTo: { Dialog: SpeedHowTo },
   },
 ];
 

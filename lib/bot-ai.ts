@@ -13,6 +13,7 @@ import type { RummyAction, RummyState } from "@/types/rummy";
 import type { WarAction, WarState } from "@/types/war";
 import type { GoFishAction, GoFishState } from "@/types/gofish";
 import type { ThirteenAction, ThirteenState } from "@/types/thirteen";
+import type { SpeedAction, SpeedState } from "@/types/speed";
 import type { BotDifficulty } from "@/types/game";
 import { getPlayerView } from "./bs-poker-game";
 import { getHoldemView } from "./holdem-game";
@@ -22,6 +23,7 @@ import { getRummyView } from "./rummy-engine";
 import { getWarView } from "./war-engine";
 import { getGoFishView } from "./gofish-engine";
 import { getThirteenView } from "./thirteen-engine";
+import { getSpeedView } from "./speed-engine";
 import { getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 import { getHoldemBotAction, observeHoldem } from "./bots/holdem-bot";
 import { getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
@@ -30,6 +32,7 @@ import { getRummyBotAction, observeRummy } from "./bots/rummy-bot";
 import { getWarBotAction, observeWar } from "./bots/war-bot";
 import { getGoFishBotAction, observeGoFish } from "./bots/gofish-bot";
 import { getThirteenBotAction, observeThirteen } from "./bots/thirteen-bot";
+import { getSpeedBotAction, observeSpeed, speedDueAt } from "./bots/speed-bot";
 import { randomId } from "./multiplayer/room-code";
 
 export { estimateBidProbability, getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
@@ -40,6 +43,7 @@ export { getRummyBotAction, observeRummy } from "./bots/rummy-bot";
 export { chooseWarCard, getWarBotAction, observeWar } from "./bots/war-bot";
 export { chooseAsk, getGoFishBotAction, observeGoFish } from "./bots/gofish-bot";
 export { getThirteenBotAction, observeThirteen, planHand } from "./bots/thirteen-bot";
+export { getSpeedBotAction, observeSpeed, speedDueAt } from "./bots/speed-bot";
 
 /** How a game exposes its bots to the driver that runs them. */
 export interface BotRunner<S, A> {
@@ -181,6 +185,30 @@ export const thirteenBots: BotRunner<ThirteenState, ThirteenAction> = {
   decide(s, botId, rng) {
     const obs = observeThirteen(getThirteenView(s, botId), botId);
     return obs ? getThirteenBotAction(obs, difficultyOf(s.players, botId), rng) : null;
+  },
+};
+
+/**
+ * Speed has no turns: every bot works out when its reaction comes due (from the host-stamped
+ * times in the state, so asking again after each move doesn't reset it), and the earliest goes.
+ */
+export const speedBots: BotRunner<SpeedState, SpeedAction> = {
+  pending(s) {
+    if ((s.phase !== "live" && s.phase !== "slap") || !s.sides) return null;
+    let next: { botId: string; at: number } | null = null;
+    for (const side of s.sides) {
+      const p = s.players.find((x) => x.id === side.id);
+      if (!p?.isBot) continue;
+      const obs = observeSpeed(getSpeedView(s, side.id), side.id);
+      if (!obs || !getSpeedBotAction(obs, difficultyOf(s.players, side.id), () => 0)) continue;
+      const at = speedDueAt({ botId: side.id, difficulty: difficultyOf(s.players, side.id), lastPlayAt: side.lastPlayAt, boardAt: s.boardAt, chaining: obs.chainPile !== null, slapping: s.phase === "slap" });
+      if (!next || at < next.at) next = { botId: side.id, at };
+    }
+    return next && { botId: next.botId, justDealt: 0, pace: Math.max(60, next.at - Date.now()) };
+  },
+  decide(s, botId, rng) {
+    const obs = observeSpeed(getSpeedView(s, botId), botId);
+    return obs ? getSpeedBotAction(obs, difficultyOf(s.players, botId), rng) : null;
   },
 };
 
