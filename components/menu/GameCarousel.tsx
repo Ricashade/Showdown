@@ -15,6 +15,7 @@ import { GarbageHowTo } from "@/components/garbage/GarbageHowTo";
 import { RummyHowTo } from "@/components/rummy/RummyHowTo";
 import { WarHowTo } from "@/components/war/WarHowTo";
 import { GoFishHowTo } from "@/components/gofish/GoFishHowTo";
+import { ThirteenHowTo } from "@/components/thirteen/ThirteenHowTo";
 import { JoinWithCode } from "./JoinWithCode";
 import { GAME_ART } from "./game-art";
 
@@ -65,6 +66,11 @@ const SLIDES: Slide[] = [
     ...GAME_ART["go-fish"],
     howTo: { Dialog: GoFishHowTo },
     howToLabel: "Learn to play",
+  },
+  {
+    id: "thirteen",
+    ...GAME_ART["thirteen"],
+    howTo: { Dialog: ThirteenHowTo },
   },
 ];
 

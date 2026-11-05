@@ -634,3 +634,87 @@
     transform: translate(0, -6px) rotate(var(--r)) scale(1.05);
   }
 }
+
+/* ---------- 13: a 2 goes down, and four 9s chop it ---------- */
+
+.thirteen {
+  --period: 2.8s;
+  width: 200px;
+  height: 92px;
+}
+.thirteen .card {
+  top: 16px;
+  left: 78px;
+}
+.two {
+  animation-name: two;
+}
+@keyframes two {
+  0% {
+    opacity: 0;
+    transform: translate(-56px, 0) rotate(-8deg);
+  }
+  12%,
+  40% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(-3deg);
+  }
+  47%,
+  78% {
+    opacity: 0.5;
+    transform: translate(0, 4px) rotate(-3deg) scale(0.95);
+  }
+  88%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 4px) rotate(-3deg) scale(0.95);
+  }
+}
+.chop {
+  animation-name: chop;
+}
+@keyframes chop {
+  0%,
+  38% {
+    opacity: 0;
+    transform: translate(var(--x), -44px) rotate(var(--r)) scale(1.12);
+  }
+  45% {
+    opacity: 1;
+    transform: translate(var(--x), 2px) rotate(var(--r)) scale(1);
+  }
+  50%,
+  78% {
+    opacity: 1;
+    transform: translate(var(--x), 0) rotate(var(--r)) scale(1);
+  }
+  88%,
+  100% {
+    opacity: 0;
+    transform: translate(var(--x), -6px) rotate(var(--r)) scale(1);
+  }
+}
+/* A warm flare where the bomb lands. */
+.ember {
+  position: absolute;
+  inset: -10px 30px;
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, rgba(200, 16, 46, 0.35), rgba(214, 182, 127, 0.1) 60%, transparent);
+  animation: ember var(--period) linear infinite both;
+}
+@keyframes ember {
+  0%,
+  42% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}

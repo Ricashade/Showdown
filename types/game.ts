@@ -2,7 +2,7 @@
  * Mode-agnostic types shared by every game mode.
  */
 
-export type GameMode = "bs-poker" | "texas-holdem" | "blackjack" | "garbage" | "rummy" | "war" | "go-fish";
+export type GameMode = "bs-poker" | "texas-holdem" | "blackjack" | "garbage" | "rummy" | "war" | "go-fish" | "thirteen";
 
 export type BotDifficulty = "easy" | "medium" | "hard";
 

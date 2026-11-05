@@ -19,10 +19,12 @@ export const WAR: GameInfo = { title: "War", path: "/war", roomKey: (code) => `w
 
 export const GO_FISH: GameInfo = { title: "Go Fish", path: "/go-fish", roomKey: (code) => `gofish:${code}` };
 
+export const THIRTEEN: GameInfo = { title: "13", path: "/thirteen", roomKey: (code) => `thirteen:${code}` };
+
 /** A shared room: one code for the night, whichever game is on. */
 export const ROOM: GameInfo = { title: "Showdown", path: "/", roomKey: (code) => `room:${code}` };
 export const ROOM_PATH = "/room";
 
-export type GameId = "bs-poker" | "texas-holdem" | "blackjack" | "garbage" | "rummy" | "war" | "go-fish";
+export type GameId = "bs-poker" | "texas-holdem" | "blackjack" | "garbage" | "rummy" | "war" | "go-fish" | "thirteen";
 /** Look-up by id: server pages pass the id, since GameInfo holds a function. */
-export const GAMES: Record<GameId, GameInfo> = { "bs-poker": BS_POKER, "texas-holdem": TEXAS_HOLDEM, blackjack: BLACKJACK, garbage: GARBAGE, rummy: RUMMY, war: WAR, "go-fish": GO_FISH };
+export const GAMES: Record<GameId, GameInfo> = { "bs-poker": BS_POKER, "texas-holdem": TEXAS_HOLDEM, blackjack: BLACKJACK, garbage: GARBAGE, rummy: RUMMY, war: WAR, "go-fish": GO_FISH, thirteen: THIRTEEN };

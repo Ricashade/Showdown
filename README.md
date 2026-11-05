@@ -1,6 +1,6 @@
 # Showdown
 
-Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage**, **Rummy**, **War** and **Go Fish**, online or on one screen.
+Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage**, **Rummy**, **War**, **Go Fish** and **13**, online or on one screen.
 
 ```bash
 npm install
@@ -25,6 +25,7 @@ app/
   rummy/                    Rummy: same three routes
   war/                      War: same three routes
   go-fish/                  Go Fish: same three routes (local/?bots=1 seats you against two bots)
+  thirteen/                 13: chooser and local/ (local/?bots=1 seats you against two bots)
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -42,6 +43,9 @@ lib/
   rummy-engine.ts           Rummy reducer: draw (incl. Rummy 500 digs), meld, lay off, discard, scoring
   war-engine.ts             War: battles, Wars and short stacks, Classic and Tactical, win conditions
   gofish-engine.ts          Go Fish: asks, go fish and lucky catches, books, empty-hand refills, memory
+  thirteen-combos.ts        13: reading plays (Jokers wild), beating them, the 17 bombs, finding bombs in a hand
+  thirteen-engine.ts        13 reducer: dealing, the 3♠ opening, tricks, passing and lockout, chops, winner stays on
+  sound-effects.ts          Web Audio table sounds (the bomb thump), with an on/off switch each browser remembers
   party-engine.ts           Shared rooms: the roster and tonight's wins around whichever game is on
                             (switch game, play again, back to lobby), plus their bots and timers
   bs-poker-game.ts          Pure transitions: createRoom, joinRoom, startGame, placeBid, callBS,
@@ -64,6 +68,8 @@ components/
   war/                      Tug-of-war counter, battle zone, WAR! banner, flip/auto-flip/speed, how-to
   gofish/                   Seats with speech bubbles and memory, hand grouped by rank, history log,
                             and a click-through lesson for first-timers
+  thirteen/                 Seats, the trick pile and the chop moment, an 18-card hand with sorting, bomb
+                            finder and live preview, the bomb ladder drawer, and a three-step chop demo
 tests/                      Engine, game-loop and online-room tests
 ```
 
@@ -179,6 +185,36 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
 - **Memory helper:** marks the ranks each player is known to hold, from what they've asked for and
   taken. The host can turn it off.
 
+## 13 (as implemented)
+
+- **Table:** three play, 18 cards each from 54 (two Jokers). With more in the room the host picks the three;
+  with *Winner stays on*, whoever held the most cards at the end gives their seat to the next in line.
+- **Order:** 3 low to Ace, then 2 on top. Suits break ties: ♠ < ♣ < ♦ < ♥.
+- **Opening:** the 3♠ leads the first hand (the play must include it); after that the last hand's winner leads
+  anything. The host can have the 3♠ open every hand.
+- **Plays:** singles, pairs, triples, straights of 3 to 11 (no 2s), or a bomb. Follow with the same kind and size,
+  higher, or pass. Passing locks you out of the trick (you can still bomb back in unless the host turns that off).
+  When everyone else has passed, the last to play leads. First to empty their hand wins.
+- **Jokers:** each stands in for one card of any rank (and suit, in a suited dragon). The table reads the
+  strongest play the cards make, and you can switch what a Joker counts as. At the top of a play a Joker counts
+  below every natural suit.
+- **Bombs:** come down only on 2s (as many as the tier allows) or on a weaker bomb, or lead an empty table.
+
+  | Tier | Bomb | Chops | Tier | Bomb | Chops |
+  | --- | --- | --- | --- | --- | --- |
+  | 1 | 3 consecutive pairs | one 2 | 10 | Dragon (3 to A) | four 2s |
+  | 2 | Four of a kind | one 2 | 11 | 2 consecutive quads | four 2s |
+  | 3 | 2 consecutive triples | one 2 | 12 | 7 consecutive pairs | five 2s |
+  | 4 | 4 consecutive pairs | two 2s | 13 | 4 consecutive triples | five 2s |
+  | 5 | Five of a kind | two 2s | 14 | Suited dragon | any |
+  | 6 | 5 consecutive pairs | three 2s | 15 | 8 consecutive pairs | any |
+  | 7 | 3 consecutive triples | three 2s | 16 | 3 consecutive quads | any |
+  | 8 | Six of a kind | three 2s | 17 | 2 consecutive fives | any |
+  | 9 | 6 consecutive pairs | four 2s | | | |
+
+  A higher tier always wins; the same tier goes to the higher top card. An exact tie follows the host's rule:
+  no Jokers wins, then the higher suit (default); neither can beat the other; or the later bomb wins.
+
 ## Bots
 
 The host can seat Easy, Medium or Hard bots in any game, mixed freely with people.
@@ -213,11 +249,16 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
 - **Go Fish:** asks come 1.2 s apart. Easy asks anyone for anything it holds; Medium remembers the
   last four asks and goes after whoever just asked for a rank it holds; Hard remembers every ask,
   steal and book, then goes for the rank it holds most of, from whoever has the most cards.
+- **13:** Easy leads its lowest card (alone or in whatever it makes), follows with the lowest play that
+  beats the table, and drops a bomb on a 2 half the time. Medium keeps its bombs, 2s and Jokers together until
+  someone is down to four cards, then chops 2s. Hard splits its hand into the fewest plays (Jokers included),
+  follows only when it doesn't break that up, cashes cards nobody can beat when it's nearly out, and counts the
+  2s already played.
 
 ## Shared rooms (as implemented)
 
 - **One code all night:** every online room is a shared room (`/room/CODE`). Creating one from a game's page
-  opens it on that game; the host can switch to any of the six from the lobby (*Change game*) or the winner
+  opens it on that game; the host can switch to any game from the lobby (*Change game*) or the winner
   screen (*Switch game*), and nobody reconnects. The new game starts on its default house rules.
 - **After a match:** the host can *Play again* (same game and house rules), go back to the *Lobby*, or
   *Switch game*. During a match, *End match* in the header goes back to the lobby.
@@ -230,7 +271,7 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
   Ending a match early crowns nobody, except at Blackjack, which never finishes with a winner: ending the
   table crowns whoever has the most chips, if they're up. Someone who drops and rejoins keeps theirs.
 - **How it's built:** the room is one more game for the host to run (`lib/party-engine.ts`), wrapping the
-  six games' own reducers, views and bots. Moves inside a game travel as `GAME` actions, sealed like any
+  games' own reducers, views and bots. Moves inside a game travel as `GAME` actions, sealed like any
   other move, and act only for whoever sent them.
 
 ## Online play (Supabase Realtime)

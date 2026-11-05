@@ -9,4 +9,5 @@ export const GAME_ART: Record<GameId, { show: string; hidden: number }> = {
   rummy: { show: "7S 8S 9S KH", hidden: 1 },
   war: { show: "AS AH", hidden: 1 },
   "go-fish": { show: "8S 8H 8D 8C", hidden: 0 },
+  thirteen: { show: "QC KD AS 2H", hidden: 0 },
 };

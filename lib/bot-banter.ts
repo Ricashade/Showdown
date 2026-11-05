@@ -19,6 +19,8 @@ const LINES = {
   war: ["THIS. MEANS. WAR.", "Oh, it's on.", "Nobody blink.", "Three down, one up. Let's go.", "I've been waiting for this."],
   /** Go Fish: someone took a bot's cards. */
   robbed: ["Hey! Those were mine.", "{name}, really? All of them?", "I was saving those.", "Rude.", "Fine. Take them. See if I care."],
+  /** 13: someone dropped a bomb on a bot's 2s (or its bomb). */
+  chopped: ["My 2! You chopped my 2.", "Was that necessary, {name}?", "I'll get you back, {name}.", "Okay. Noted.", "Where were you hiding that?"],
 };
 
 const pick = (lines: string[], name: string) => lines[Math.floor(Math.random() * lines.length)].replace("{name}", name);
@@ -49,6 +51,16 @@ export function banterFor(prev: ActiveGameState | null, next: ActiveGameState): 
       lines.push({ botId: e.targetId, text: pick(LINES.robbed, nameOf(e.askerId)) });
     }
     return lines.slice(0, 1);
+  }
+
+  if (next.mode === "thirteen" && prev.mode === "thirteen") {
+    const seen = prev.log.at(-1)?.n ?? -1;
+    for (const [i, e] of next.log.entries()) {
+      if (e.n <= seen || e.kind !== "play" || !e.chop) continue;
+      // The play it came down on: the last play before it, in the same trick.
+      const victim = next.log.slice(0, i).findLast((x) => x.kind === "play");
+      if (victim?.kind === "play" && isBot(victim.by) && victim.by !== e.by) return [{ botId: victim.by, text: pick(LINES.chopped, nameOf(e.by)) }];
+    }
   }
 
   return [];

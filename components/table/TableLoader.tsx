@@ -48,6 +48,7 @@ const STAGE: Record<GameId, string> = {
   rummy: "rummy",
   war: "war",
   "go-fish": "fish",
+  thirteen: "thirteen",
 };
 
 const VIGNETTES: Record<GameId, () => ReactNode> = {
@@ -100,4 +101,14 @@ const VIGNETTES: Record<GameId, () => ReactNode> = {
         ["7c", "-72px", "0px", "15deg"],
       ] as const
     ).map(([c, fx, fy, r], i) => <Card key={c} code={c} className={s.book} style={{ "--fx": fx, "--fy": fy, "--r": r, ...delay(i * 0.2) } as CSSProperties} />),
+  // A 2 goes down, and four 9s come down on it.
+  thirteen: () => (
+    <>
+      <div className={s.ember} />
+      <Card code="2h" className={s.two} />
+      {["9s", "9c", "9d", "9h"].map((c, i) => (
+        <Card key={c} code={c} className={s.chop} style={{ "--x": `${(i - 1.5) * 16}px`, "--r": `${(i - 1.5) * 6}deg`, ...delay(i * 0.05) } as CSSProperties} />
+      ))}
+    </>
+  ),
 };
