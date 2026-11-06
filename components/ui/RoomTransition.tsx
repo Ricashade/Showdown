@@ -4,23 +4,19 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { gust } from "@/components/IdleBackground";
 
 /**
  * Moving between rooms (menu → a game, a lobby → its table).
  *
  * The page never goes blank: the old one eases back and fades as the next settles in over it
- * (a View Transition; see `page` in app/globals.css). Meanwhile the room answers: a gust spreads
- * from where you clicked through the idle background. Browsers without View Transitions, and
+ * (a View Transition; see `page` in app/globals.css). Browsers without View Transitions, and
  * reduced motion, just swap.
  */
 
-type Point = { x: number; y: number };
-
 interface RoomTransitionApi {
-  /** Go to another page, the gust starting at `from` (else the last click). Waits for `ready` first. */
-  go: (href: string, opts?: { from?: Point | Element | null; ready?: Promise<unknown> }) => Promise<void>;
-  /** Swap this page's room (`update` changes the DOM synchronously or resolves once it has); the gust starts at the last click. */
+  /** Go to another page. Waits for `ready` first. */
+  go: (href: string, opts?: { ready?: Promise<unknown> }) => Promise<void>;
+  /** Swap this page's room (`update` changes the DOM synchronously or resolves once it has). */
   swap: (update: () => void | Promise<void>) => void;
 }
 
@@ -31,10 +27,6 @@ const RoomTransitionContext = createContext<RoomTransitionApi>({
 export const useRoomTransition = () => useContext(RoomTransitionContext);
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const centerOf = (el: Element): Point => {
-  const r = el.getBoundingClientRect();
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-};
 
 /** Wraps the page. Mount once, in the root layout. */
 export function RoomTransitionProvider({ children }: { children: ReactNode }) {
@@ -44,26 +36,13 @@ export function RoomTransitionProvider({ children }: { children: ReactNode }) {
   const running = useRef(0);
   const arrived = useRef<(() => void) | null>(null);
   const going = useRef(false);
-  const lastClick = useRef<{ x: number; y: number; at: number } | null>(null);
-
-  // Where the gust starts when nobody says: the click that started it, or the middle of the screen.
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => (lastClick.current = { x: e.clientX, y: e.clientY, at: Date.now() });
-    window.addEventListener("pointerdown", onDown, { capture: true });
-    return () => window.removeEventListener("pointerdown", onDown, { capture: true });
-  }, []);
 
   const api = useMemo<RoomTransitionApi>(() => {
-    const origin = (): Point => {
-      const c = lastClick.current;
-      return c && Date.now() - c.at < 1500 ? c : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    };
-
     /** Crosses from the page as it is to the page after `update`; resolves when it's done. */
     const crossfade = async (update: () => void | Promise<void>) => {
       // Run outside whatever React lifecycle asked for it.
       if (!document.startViewTransition || reducedMotion()) return Promise.resolve().then(update);
-      // Only the page is captured, so the room behind it stays live (and gusting) throughout.
+      // Only the page is captured, so the room behind it stays live throughout.
       const page = pageRef.current;
       page?.style.setProperty("view-transition-name", "page");
       running.current++;
@@ -86,17 +65,13 @@ export function RoomTransitionProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const swap: RoomTransitionApi["swap"] = (update) => {
-      if (!reducedMotion()) gust(origin());
-      void crossfade(update);
-    };
+    const swap: RoomTransitionApi["swap"] = (update) => void crossfade(update);
 
-    const go: RoomTransitionApi["go"] = async (href, { from, ready } = {}) => {
+    const go: RoomTransitionApi["go"] = async (href, { ready } = {}) => {
       // Already on the way somewhere (a second Enter on the same link).
       if (going.current) return;
       going.current = true;
       try {
-        if (!reducedMotion()) gust(from instanceof Element ? centerOf(from) : (from ?? origin()));
         await ready;
         if (new URL(href, window.location.href).pathname === window.location.pathname) return router.push(href);
         // The old page holds until the next one is in, then they cross; never longer than a moment.
@@ -142,8 +117,7 @@ export function RoomLink({ href, onClick, ...rest }: ComponentProps<typeof Link>
         // Leave new-tab and other modified clicks to the browser.
         if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
-        // A keyboard "click" has no position: start from the link itself.
-        void rooms.go(href, { from: e.detail > 0 ? { x: e.clientX, y: e.clientY } : e.currentTarget });
+        void rooms.go(href);
       }}
     />
   );
@@ -196,7 +170,6 @@ export function RoomStage({ room, loader, children }: { room: string; loader?: R
       if (lifted) return;
       lifted = true;
       setCover("out");
-      gust({ x: window.innerWidth / 2, y: window.innerHeight * 0.35 });
     };
     const t = setTimeout(
       () => {

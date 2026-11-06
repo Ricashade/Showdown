@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { GAMES, ROOM, ROOM_PATH, type GameId } from "@/lib/games";
 import { createSession, getTransport, type TransportKind } from "@/lib/multiplayer/session";
 import { generateRoomCode, isRoomCode, normalizeRoomCode } from "@/lib/multiplayer/room-code";
@@ -11,7 +11,6 @@ import { NameField, rememberName, useRememberedName } from "./NameField";
 export default function PlayModeChooser({ game }: { game: GameId }) {
   const info = GAMES[game];
   const rooms = useRoomTransition();
-  const onlineRef = useRef<HTMLElement>(null);
   const [name, setName] = useRememberedName();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<"create" | "join" | null>(null);
@@ -28,7 +27,6 @@ export default function PlayModeChooser({ game }: { game: GameId }) {
     const roomCode = kind === "create" ? generateRoomCode() : code;
     // The room opens on this game; a guest gets whatever the host has on.
     await rooms.go(kind === "create" ? `${ROOM_PATH}/${roomCode}?game=${game}` : `${ROOM_PATH}/${roomCode}`, {
-      from: onlineRef.current,
       ready: createSession(ROOM.roomKey(roomCode), roomCode, name, kind === "create" ? "host" : "guest"),
     });
   };
@@ -43,7 +41,7 @@ export default function PlayModeChooser({ game }: { game: GameId }) {
       </header>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1.2fr_1fr]">
-        <section ref={onlineRef} aria-labelledby="online-heading" className="felt rounded-[2rem] p-6 sm:p-9">
+        <section aria-labelledby="online-heading" className="felt rounded-[2rem] p-6 sm:p-9">
           <h2 id="online-heading" className="font-display text-5xl font-extrabold text-bone">
             Play online
           </h2>
