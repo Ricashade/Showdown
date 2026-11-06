@@ -12,7 +12,7 @@ import { GAME_ART } from "@/components/menu/game-art";
 /** How the room would sit at this game, when that isn't simply "everyone plays". */
 function fit(id: GameId, people: number) {
   const { min, max } = seatsFor(id);
-  if (id === "thirteen" && people < min) return `Bots fill ${min - people} ${min - people === 1 ? "seat" : "seats"}`;
+  if ((id === "thirteen" || id === "bouillotte") && people < min) return `Bots fill ${min - people} ${min - people === 1 ? "seat" : "seats"}`;
   if (people < min) return `Needs ${min}`;
   if ((id === "war" || id === "speed") && people > 2) return `2 play, ${people - 2} watch`;
   if (id === "thirteen" && people > 3) return `3 play, ${people - 3} watch`;

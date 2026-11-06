@@ -748,3 +748,72 @@
     transform: translateY(0) rotate(var(--r));
   }
 }
+
+/* ---------- Bouillotte: two hands face down, and the Retourné turning up in its frame ---------- */
+
+.bouillotte {
+  --period: 2.8s;
+  width: 236px;
+  height: 62px;
+}
+.frame {
+  position: absolute;
+  top: -7px;
+  left: 90px;
+  width: 58px;
+  height: 76px;
+  border-radius: 9px;
+  box-shadow:
+    inset 0 0 0 1.5px var(--color-brass-lit),
+    0 0 18px rgba(214, 182, 127, 0.25);
+  animation: frame var(--period) linear infinite both;
+}
+@keyframes frame {
+  0%,
+  20% {
+    opacity: 0.25;
+  }
+  32%,
+  80% {
+    opacity: 1;
+  }
+  92%,
+  100% {
+    opacity: 0.25;
+  }
+}
+.retourne {
+  animation-name: retourne;
+}
+.retourne > .face {
+  animation-name: retourne-face;
+}
+@keyframes retourne {
+  0%,
+  18% {
+    transform: scaleX(1);
+  }
+  24% {
+    transform: scaleX(0.04);
+  }
+  30%,
+  84% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  92%,
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+@keyframes retourne-face {
+  0%,
+  23.99% {
+    opacity: 0;
+  }
+  24%,
+  100% {
+    opacity: 1;
+  }
+}

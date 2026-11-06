@@ -11,4 +11,5 @@ export const GAME_ART: Record<GameId, { show: string; hidden: number }> = {
   "go-fish": { show: "8S 8H 8D 8C", hidden: 0 },
   thirteen: { show: "QC KD AS 2H", hidden: 0 },
   speed: { show: "KH AS 2D", hidden: 0 },
+  bouillotte: { show: "AH 9H QH", hidden: 0 },
 };

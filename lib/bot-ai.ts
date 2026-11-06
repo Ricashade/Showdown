@@ -14,6 +14,7 @@ import type { WarAction, WarState } from "@/types/war";
 import type { GoFishAction, GoFishState } from "@/types/gofish";
 import type { ThirteenAction, ThirteenState } from "@/types/thirteen";
 import type { SpeedAction, SpeedState } from "@/types/speed";
+import type { BouillotteAction, BouillotteState } from "@/types/bouillotte";
 import type { BotDifficulty } from "@/types/game";
 import { getPlayerView } from "./bs-poker-game";
 import { getHoldemView } from "./holdem-game";
@@ -24,6 +25,7 @@ import { getWarView } from "./war-engine";
 import { getGoFishView } from "./gofish-engine";
 import { getThirteenView } from "./thirteen-engine";
 import { getSpeedView } from "./speed-engine";
+import { getBouillotteView } from "./bouillotte-engine";
 import { getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
 import { getHoldemBotAction, observeHoldem } from "./bots/holdem-bot";
 import { getBlackjackBotAction, observeBlackjack } from "./bots/blackjack-bot";
@@ -33,6 +35,7 @@ import { getWarBotAction, observeWar } from "./bots/war-bot";
 import { getGoFishBotAction, observeGoFish } from "./bots/gofish-bot";
 import { getThirteenBotAction, observeThirteen } from "./bots/thirteen-bot";
 import { getSpeedBotAction, observeSpeed, speedDueAt } from "./bots/speed-bot";
+import { getBouillotteBotAction, observeBouillotte } from "./bots/bouillotte-bot";
 import { randomId } from "./multiplayer/room-code";
 
 export { estimateBidProbability, getBSPokerBotAction, observeBsPoker } from "./bots/bs-poker-bot";
@@ -44,6 +47,7 @@ export { chooseWarCard, getWarBotAction, observeWar } from "./bots/war-bot";
 export { chooseAsk, getGoFishBotAction, observeGoFish } from "./bots/gofish-bot";
 export { getThirteenBotAction, observeThirteen, planHand } from "./bots/thirteen-bot";
 export { getSpeedBotAction, observeSpeed, speedDueAt } from "./bots/speed-bot";
+export { estimateEquity as estimateBouillotteEquity, getBouillotteBotAction, observeBouillotte } from "./bots/bouillotte-bot";
 
 /** How a game exposes its bots to the driver that runs them. */
 export interface BotRunner<S, A> {
@@ -209,6 +213,21 @@ export const speedBots: BotRunner<SpeedState, SpeedAction> = {
   decide(s, botId, rng) {
     const obs = observeSpeed(getSpeedView(s, botId), botId);
     return obs ? getSpeedBotAction(obs, difficultyOf(s.players, botId), rng) : null;
+  },
+};
+
+export const bouillotteBots: BotRunner<BouillotteState, BouillotteAction> = {
+  pending(s) {
+    if ((s.phase !== "betting" && s.phase !== "carre") || !s.currentTurnId) return null;
+    const p = s.players.find((x) => x.id === s.currentTurnId);
+    if (!p?.isBot) return null;
+    // The first bet of a hand waits for the cards to land.
+    const fresh = s.phase === "betting" && Object.values(s.lastActions).every((a) => a.move === "ante" || a.move === "carre");
+    return { botId: p.id, justDealt: fresh ? 1500 : 0 };
+  },
+  decide(s, botId, rng) {
+    const obs = observeBouillotte(getBouillotteView(s, botId), botId);
+    return obs ? getBouillotteBotAction(obs, difficultyOf(s.players, botId), rng) : null;
   },
 };
 

@@ -17,6 +17,7 @@ import { WarHowTo } from "@/components/war/WarHowTo";
 import { GoFishHowTo } from "@/components/gofish/GoFishHowTo";
 import { ThirteenHowTo } from "@/components/thirteen/ThirteenHowTo";
 import { SpeedHowTo } from "@/components/speed/SpeedHowTo";
+import { BouillotteHowTo } from "@/components/bouillotte/BouillotteHowTo";
 import { JoinWithCode } from "./JoinWithCode";
 import { GAME_ART } from "./game-art";
 
@@ -77,6 +78,11 @@ const SLIDES: Slide[] = [
     id: "speed",
     ...GAME_ART["speed"],
     howTo: { Dialog: SpeedHowTo },
+  },
+  {
+    id: "bouillotte",
+    ...GAME_ART["bouillotte"],
+    howTo: { Dialog: BouillotteHowTo },
   },
 ];
 

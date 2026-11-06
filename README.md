@@ -1,6 +1,6 @@
 # Showdown
 
-Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage**, **Rummy**, **War**, **Go Fish** and **Thirteen**, online or on one screen.
+Multiplayer card games on Next.js (App Router): **Texas Hold'em** (no-limit), **BS Poker**, **Blackjack**, **Garbage**, **Rummy**, **War**, **Go Fish**, **Thirteen**, **Speed** and **Bouillotte**, online or on one screen.
 
 ```bash
 npm install
@@ -26,6 +26,8 @@ app/
   war/                      War: same three routes
   go-fish/                  Go Fish: same three routes (local/?bots=1 seats you against two bots)
   thirteen/                 Thirteen: chooser and local/ (local/?bots=1 seats you against two bots)
+  speed/                    Speed: chooser and local/ (you against a bot)
+  bouillotte/               Bouillotte: chooser and local/ (local/?bots=1 seats you against three bots)
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -47,6 +49,8 @@ lib/
   thirteen-engine.ts        Thirteen reducer: dealing, the 3♠ opening, tricks, passing and lockout, bombs on 2s, winner stays on
   speed-engine.ts           Speed: real-time play in arrival order, stale moves, stalls and spare flips, slap mode,
                             and the host's clock (countdown, flips)
+  bouillotte-engine.ts      Bouillotte: stripped decks, antes and the carré, betting with side pots, brélans,
+                            Le Point across every hand dealt, bonuses
   sound-effects.ts          Web Audio table sounds (bomb thump, card slaps, runs, misses), with an on/off switch
   party-engine.ts           Shared rooms: the roster and tonight's wins around whichever game is on
                             (switch game, play again, back to lobby), plus their bots and timers
@@ -72,6 +76,10 @@ components/
                             and a click-through lesson for first-timers
   thirteen/                 Seats, the trick pile and the bomb moment, an 18-card hand with sorting, bomb
                             finder and live preview, the bomb ladder drawer, and a three-step bomb demo
+  speed/                    Piles slammed from both sides, a five-slot hand with 1–5 keys, countdown, flips,
+                            the slap race, "Too slow!" bounces, and a three-step reflex drill
+  bouillotte/               Seats, the Retourné in its frame, a hand helper, betting controls, the Le Point
+                            meter at showdown, and a three-step showdown demo
 tests/                      Engine, game-loop and online-room tests
 ```
 
@@ -234,6 +242,24 @@ are wild) can fill any missing card. With deuces wild, a 2 counts only as a wild
   the smaller pile (all but its top card).
 - **Hands are private:** you see how many cards the other player holds, not which.
 
+## Bouillotte (as implemented)
+
+- **Table:** 3–5 players (down to two as players go broke), each starting with a *cave* of 100 chips (50–500).
+  The deck is stripped to the table: A K 9 8 (16 cards) for two or three, plus Q (20) for four, plus J (24) for
+  five. Three cards each and one face up in the middle, the *Retourné*; the rest (the stub) stays hidden.
+- **Antes and carré:** everyone antes 1 (or 2 or 5), or the dealer antes for the whole table. Before the deal the
+  player on the dealer's right may post a blind *carré* the size of the pot; they then act last.
+- **Betting:** one round, starting left of the dealer. Pass while nobody has opened, then call, raise, *va-tout*
+  or fold. No bet beyond your chips; short all-ins make side pots and don't reopen the raising. Everyone else
+  folds: the bet wins without a showdown.
+- **Showdown:** a brélan wins: *carré* (three of a rank and the Retourné is the fourth) beats a natural brélan
+  beats a *favori* (a pair plus the Retourné; the host can turn it off), then the higher rank. A brélan that takes
+  the main pot is paid 1 chip (2 for a carré) by everyone else dealt in, folded or not.
+- **Le Point:** no brélan among those still in: every hand dealt is turned up, folded ones too. Each suit's points
+  (A 11, K Q J 10, 9 9, 8 8) are added across all of them and the Retourné; the top suit wins (a tie goes to the
+  suit with the higher card), and whoever still in holds its highest card takes the pot. Nobody still in holds
+  that suit: the next suit down. Side pots are settled the same way among those who reached them.
+
 ## Bots
 
 The host can seat Easy, Medium or Hard bots in any game, mixed freely with people.
@@ -277,6 +303,10 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
   piles change): Easy 1.8–2.6 s, playing one card at a time at random; Medium 1–1.5 s, sets together; Hard
   0.55–0.9 s, starting the longest run it holds and running it at 450 ms a card. The times come from the
   host-stamped state, so they don't restart when the other player moves.
+- **Bouillotte:** Easy bets and calls whenever it holds an Ace or King; Medium counts its points in one suit
+  with the Retourné (and whether it holds that suit's Ace) and weighs them against the price of a call; Hard
+  deals the unseen cards out 300 times (folded hands included, since they count toward Le Point), plays its
+  equity against the pot odds, and bluffs holding the Ace of the Retourné's suit or two Aces.
 
 ## Shared rooms (as implemented)
 

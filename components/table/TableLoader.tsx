@@ -50,6 +50,7 @@ const STAGE: Record<GameId, string> = {
   "go-fish": "fish",
   thirteen: "thirteen",
   speed: "speed",
+  bouillotte: "bouillotte",
 };
 
 const VIGNETTES: Record<GameId, () => ReactNode> = {
@@ -123,4 +124,17 @@ const VIGNETTES: Record<GameId, () => ReactNode> = {
         ["9c", "0px", "1", "-2deg"],
       ] as const
     ).map(([c, x, from, r], i) => <Card key={c} code={c} className={s.slam} style={{ left: x, "--from": from, "--r": r, ...delay(i * 0.32) } as CSSProperties} />),
+  // Two hands face down either side, and the Retourné turning up in its frame.
+  bouillotte: () => (
+    <>
+      {[0, 1, 2].map((i) => (
+        <div key={`l${i}`} className={clsx(s.stack, "card-back")} style={{ left: i * 9, transform: `rotate(${(i - 1) * 8}deg)` }} />
+      ))}
+      {[0, 1, 2].map((i) => (
+        <div key={`r${i}`} className={clsx(s.stack, "card-back")} style={{ left: 174 + i * 9, transform: `rotate(${(i - 1) * 8}deg)` }} />
+      ))}
+      <div className={s.frame} />
+      <Card code="Qh" className={s.retourne} style={{ left: 97 }} />
+    </>
+  ),
 };
