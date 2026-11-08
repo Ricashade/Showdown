@@ -35,15 +35,19 @@ export function BlackjackTable({ view, connectedIds }: BlackjackTableProps) {
   const dealOrder = (seat: number, card: number) => (card * (dealtIn.length + 1) + seat) * DEAL_STAGGER;
 
   return (
-    <section aria-label="Table" className="felt felt-line relative mx-4 rounded-t-[3rem] rounded-b-[45%_30%] px-4 pt-7 pb-14 sm:px-10">
+    // On wider screens the felt takes the height the window leaves, and the dealer, the rules and the seats spread evenly in it.
+    <section
+      aria-label="Table"
+      className="felt felt-line relative mx-4 rounded-t-[3rem] rounded-b-[45%_30%] px-4 pt-7 pb-14 sm:px-10 md:pb-12 md:flex md:h-[calc(100dvh-19.25rem)] md:min-h-fit md:flex-col md:justify-between"
+    >
       <Dealer view={view} delayFor={(i) => (i < 2 ? dealOrder(dealtIn.length, i) : 0)} />
 
-      <div aria-hidden className="mt-5 text-center font-display text-bone">
+      <div aria-hidden className="mt-3 text-center font-display text-bone">
         <p className="text-2xl font-extrabold sm:text-3xl">Blackjack pays 3 to 2</p>
         <p className="text-sm font-bold sm:text-base">Dealer hits soft 17 · Insurance pays 2 to 1</p>
       </div>
 
-      <ul className="mt-8 flex flex-wrap items-start justify-center gap-x-4 gap-y-8 sm:gap-x-6">
+      <ul className="mt-4 flex flex-wrap items-start justify-center gap-x-4 gap-y-8 sm:gap-x-6 md:mt-2">
         {view.players.map((p, i) => {
           const fromCenter = Math.abs(i - (view.players.length - 1) / 2) / Math.max(1, (view.players.length - 1) / 2);
           const seat = dealtIn.findIndex((x) => x.id === p.id);
@@ -119,17 +123,16 @@ function Seat({
   const size = isViewer ? "md" : "sm";
 
   let status: string | null = null;
-  if (view.phase === "betting" && !out) status = p.bet > 0 ? `Bet ${chips(p.bet)}` : p.isBot ? "Thinking…" : "No bet yet";
+  if (view.phase === "betting" && !out) status = p.bet > 0 ? `Bet ${chips(p.bet)}` : p.isBot ? null : "No bet yet";
   if (view.phase === "insurance" && p.hands.length > 0) {
-    status = p.insurance === null ? (p.isBot ? "Thinking…" : "Insurance?") : p.insurance > 0 ? `Insured ${chips(p.insurance)}` : "No insurance";
+    status = p.insurance === null ? (p.isBot ? null : "Insurance?") : p.insurance > 0 ? `Insured ${chips(p.insurance)}` : "No insurance";
   }
-  if (isTurn && p.isBot) status = "Thinking…";
 
   return (
     <div className={clsx("flex w-max flex-col items-center gap-2", out && "opacity-50")}>
-      {p.hands.length > 0 && (
-        <div className="flex items-end gap-3">
-          {p.hands.map((hand, h) => (
+      {/* Room for a hand is kept from the start, so the seats don't jump when the cards come out. */}
+      <div className={clsx("flex items-end gap-3", size === "md" ? "min-h-36" : "min-h-30")}>
+        {p.hands.map((hand, h) => (
             <Hand
               key={h}
               hand={hand}
@@ -139,34 +142,38 @@ function Seat({
               delayFor={h === 0 && !hand.fromSplit ? delayFor : () => 0}
             />
           ))}
-        </div>
-      )}
+      </div>
 
       <div
         className={clsx(
           "flex min-w-28 flex-col items-center rounded-2xl px-3 py-1.5",
-          isTurn ? "bg-leather-lit ring-2 ring-brass-lit" : net !== undefined && net > 0 ? "bg-leather ring-2 ring-brass-lit" : "bg-leather",
+          // Whose turn it is shows on the seat itself: its name box turns brass.
+          isTurn ? "bg-brass ring-2 ring-brass-lit" : net !== undefined && net > 0 ? "bg-leather ring-2 ring-brass-lit" : "bg-leather",
         )}
       >
         <div className="flex max-w-40 items-baseline gap-1.5">
-          <span data-seat-of={p.id} className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{p.name}</span>
-          {isViewer && <span className="text-xs text-brass-lit">you</span>}
-          {p.isBot && <span className="text-xs text-brass-lit">{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
+          <span data-seat-of={p.id} className={clsx("truncate text-base font-bold", isTurn ? "text-smoke" : "text-parchment")}>{p.name}</span>
+          {isViewer && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>you</span>}
+          {p.isBot && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
         </div>
         {out ? (
           <span className="text-sm text-ash">Out</span>
         ) : (
-          <span className="font-display text-lg leading-tight font-bold text-brass-lit tabular-nums">{chips(p.chips)}</span>
+          <span className={clsx("font-display text-lg leading-tight font-bold tabular-nums", isTurn ? "text-smoke" : "text-brass-lit")}>{chips(p.chips)}</span>
         )}
-        {status && <span className="text-xs font-bold text-parchment">{status}</span>}
         {disconnected && !out && <span className="text-xs text-parchment">Reconnecting…</span>}
       </div>
 
-      {net !== undefined && (
-        <span className={clsx("text-sm font-bold tabular-nums", net > 0 ? "text-brass-lit" : net < 0 ? "text-parchment" : "text-bone")}>
-          {net > 0 ? `+${chips(net)}` : net < 0 ? `−${chips(-net)}` : "Even"}
-        </span>
-      )}
+      {/* One line, kept even when empty: the round's result, or where this seat stands on the bet. */}
+      <div className="flex h-5 items-center">
+        {net !== undefined ? (
+          <span className={clsx("text-sm font-bold tabular-nums", net > 0 ? "text-brass-lit" : net < 0 ? "text-parchment" : "text-bone")}>
+            {net > 0 ? `+${chips(net)}` : net < 0 ? `−${chips(-net)}` : "Even"}
+          </span>
+        ) : (
+          status && <span className="text-xs font-bold text-parchment">{status}</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -209,9 +216,7 @@ function Hand({
         </span>
         <BetChip amount={hand.bet} doubled={hand.doubled} />
       </div>
-      {outcome && outcome !== "bust" && (
-        <span className={clsx("text-xs font-bold", won ? "text-brass-lit" : "text-parchment")}>{OUTCOME[outcome]}</span>
-      )}
+      <span className={clsx("h-4 text-xs font-bold", won ? "text-brass-lit" : "text-parchment")}>{outcome && outcome !== "bust" ? OUTCOME[outcome] : ""}</span>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import type { HoldemMove } from "@/types/holdem";
 import { nextBlindRise, type HoldemPublicPlayer, type HoldemView } from "@/lib/holdem-game";
 import { buildPots } from "@/lib/holdem-pots";
@@ -47,7 +48,7 @@ export function HoldemTable({ view, winningCardIds, connectedIds }: HoldemTableP
   return (
     <section aria-label="Table">
       {/* Desktop: oval table, bets pushed out in front of each seat; as tall as the window leaves room for. */}
-      <div className="relative mx-auto hidden h-[clamp(24rem,calc(100dvh-16rem),40rem)] w-full max-w-5xl md:block">
+      <div className="relative mx-auto hidden h-[clamp(24rem,calc(100dvh-20rem),40rem)] w-full max-w-5xl md:block">
         <div className="felt felt-line absolute inset-x-[5%] inset-y-[9%] rounded-[50%]" />
         <div className="absolute inset-x-[24%] inset-y-[30%] flex items-center justify-center">
           <Center view={view} winningCardIds={winningCardIds} />
@@ -57,14 +58,22 @@ export function HoldemTable({ view, winningCardIds, connectedIds }: HoldemTableP
             const angle = Math.PI / 2 + (i * 2 * Math.PI) / ordered.length;
             const at = (rx: number, ry: number) => ({ left: `${50 + rx * Math.cos(angle)}%`, top: `${50 + ry * Math.sin(angle)}%` });
             const seatAt = at(45, 41);
-            // A bet sits a fixed distance in from its seat, so it never lands on the cards however short the table.
-            const betAt = {
-              left: `calc(${seatAt.left} - ${Math.round(Math.cos(angle) * 130)}px)`,
-              top: `calc(${seatAt.top} - ${Math.round(Math.sin(angle) * 108)}px)`,
-            };
+            // A bet sits a fixed distance in from its seat, so it never lands on the cards however short the
+            // table. Yours sits beside your cards, clear of the board in the middle.
+            const betAt =
+              i === 0
+                ? { left: "calc(50% - 8.5rem)", top: "calc(100% - 7.5rem)" }
+                : {
+                    left: `calc(${seatAt.left} - ${Math.round(Math.cos(angle) * 130)}px)`,
+                    top: `calc(${seatAt.top} - ${Math.round(Math.sin(angle) * 108)}px)`,
+                  };
             return (
               <li key={p.id}>
-                <div className="absolute z-10 -translate-x-1/2 -translate-y-1/2" style={{ ...seatAt, zIndex: i === 0 ? 20 : 10 }}>
+                {/* The near seat (yours) rests on the bottom edge, so nothing of it spills onto the panel below. */}
+                <div
+                  className={clsx("absolute -translate-x-1/2", i === 0 ? "bottom-0" : "-translate-y-1/2")}
+                  style={i === 0 ? { left: "50%", zIndex: 20 } : { ...seatAt, zIndex: 10 }}
+                >
                   {seat(p, i === 0 && view.viewerId ? "md" : "sm", false)}
                 </div>
                 {p.bet > 0 && (
@@ -108,7 +117,8 @@ function Seat({
   winningCardIds: Set<string>;
   disconnected: boolean;
 }) {
-  const isTurn = view.currentTurnId === p.id;
+  // Whose turn it is shows on the seat itself: its name box turns brass.
+  const isTurn = view.phase === "betting" && view.currentTurnId === p.id;
   const isViewer = view.viewerId === p.id;
   const busted = p.status === "busted";
   const won = view.result?.won[p.id];
@@ -116,6 +126,8 @@ function Seat({
   const tag = move ? MOVE_LABEL[move] : undefined;
   const handOver = view.phase !== "betting";
   const overlap = size === "md" ? "-ml-4" : "-ml-3";
+  // The oval and the phone list are both on the page; each moves its own buttons.
+  const scope = showBet ? "list" : "oval";
 
   return (
     <div className={clsx("relative flex w-max flex-col items-center gap-2.5", (busted || p.folded) && "opacity-50")}>
@@ -146,32 +158,32 @@ function Seat({
       <div
         className={clsx(
           "relative flex min-w-24 flex-col items-center rounded-2xl px-3 py-1.5",
-          isTurn ? "bg-leather-lit ring-2 ring-brass-lit" : won ? "bg-leather ring-2 ring-brass-lit" : "bg-leather",
+          isTurn ? "bg-brass ring-2 ring-brass-lit" : won ? "bg-leather ring-2 ring-brass-lit" : "bg-leather",
         )}
       >
-        {view.buttonId === p.id && !busted && (
-          <span
-            aria-label="Dealer"
-            className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-bone font-display text-sm font-extrabold text-smoke shadow"
-          >
-            D
-          </span>
+        {/* The blinds glide to their next seats each hand. */}
+        {(view.smallBlindId === p.id || view.bigBlindId === p.id) && !busted && view.phase !== "lobby" && (
+          <motion.span layoutId={`${scope}-${view.bigBlindId === p.id ? "bb" : "sb"}`} transition={GLIDE} className="absolute -top-2.5 left-2">
+            <BlindTag kind={view.bigBlindId === p.id ? "bb" : "sb"} amount={view.bigBlindId === p.id ? view.bigBlind : view.smallBlind} />
+          </motion.span>
         )}
         <div className="flex max-w-36 items-baseline gap-1.5">
-          <span data-seat-of={p.id} className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{p.name}</span>
-          {isViewer && <span className="text-xs text-brass-lit">you</span>}
-          {p.isBot && <span className="text-xs text-brass-lit">{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
+          <span data-seat-of={p.id} className={clsx("truncate text-base font-bold", isTurn ? "text-smoke" : "text-parchment")}>{p.name}</span>
+          {isViewer && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>you</span>}
+          {p.isBot && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
         </div>
-        {!busted && <span className="font-display text-lg leading-tight font-bold text-brass-lit tabular-nums">{chips(p.chips)}</span>}
-        {isTurn && p.isBot && <span className="text-xs font-bold text-brass-lit">Thinking…</span>}
+        {!busted && <span className={clsx("font-display text-lg leading-tight font-bold tabular-nums", isTurn ? "text-smoke" : "text-brass-lit")}>{chips(p.chips)}</span>}
         {disconnected && !busted && <span className="text-xs text-parchment">Reconnecting…</span>}
       </div>
 
-      {won ? (
-        <span className="text-sm font-bold text-brass-lit">+{chips(won)}</span>
-      ) : tag && !busted ? (
-        <span className={clsx("text-xs font-bold", move === "all_in" ? "text-bone" : "text-parchment")}>{tag}</span>
-      ) : null}
+      {/* Kept even when empty, so a seat doesn't change height as moves come and go. */}
+      <div className="flex h-5 items-center">
+        {won ? (
+          <span className="text-sm font-bold text-brass-lit">+{chips(won)}</span>
+        ) : tag && !busted ? (
+          <span className={clsx("text-xs font-bold", move === "all_in" ? "text-bone" : "text-parchment")}>{tag}</span>
+        ) : null}
+      </div>
       {showBet && p.bet > 0 && <BetChips amount={p.bet} />}
     </div>
   );
@@ -197,6 +209,8 @@ function Center({ view, winningCardIds }: { view: HoldemView; winningCardIds: Se
   const { pots } = buildPots(settled);
   const middle = settled.reduce((n, c) => n + c.amount, 0);
   const rise = nextBlindRise(view.settings, view.handNumber);
+  const blindsNews =
+    view.phase === "betting" && view.street === "preflop" && Object.values(view.lastActions).every((a) => a.move === "small_blind" || a.move === "big_blind");
 
   return (
     <div className="flex w-full flex-col items-center gap-4 text-center">
@@ -243,10 +257,47 @@ function Center({ view, winningCardIds }: { view: HoldemView; winningCardIds: Se
         </div>
       )}
 
-      <p className="text-sm text-bone">
-        Blinds {chips(view.smallBlind)}/{chips(view.bigBlind)}
-        {rise && `, ${chips(rise.small)}/${chips(rise.big)} in ${rise.handsLeft} ${rise.handsLeft === 1 ? "hand" : "hands"}`}
-      </p>
+      {/* The blinds, quietly, while they're news: until someone makes a real move this hand. The row keeps its height. */}
+      <div className="flex h-7 items-center justify-center">
+        <AnimatePresence>
+          {blindsNews && (
+            <motion.p
+              key={view.handNumber}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.6 } }}
+              className="rounded-full bg-black/25 px-3 py-0.5 text-xs text-bone/80 tabular-nums"
+            >
+              Small blind {chips(view.smallBlind)} · Big blind {chips(view.bigBlind)}
+              {rise && (
+                <span className="text-bone/55">
+                  {" "}
+                  · {chips(rise.small)}/{chips(rise.big)} in {rise.handsLeft} {rise.handsLeft === 1 ? "hand" : "hands"}
+                </span>
+              )}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
+  );
+}
+
+/** How the blinds move to their next seats. */
+const GLIDE = { type: "spring", stiffness: 140, damping: 22 } as const;
+
+/** Marks the small or big blind on its seat: a small tab on the name box. */
+function BlindTag({ kind, amount }: { kind: "sb" | "bb"; amount: number }) {
+  const label = kind === "sb" ? "Small blind" : "Big blind";
+  return (
+    <span
+      title={`${label} ${chips(amount)}`}
+      className={clsx(
+        "block rounded-full px-1.5 py-px text-[10px] leading-tight font-bold whitespace-nowrap shadow",
+        kind === "sb" ? "bg-smoke text-brass-lit ring-1 ring-brass-lit/60" : "bg-brass-lit text-smoke",
+      )}
+    >
+      {label}
+    </span>
   );
 }

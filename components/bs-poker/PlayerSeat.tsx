@@ -90,19 +90,17 @@ export function PlayerSeat({
       <div
         className={clsx(
           "flex flex-col items-center rounded-2xl px-3 py-1.5 transition",
-          isTurn ? "bg-leather-lit ring-2 ring-brass-lit" : "bg-leather",
+          // Whose turn it is shows on the seat itself: its name box turns brass.
+          isTurn ? "bg-brass ring-2 ring-brass-lit" : "bg-leather",
         )}
       >
         <div className="flex max-w-40 items-baseline gap-1.5">
-          <span data-seat-of={player.id} className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{player.name}</span>
-          {isViewer && <span className="text-xs text-brass-lit">you</span>}
-          {player.isBot && <span className="text-xs text-brass-lit">{DIFFICULTY_LABEL[player.botDifficulty ?? "medium"]}</span>}
+          <span data-seat-of={player.id} className={clsx("truncate text-base font-bold", isTurn ? "text-smoke" : "text-parchment")}>{player.name}</span>
+          {isViewer && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>you</span>}
+          {player.isBot && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>{DIFFICULTY_LABEL[player.botDifficulty ?? "medium"]}</span>}
         </div>
-        {isTurn && (
-          <span className="text-xs font-bold text-brass-lit">{player.isBot ? "Thinking…" : isViewer ? "Your turn" : "Their turn"}</span>
-        )}
-        {onBrink && !isTurn && (
-          <span className="text-xs font-bold text-chip-lit">One more loss and {isViewer ? "you're" : "they're"} out</span>
+        {onBrink && (
+          <span className={clsx("text-xs font-bold", isTurn ? "text-smoke" : "text-chip-lit")}>One more loss and {isViewer ? "you're" : "they're"} out</span>
         )}
         {out && <span className="text-xs text-ash">Out in round {player.eliminatedInRound}</span>}
         {disconnected && !out && <span className="text-xs text-parchment">Reconnecting…</span>}

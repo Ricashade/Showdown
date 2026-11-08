@@ -63,8 +63,8 @@ export function BettingPanel({ view, legal, actingId, onAction }: ActionsProps) 
   return (
     <section aria-label="Your bet" className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
       <div>
-        <h2 className="font-display text-3xl font-bold text-bone">Place your bet</h2>
-        <div className="mt-4 flex flex-wrap items-center gap-3" role="group" aria-label="Add chips">
+        <h2 className="font-display text-xl font-bold text-bone">Place your bet</h2>
+        <div className="mt-2.5 flex flex-wrap items-center gap-3" role="group" aria-label="Add chips">
           {CHIP_VALUES.map((v) => (
             <button
               key={v}
@@ -121,7 +121,7 @@ export function InsurancePanel({ legal, actingId, onAction }: Omit<ActionsProps,
   const cost = legal.insuranceOffer!;
   return (
     <section aria-label="Insurance">
-      <h2 className="font-display text-3xl font-bold text-bone">Insurance?</h2>
+      <h2 className="font-display text-xl font-bold text-bone">Insurance?</h2>
       <p className="mt-1 text-base text-parchment">Costs {chips(cost)}, pays {chips(cost * 2)} if the dealer has blackjack.</p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button
@@ -143,15 +143,16 @@ export function InsurancePanel({ legal, actingId, onAction }: Omit<ActionsProps,
 
 export function PlayPanel({ view, legal, actingId, onAction }: ActionsProps) {
   const me = view.players.find((p) => p.id === actingId)!;
-  const hand = me.hands[view.currentHand];
+  // Off your turn (shown greyed out) the current hand may be someone else's: fall back to your first.
+  const hand = me.hands[view.currentHand] ?? me.hands[0];
   const btn = "min-h-14 rounded-full px-7 font-display text-2xl font-bold transition disabled:opacity-35";
   return (
     <section aria-label="Your move">
-      <h2 className="font-display text-3xl font-bold text-bone">
+      <h2 className="font-display text-xl font-bold text-bone">
         Your move
-        {me.hands.length > 1 && <span className="ml-3 text-xl text-parchment">Hand {view.currentHand + 1} of {me.hands.length}</span>}
+        {me.hands.length > 1 && <span className="ml-3 text-base text-parchment">Hand {view.currentHand + 1} of {me.hands.length}</span>}
       </h2>
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-2.5 flex flex-wrap gap-2">
         <button onClick={() => onAction({ type: "HIT", playerId: actingId })} className={clsx(btn, "bg-brass text-smoke hover:bg-brass-lit")}>
           Hit
         </button>
@@ -163,7 +164,7 @@ export function PlayPanel({ view, legal, actingId, onAction }: ActionsProps) {
           disabled={!legal.canDouble}
           className={clsx(btn, "border-2 border-bone/60 text-bone hover:border-bone")}
         >
-          Double {chips(hand.bet)}
+          Double{hand ? ` ${chips(hand.bet)}` : ""}
         </button>
         <button
           onClick={() => onAction({ type: "SPLIT", playerId: actingId })}

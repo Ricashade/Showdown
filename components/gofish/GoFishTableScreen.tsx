@@ -37,7 +37,6 @@ export function GoFishTableScreen({ view, actingId, isHost, onAction, onStartGam
   const legal = getGoFishLegal(view, actingId);
   const acting = view.players.find((p) => p.id === actingId);
   const myTurn = legal.isMyTurn && !!acting && !acting.isBot;
-  const turnPlayer = view.players.find((p) => p.id === view.currentTurnId);
   const focusId = view.viewerId ?? view.currentTurnId ?? view.players[0]?.id ?? null;
   const latest = view.log.at(-1);
   // The ask that just happened (books and refills follow it in the log).
@@ -46,11 +45,11 @@ export function GoFishTableScreen({ view, actingId, isHost, onAction, onStartGam
   let prompt = "";
   if (view.phase === "playing") {
     if (myTurn) prompt = lastAsk && lastAsk.kind === "ask" && lastAsk.askerId === acting!.id && lastAsk.again ? "Go again! Pick someone, then a rank you hold." : "Your turn: pick someone to ask, then a rank you hold.";
-    else prompt = turnPlayer?.isBot ? `${turnPlayer.name} is deciding who to ask…` : `Waiting for ${turnPlayer?.name}.`;
+    // Off your turn the seat's brass name box says whose turn it is; the line stays, empty, so nothing shifts.
   }
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-16 md:pb-5">
       <div inert={view.phase === "game_over"}>
         <ScreenHeader title="Go Fish" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
@@ -66,9 +65,11 @@ export function GoFishTableScreen({ view, actingId, isHost, onAction, onStartGam
               onStart={onStartGame}
             />
           ) : (
-            <main className="mx-auto max-w-6xl space-y-4 pt-6 sm:px-4">
+            <main className="mx-auto max-w-6xl space-y-7 pt-6 sm:px-4">
               <div className="mx-4 flex flex-wrap items-center justify-between gap-3">
+                {/* Both lines keep their height (the last ask, then your prompt), so the table never moves. */}
                 <div className="min-w-0 flex-1" aria-live="polite">
+                  <div className="min-h-7">
                   <AnimatePresence mode="wait">
                     {lastAsk && (
                       <motion.p key={lastAsk.n} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-lg text-parchment">
@@ -77,7 +78,8 @@ export function GoFishTableScreen({ view, actingId, isHost, onAction, onStartGam
                       </motion.p>
                     )}
                   </AnimatePresence>
-                  <p className="font-display text-2xl font-bold text-bone">{prompt}</p>
+                  </div>
+                  <p className="min-h-8 font-display text-2xl font-bold text-bone">{prompt}</p>
                 </div>
                 <button
                   onClick={() => setShowLog(true)}

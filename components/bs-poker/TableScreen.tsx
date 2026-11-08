@@ -80,7 +80,6 @@ export function TableScreen({
   });
   const [, setTick] = useState(0);
   const dealing = view.phase === "bidding" && Date.now() < deal.endsAt;
-  const shuffling = dealing && Date.now() < deal.startedAt + deal.shuffleMs;
   // Re-render when the shuffle ends and when the last card lands, to open up bidding.
   useEffect(() => {
     if (!dealing) return;
@@ -105,7 +104,9 @@ export function TableScreen({
 
   const acting = view.players.find((p) => p.id === actingId);
   const legal = getLegalActions(view, actingId);
-  const turnPlayer = view.players.find((p) => p.id === view.currentTurnPlayerId);
+  // Your seat while you're still in; spectators and the knocked-out get no bid panel.
+  const seated = acting && !acting.isBot && acting.status !== "eliminated" ? acting : null;
+  const preview = getLegalActions({ ...view, currentTurnPlayerId: seated?.id ?? null }, seated?.id ?? null);
   const bidder = view.players.find((p) => p.id === view.currentBid?.playerId);
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "the host";
 
@@ -150,25 +151,33 @@ export function TableScreen({
               <main className="mx-auto max-w-6xl space-y-6 pt-3 sm:px-4">
                 <GameTable view={view} highlights={highlights} connectedIds={connectedIds} />
 
-                {view.phase === "bidding" && (
+                {view.phase === "bidding" && seated && (
                   <div className="mx-4 rounded-[2rem] bg-smoke-raised p-5 ring-1 ring-leather-lit sm:px-6">
-                    {dealing ? (
-                      <p role="status" className="text-lg text-parchment">
-                        {shuffling ? "Shuffling the deck…" : `Dealing round ${view.round}…`}
-                      </p>
-                    ) : legal.isMyTurn && acting && !acting.isBot ? (
+                    {/* Off your turn (or while dealing) the same controls stay, greyed out, so the panel doesn't come and go. */}
+                    {legal.isMyTurn && !dealing ? (
                       <BidBuilder
-                        key={`${view.round}-${view.bidHistory.length}-${acting.id}`}
+                        key={`${view.round}-${view.bidHistory.length}-${seated.id}`}
                         legalBids={legal.legalBids}
                         currentBid={view.currentBid}
                         currentBidderName={bidder?.name}
                         disabledHandTypes={view.disabledHandTypes}
                         canCallBS={legal.canCallBS}
-                        onBid={(bid) => onAction({ type: "PLACE_BID", playerId: acting.id, bid })}
-                        onCallBS={() => onAction({ type: "CALL_BS", playerId: acting.id })}
+                        onBid={(bid) => onAction({ type: "PLACE_BID", playerId: seated.id, bid })}
+                        onCallBS={() => onAction({ type: "CALL_BS", playerId: seated.id })}
                       />
                     ) : (
-                      <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
+                      <div className="opacity-40" inert>
+                        <BidBuilder
+                          key={`waiting-${view.bidHistory.length}`}
+                          legalBids={preview.legalBids}
+                          currentBid={view.currentBid}
+                          currentBidderName={bidder?.name}
+                          disabledHandTypes={view.disabledHandTypes}
+                          canCallBS={preview.canCallBS}
+                          onBid={() => {}}
+                          onCallBS={() => {}}
+                        />
+                      </div>
                     )}
                   </div>
                 )}

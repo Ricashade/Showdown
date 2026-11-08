@@ -69,7 +69,11 @@ export function RummyTable({ view, focusId, legal, actingId, onAction, connected
   const toggle = (id: string) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   return (
-    <section aria-label="Table" className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
+    // On wider screens the felt takes the height the window leaves, and its rows spread evenly in it.
+    <section
+      aria-label="Table"
+      className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8 md:flex md:h-[calc(100dvh-11rem)] md:min-h-fit md:flex-col md:justify-between"
+    >
       {others.length > 0 && (
         <ul className="flex flex-wrap items-start justify-center gap-x-8 gap-y-4">
           {others.map((p) => (
@@ -101,18 +105,19 @@ export function RummyTable({ view, focusId, legal, actingId, onAction, connected
                 </button>
               ))}
             </div>
-            {playing && (
+            {/* Kept through others' turns, greyed out, so the row doesn't change. */}
+            {view.phase === "playing" && (
               <>
                 <button
                   onClick={() => onAction({ type: "MELD", playerId: actingId!, cardIds: selected })}
-                  disabled={!meldable}
+                  disabled={!playing || !meldable}
                   className="min-h-11 rounded-full bg-brass px-6 font-display text-xl font-bold text-smoke transition hover:bg-brass-lit disabled:opacity-35"
                 >
                   Meld {picked.length >= 3 ? picked.length : ""} cards
                 </button>
                 <button
                   onClick={() => onAction({ type: "DISCARD", playerId: actingId!, cardId: selected[0] })}
-                  disabled={!canDiscard}
+                  disabled={!playing || !canDiscard}
                   className="min-h-11 rounded-full border-2 border-bone/60 px-5 font-display text-xl font-bold text-bone transition hover:border-bone disabled:opacity-35"
                 >
                   Discard{picked.length === 1 ? ` ${cardLabel(picked[0])}` : ""}
@@ -247,10 +252,11 @@ function Piles({ view, legal, actingId, onAction }: { view: RummyView; legal: Ru
 /** Everyone's sets and runs. A meld your selected cards fit lights up. */
 function Melds({ view, targets, onLayOff }: { view: RummyView; targets: string[]; onLayOff: (meldId: string) => void }) {
   if (view.melds.length === 0) {
-    return <div className="grid min-h-24 min-w-64 flex-1 place-items-center rounded-3xl border border-dashed border-bone/25 px-6 text-sm text-bone">Melds</div>;
+    return <div className="grid min-h-24 min-w-64 flex-1 place-items-center rounded-3xl border border-dashed border-bone/25 px-6 text-sm text-bone md:h-38">Melds</div>;
   }
+  // Room for about two rows of melds; past that the area scrolls, so the table never grows.
   return (
-    <ul aria-label="Melds on the table" className="flex min-w-0 flex-1 flex-wrap content-start justify-center gap-x-5 gap-y-4 lg:justify-start">
+    <ul aria-label="Melds on the table" className="flex min-w-0 flex-1 flex-wrap content-start justify-center gap-x-5 gap-y-4 pt-3 lg:justify-start md:h-38 md:overflow-y-auto">
       {view.melds.map((m: Meld) => {
         const target = targets.includes(m.id);
         return (
@@ -296,16 +302,16 @@ function Opponent({ player: p, view, disconnected }: { player: RummyPublicPlayer
 function Nameplate({ player: p, view, you, disconnected }: { player: RummyPublicPlayer; view: RummyView; you: boolean; disconnected: boolean }) {
   const isTurn = view.phase === "playing" && view.currentTurnId === p.id;
   return (
-    <div className={clsx("flex min-w-28 flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-leather-lit ring-2 ring-brass-lit" : "bg-leather")}>
+    // Whose turn it is shows on the seat itself: its name box turns brass.
+    <div className={clsx("flex min-w-28 flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-brass ring-2 ring-brass-lit" : "bg-leather")}>
       <div className="flex max-w-40 items-baseline gap-1.5">
-        <span data-seat-of={p.id} className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{p.name}</span>
-        {you && <span className="text-xs text-brass-lit">you</span>}
-        {p.isBot && <span className="text-xs text-brass-lit">{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
+        <span data-seat-of={p.id} className={clsx("truncate text-base font-bold", isTurn ? "text-smoke" : "text-parchment")}>{p.name}</span>
+        {you && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>you</span>}
+        {p.isBot && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
       </div>
-      <span className="text-xs text-parchment tabular-nums">
+      <span className={clsx("text-xs tabular-nums", isTurn ? "text-smoke" : "text-parchment")}>
         {chips(p.score)} pts · {p.handCount} {p.handCount === 1 ? "card" : "cards"}
       </span>
-      {isTurn && p.isBot && <span className="text-xs font-bold text-brass-lit">Thinking…</span>}
       {disconnected && <span className="text-xs text-parchment">Reconnecting…</span>}
     </div>
   );

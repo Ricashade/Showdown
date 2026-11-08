@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import type { BsPokerView, PublicPlayer } from "@/lib/bs-poker-game";
 import { bidLabel } from "@/lib/bs-poker-engine";
@@ -53,10 +54,11 @@ export function GameTable({ view, highlights, connectedIds }: GameTableProps) {
             const x = 50 + 45 * Math.cos(angle);
             const y = 50 + 41 * Math.sin(angle);
             return (
+              // The near seat (yours) rests on the bottom edge, so nothing of it spills onto the panel below.
               <li
                 key={p.id}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${x}%`, top: `${y}%`, zIndex: i === 0 ? 20 : 10 }}
+                className={clsx("absolute -translate-x-1/2", i === 0 ? "bottom-0" : "-translate-y-1/2")}
+                style={i === 0 ? { left: "50%", zIndex: 20 } : { left: `${x}%`, top: `${y}%`, zIndex: 10 }}
               >
                 {seat(p, i === 0 && view.viewerId ? "md" : "sm")}
               </li>

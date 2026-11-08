@@ -67,7 +67,6 @@ export function ThirteenTableScreen({ view, actingId, isHost, onAction, onStartG
   const legal = getThirteenLegal(view, actingId);
   const acting = view.players.find((p) => p.id === actingId);
   const myTurn = legal.isMyTurn && !!acting && !acting.isBot;
-  const turnPlayer = view.players.find((p) => p.id === view.currentTurnId);
   const seated = view.seats?.some((x) => x.id === view.viewerId);
   const focusId = seated ? view.viewerId : view.godMode ? view.currentTurnId : null;
   const top = view.trick.at(-1)?.combo;
@@ -79,7 +78,8 @@ export function ThirteenTableScreen({ view, actingId, isHost, onAction, onStartG
       if (legal.leading) prompt = view.openWith3S ? "Your lead: open with the 3♠." : "Your lead.";
       else if (legal.lockedOut) prompt = "You passed. Bomb back in, or pass.";
       else prompt = `Beat ${describeCombo(top!)}, or pass.`;
-    } else prompt = turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`;
+    }
+    // Off your turn the seat's brass name says whose turn it is; the line stays, empty, so nothing shifts.
   }
 
   const chip = "flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-bold text-parchment ring-1 ring-leather-lit transition hover:text-bone hover:ring-brass";
@@ -101,9 +101,11 @@ export function ThirteenTableScreen({ view, actingId, isHost, onAction, onStartG
               onStart={onStartGame}
             />
           ) : (
-            <main className="mx-auto max-w-6xl space-y-4 pt-3 sm:px-4">
+            <main className="mx-auto max-w-6xl space-y-7 pt-3 sm:px-4">
               <div className="mx-4 flex flex-wrap items-center justify-between gap-3">
+                {/* Both lines keep their height (the last play, then your prompt), so the table never moves. */}
                 <div className="min-w-0 flex-1" aria-live="polite">
+                  <div className="min-h-7">
                   <AnimatePresence mode="wait">
                     {latest && (
                       <motion.p key={latest.n} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-lg text-parchment">
@@ -111,7 +113,8 @@ export function ThirteenTableScreen({ view, actingId, isHost, onAction, onStartG
                       </motion.p>
                     )}
                   </AnimatePresence>
-                  <p className="font-display text-2xl font-bold text-bone">{prompt}</p>
+                  </div>
+                  <p className="min-h-8 font-display text-2xl font-bold text-bone">{prompt}</p>
                 </div>
                 <div className="flex gap-2">
                   <button

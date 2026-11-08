@@ -126,7 +126,8 @@ export function HoldemTableScreen({
   const myHole = view.players.find((p) => p.id === view.viewerId)?.hand;
   const myCards = myHole ? [...myHole, ...view.board] : null;
   const acting = view.players.find((p) => p.id === actingId);
-  const turnPlayer = view.players.find((p) => p.id === view.currentTurnId);
+  // Your seat, while you're still in the game; spectators get no betting panel.
+  const seated = acting && !acting.isBot && acting.status !== "busted" ? acting : null;
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "the host";
 
   // Let the board finish dealing (an all-in runout) before showing who won.
@@ -154,16 +155,20 @@ export function HoldemTableScreen({
             ) : (
               <main className="mx-auto max-w-6xl space-y-6 pt-3 sm:px-4">
                 <HoldemTable view={view} winningCardIds={winningCardIds} connectedIds={connectedIds} />
-                {view.phase === "betting" && (
+                {view.phase === "betting" && seated && (
                   <div className="mx-4 rounded-[2rem] bg-smoke-raised p-5 ring-1 ring-leather-lit sm:px-7">
-                    {dealing ? (
-                      <p role="status" className="text-lg text-parchment">
-                        Dealing…
-                      </p>
-                    ) : legal.isMyTurn && acting && !acting.isBot ? (
-                      <HoldemActions key={`${view.version}-${acting.id}`} view={view} legal={legal} actingId={acting.id} onAction={onAction} />
+                    {/* Off your turn (or while dealing) the same controls stay, greyed out, showing what you'd face. */}
+                    {legal.isMyTurn && !dealing ? (
+                      <HoldemActions key={`${view.version}-${seated.id}`} view={view} legal={legal} actingId={seated.id} onAction={onAction} />
                     ) : (
-                      <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
+                      <HoldemActions
+                        key="waiting"
+                        view={view}
+                        legal={{ ...getHoldemLegal({ ...view, currentTurnId: seated.id }, seated.id), canRaise: true }}
+                        actingId={seated.id}
+                        onAction={() => {}}
+                        disabled
+                      />
                     )}
                   </div>
                 )}

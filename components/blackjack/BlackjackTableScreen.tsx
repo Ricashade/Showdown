@@ -72,45 +72,36 @@ export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStart
   const legal = getBlackjackLegal(view, actingId);
   const acting = view.players.find((p) => p.id === actingId);
   const actingHuman = acting && !acting.isBot ? acting : null;
-  const turnPlayer = view.players.find((p) => p.id === view.currentTurnId);
 
   const showResult = roundOver && resultReady === view.roundNumber && closedRound !== view.roundNumber;
   const showGameOver = view.phase === "game_over" && !showResult && resultReady === view.roundNumber;
 
+  // Your controls stay put through the round: live when it's your call, greyed out otherwise, so the panel never
+  // turns into a line of text and back.
+  const greyed = (node: React.ReactNode) => (
+    <div className="opacity-40" inert>
+      {node}
+    </div>
+  );
+  const inGame = !!actingHuman && actingHuman.status === "active";
+  const waitingPlay = inGame && actingHuman.hands.length > 0 ? greyed(<PlayPanel view={{ ...view, currentHand: 0 }} legal={legal} actingId={actingHuman.id} onAction={() => {}} />) : null;
   let panel: React.ReactNode = null;
   let timer: { total: number; label: string } | null = null;
   if (view.phase === "betting") {
     timer = { total: view.settings.betSeconds, label: "Betting closes" };
-    panel =
-      actingHuman && legal.canBet ? (
-        <BettingPanel key={`${view.roundNumber}-${actingHuman.id}`} view={view} legal={legal} actingId={actingHuman.id} onAction={onAction} />
-      ) : (
-        <p className="text-lg text-parchment">{acting?.status === "busted" ? "You're out of chips." : "Bets are going down."}</p>
-      );
+    panel = actingHuman && legal.canBet ? <BettingPanel key={`${view.roundNumber}-${actingHuman.id}`} view={view} legal={legal} actingId={actingHuman.id} onAction={onAction} /> : null;
   } else if (view.phase === "insurance") {
     timer = { total: view.settings.betSeconds, label: "Insurance closes" };
-    panel =
-      actingHuman && legal.insuranceOffer !== null ? (
-        <InsurancePanel legal={legal} actingId={actingHuman.id} onAction={onAction} />
-      ) : (
-        <p className="text-lg text-parchment">Waiting on insurance.</p>
-      );
+    panel = actingHuman && legal.insuranceOffer !== null ? <InsurancePanel legal={legal} actingId={actingHuman.id} onAction={onAction} /> : waitingPlay;
   } else if (view.phase === "playing") {
     timer = { total: TURN_SECONDS, label: "Time to play" };
-    panel =
-      actingHuman && legal.isMyTurn ? (
-        <PlayPanel key={`${view.version}`} view={view} legal={legal} actingId={actingHuman.id} onAction={onAction} />
-      ) : (
-        <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
-      );
-  } else if (view.phase === "dealer") {
-    panel = <p className="text-lg text-parchment">Dealer&apos;s turn.</p>;
-  } else if (view.phase === "settled") {
-    panel = <p className="text-lg text-parchment">Next round coming up.</p>;
+    panel = actingHuman && legal.isMyTurn ? <PlayPanel key={`${view.version}`} view={view} legal={legal} actingId={actingHuman.id} onAction={onAction} /> : waitingPlay;
+  } else if (view.phase === "dealer" || view.phase === "settled") {
+    panel = waitingPlay;
   }
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-16 md:pb-5">
       <div inert={showResult || showGameOver}>
         <ScreenHeader title="Blackjack" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
@@ -126,12 +117,12 @@ export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStart
               onStart={onStartGame}
             />
           ) : (
-            <main className="mx-auto max-w-6xl space-y-6 pt-6 sm:px-4">
+            <main className="mx-auto max-w-6xl space-y-8 pt-8 sm:px-4">
               <BlackjackTable view={view} connectedIds={connectedIds} />
-              {view.phase !== "game_over" && (
-                <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
+              {view.phase !== "game_over" && panel && (
+                <div className="relative mx-4 min-h-40 rounded-[2rem] bg-smoke-raised p-5 ring-1 ring-leather-lit sm:px-7">
                   {timer && (
-                    <div className="mb-4 flex justify-end">
+                    <div className="absolute top-5 right-6">
                       <Countdown deadline={view.deadline} total={timer.total} label={timer.label} />
                     </div>
                   )}

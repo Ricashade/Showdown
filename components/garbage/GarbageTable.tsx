@@ -237,16 +237,16 @@ function Nameplate({ player: p, view, you, disconnected }: { player: GarbagePubl
   const isTurn = view.phase === "playing" && view.currentTurnId === p.id;
   const left = p.slots.filter((s) => s.faceDown).length;
   return (
-    <div className={clsx("flex min-w-28 flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-leather-lit ring-2 ring-brass-lit" : "bg-leather")}>
+    // Whose turn it is shows on the seat itself: its name box turns brass.
+    <div className={clsx("flex min-w-28 flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-brass ring-2 ring-brass-lit" : "bg-leather")}>
       <div className="flex max-w-40 items-baseline gap-1.5">
-        <span data-seat-of={p.id} className={clsx("truncate text-base font-bold", isTurn ? "text-bone" : "text-parchment")}>{p.name}</span>
-        {you && <span className="text-xs text-brass-lit">you</span>}
-        {p.isBot && <span className="text-xs text-brass-lit">{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
+        <span data-seat-of={p.id} className={clsx("truncate text-base font-bold", isTurn ? "text-smoke" : "text-parchment")}>{p.name}</span>
+        {you && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>you</span>}
+        {p.isBot && <span className={clsx("text-xs", isTurn ? "text-smoke/75" : "text-brass-lit")}>{DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}</span>}
       </div>
-      <span className="text-xs text-parchment tabular-nums">
+      <span className={clsx("text-xs tabular-nums", isTurn ? "text-smoke" : "text-parchment")}>
         {p.finished ? "Board cleared" : view.phase === "reveal" ? (p.revealDone ? "Done" : "Rearranging…") : `${left} of ${p.slots.length} to go`}
       </span>
-      {isTurn && p.isBot && <span className="text-xs font-bold text-brass-lit">Thinking…</span>}
       {disconnected && <span className="text-xs text-parchment">Reconnecting…</span>}
     </div>
   );

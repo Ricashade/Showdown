@@ -51,7 +51,11 @@ export function GoFishTable({ view, focusId, legal, actingId, onAction, connecte
   const ready = canAsk && !!target && rank !== null && legal.targets.includes(target) && legal.ranks.includes(rank);
 
   return (
-    <section aria-label="Table" className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
+    // On wider screens the felt takes the height the window leaves, and its rows spread evenly in it.
+    <section
+      aria-label="Table"
+      className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8 md:flex md:h-[calc(100dvh-12.75rem)] md:min-h-fit md:flex-col md:justify-between md:py-6"
+    >
       <ul className="flex flex-wrap items-start justify-center gap-x-6 gap-y-6">
         {others.map((p) => {
           const selectable = canAsk && legal.targets.includes(p.id);
@@ -76,8 +80,7 @@ export function GoFishTable({ view, focusId, legal, actingId, onAction, connecte
       <Pond view={view} latest={latest ?? null} />
 
       {focus && (
-        <div className="flex flex-col items-center gap-4">
-          {focus.books.length > 0 && <Books books={focus.books} size={view.settings.bookSize} />}
+        <div className="flex flex-col items-center gap-3">
           {focus.hand && (
             <Hand
               hand={focus.hand}
@@ -88,16 +91,22 @@ export function GoFishTable({ view, focusId, legal, actingId, onAction, connecte
               fresh={latest?.askerId === focus.id && latest.got > 0 ? latest.rank : null}
             />
           )}
-          {canAsk && (
+          {/* Your ask button stays through others' turns, greyed out, so it doesn't come and go. */}
+          {view.phase === "playing" && focus.id === actingId && (
             <button
               onClick={() => ready && onAction({ type: "ASK", playerId: actingId!, targetId: target!, rank: rank! })}
               disabled={!ready}
-              className="min-h-14 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke shadow-lg transition hover:bg-brass-lit disabled:opacity-40"
+              className="min-h-12 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke shadow-lg transition hover:bg-brass-lit disabled:opacity-40"
             >
               {target && rank !== null ? `Ask ${name(target)} for ${plural(rank)}` : !target ? "Pick who to ask" : "Pick a rank from your hand"}
             </button>
           )}
-          <Nameplate player={focus} view={view} you={focus.id === view.viewerId} />
+          {/* Your books sit beside your name box (which stays centred), so collecting them never grows the table. */}
+          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4">
+            <span />
+            <Nameplate player={focus} view={view} you={focus.id === view.viewerId} />
+            <div className="justify-self-start">{focus.books.length > 0 && <Books books={focus.books} size={view.settings.bookSize} />}</div>
+          </div>
         </div>
       )}
     </section>
@@ -129,7 +138,7 @@ function Seat({
   const isTurn = view.phase === "playing" && view.currentTurnId === p.id;
   const knownList = known ? [...known].sort((a, b) => a - b) : [];
   return (
-    <div className="relative flex w-44 flex-col items-center gap-2">
+    <div className="relative flex w-48 flex-col items-center gap-1.5">
       <AnimatePresence>
         {goFish !== null && (
           <motion.span
@@ -164,29 +173,40 @@ function Seat({
           ))}
           {p.handCount === 0 && <span className="pb-4 text-sm text-ash">No cards</span>}
         </div>
-        <div className={clsx("flex w-full flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-leather-lit ring-2 ring-brass-lit" : "bg-leather")}>
-          <span data-seat-of={p.id} className="flex max-w-full items-center gap-1.5 truncate text-base font-bold text-bone">
-            {p.isBot && <Bot className="size-4 shrink-0 text-brass-lit" aria-hidden />}
+        {/* Whose turn it is shows on the seat itself: its name box turns brass. */}
+        <div className={clsx("flex w-full flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-brass ring-2 ring-brass-lit" : "bg-leather")}>
+          <span data-seat-of={p.id} className={clsx("flex max-w-full items-center gap-1.5 truncate text-base font-bold", isTurn ? "text-smoke" : "text-bone")}>
+            {p.isBot && <Bot className={clsx("size-4 shrink-0", isTurn ? "text-smoke/75" : "text-brass-lit")} aria-hidden />}
             {p.name}
           </span>
-          <span className="text-xs text-parchment tabular-nums">
+          <span className={clsx("text-xs tabular-nums", isTurn ? "text-smoke" : "text-parchment")}>
             {p.handCount} {p.handCount === 1 ? "card" : "cards"} · {p.books.length} {p.books.length === 1 ? "book" : "books"}
             {p.isBot && ` · ${DIFFICULTY_LABEL[p.botDifficulty ?? "medium"]}`}
           </span>
-          {isTurn && p.isBot && <span className="text-xs font-bold text-brass-lit">Thinking…</span>}
           {disconnected && <span className="text-xs text-parchment">Reconnecting…</span>}
         </div>
       </button>
 
-      {bubble && <p className="w-full rounded-2xl bg-black/30 px-3 py-1.5 text-center text-xs text-bone">“{bubble}”</p>}
-      {knownList.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-1" aria-label={`${p.name} is known to hold ${knownList.map(plural).join(", ")}`}>
-          <span className="text-xs text-ash">Has</span>
-          {knownList.map((r) => (
-            <span key={r} className="rounded-md bg-bone px-1.5 font-display text-sm font-extrabold text-smoke">
-              {rankShort(r)}
-            </span>
-          ))}
+      {/* The last ask and what they're known to hold each keep a line, so seats don't grow as play goes on. */}
+      <div className="flex h-7 w-full items-center">
+        {bubble && (
+          <p title={`“${bubble}”`} className="w-full truncate rounded-2xl bg-black/30 px-3 py-1.5 text-center text-xs text-bone">
+            “{bubble}”
+          </p>
+        )}
+      </div>
+      {view.settings.memoryHelper && (
+        <div className="flex h-6 items-center">
+          {knownList.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-1" aria-label={`${p.name} is known to hold ${knownList.map(plural).join(", ")}`}>
+              <span className="text-xs text-ash">Has</span>
+              {knownList.map((r) => (
+                <span key={r} className="rounded-md bg-bone px-1.5 font-display text-sm font-extrabold text-smoke">
+                  {rankShort(r)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -197,7 +217,7 @@ function Seat({
 function Pond({ view, latest }: { view: GoFishView; latest: Ask | null }) {
   const stack = Math.min(5, Math.ceil(view.pondCount / 8));
   return (
-    <div className="my-7 flex items-center justify-center gap-6">
+    <div className="my-7 flex items-center justify-center gap-6 md:my-2">
       <div className="flex flex-col items-center gap-1.5">
         <div className="relative h-20 w-14" role="img" aria-label={`The pond, ${view.pondCount} cards`}>
           {view.pondCount === 0 ? (
@@ -225,7 +245,7 @@ function Pond({ view, latest }: { view: GoFishView; latest: Ask | null }) {
 function Books({ books, size }: { books: Rank[]; size: 2 | 4 }) {
   const suits = ["S", "H", "D", "C"] as const;
   return (
-    <ul aria-label="Your books" className="flex flex-wrap justify-center gap-3">
+    <ul aria-label="Your books" className="flex flex-wrap gap-3">
       {books.map((r, i) => (
         <li key={`${r}-${i}`} className="flex rounded-xl bg-black/20 p-1 pl-6">
           {suits.slice(0, size).map((s) => (
@@ -295,12 +315,12 @@ function Hand({
 function Nameplate({ player: p, view, you }: { player: GoFishPublicPlayer; view: GoFishView; you: boolean }) {
   const isTurn = view.phase === "playing" && view.currentTurnId === p.id;
   return (
-    <div className={clsx("flex min-w-32 flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-leather-lit ring-2 ring-brass-lit" : "bg-leather")}>
-      <span data-seat-of={p.id} className="text-base font-bold text-bone">
+    <div className={clsx("flex min-w-32 flex-col items-center rounded-2xl px-3 py-1.5", isTurn ? "bg-brass ring-2 ring-brass-lit" : "bg-leather")}>
+      <span data-seat-of={p.id} className={clsx("text-base font-bold", isTurn ? "text-smoke" : "text-bone")}>
         {p.name}
-        {you && <span className="ml-1.5 text-xs font-normal text-brass-lit">you</span>}
+        {you && <span className={clsx("ml-1.5 text-xs font-normal", isTurn ? "text-smoke/75" : "text-brass-lit")}>you</span>}
       </span>
-      <span className="text-xs text-parchment tabular-nums">
+      <span className={clsx("text-xs tabular-nums", isTurn ? "text-smoke" : "text-parchment")}>
         {p.books.length} {p.books.length === 1 ? "book" : "books"}
       </span>
     </div>

@@ -63,7 +63,6 @@ export function GarbageTableScreen({ view, actingId, isHost, onAction, onStartGa
 
   const legal = getGarbageLegal(view, actingId);
   const acting = view.players.find((p) => p.id === actingId);
-  const turnPlayer = view.players.find((p) => p.id === view.currentTurnId);
   const humanTurn = legal.isMyTurn && acting && !acting.isBot;
   // Your own board up close; watching everyone, the board of whoever's playing.
   const focusId = view.viewerId ?? view.currentTurnId ?? view.players[0]?.id ?? null;
@@ -82,12 +81,13 @@ export function GarbageTableScreen({ view, actingId, isHost, onAction, onStartGa
       ? myBoardFull
         ? "Every slot filled. Press Done to clear your board."
         : "Tap two of your turned-over cards to swap them."
-      : `Waiting for ${names(stillArranging.map((p) => p.name))} to rearrange.`;
+      : "";
   } else if (view.phase !== "playing") prompt = "";
   else if (humanTurn && legal.mustDraw) prompt = legal.canTakeDiscard ? "Draw from the stock, or take the card on the discard pile." : "Draw from the stock.";
   else if (humanTurn && legal.mustDiscard) prompt = `The ${cardLabel(view.active!)} has nowhere to go. Throw it away.`;
   else if (humanTurn) prompt = legal.slots.length > 1 ? "Wild: pick any face-down slot." : `Place the ${cardLabel(view.active!)}.`;
-  else prompt = turnPlayer?.isBot ? `${turnPlayer.name} is playing…` : `Waiting for ${turnPlayer?.name}.`;
+  // Off your turn the seat's brass name box says whose turn it is; the line stays, empty, so nothing shifts.
+  else prompt = "";
 
   return (
     <div className="min-h-screen pb-16">
@@ -112,10 +112,12 @@ export function GarbageTableScreen({ view, actingId, isHost, onAction, onStartGa
               </p>
               {view.phase === "reveal" && (
                 <div className="flex flex-wrap justify-center gap-3">
-                  {legal.canRearrange && acting && !acting.isBot && (
+                  {/* Your Done stays once pressed, greyed out, so the row doesn't come and go. */}
+                  {acting && !acting.isBot && (
                     <button
                       onClick={() => onAction({ type: "REVEAL_DONE", playerId: acting.id })}
-                      className="min-h-12 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit"
+                      disabled={!legal.canRearrange}
+                      className="min-h-12 rounded-full bg-brass px-8 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit disabled:opacity-40"
                     >
                       Done
                     </button>

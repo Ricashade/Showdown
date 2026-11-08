@@ -52,7 +52,11 @@ export function ThirteenTable({ view, focusId, legal, actingId, onAction, connec
   }, [chop?.n, reduceMotion, shake]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <motion.section animate={shake} aria-label="Table" className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8">
+    <motion.section
+      animate={shake}
+      aria-label="Table"
+      className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 md:flex md:h-[calc(100dvh-11.5rem)] md:min-h-fit md:flex-col md:justify-between"
+    >
       <ul className="flex flex-wrap items-start justify-center gap-x-3 gap-y-4 sm:justify-between sm:gap-x-10">
         {others.map((x) => (
           <li key={x.id}>
@@ -90,7 +94,7 @@ function Seat({ seat, view, disconnected }: { seat: ThirteenPublicSeat; view: Th
   return (
     <div
       data-seat-of={seat.id}
-      className={clsx("flex w-36 flex-col items-center gap-2 rounded-3xl px-2 pt-3 pb-2 transition sm:w-48 sm:px-3", isTurn ? "bg-black/15 ring-2 ring-brass" : "ring-1 ring-transparent")}
+      className="flex w-36 flex-col items-center gap-2 rounded-3xl px-2 pt-3 pb-2 sm:w-48 sm:px-3"
     >
       <div aria-hidden className="flex h-12 items-end">
         {Array.from({ length: shown }, (_, i) => (
@@ -101,8 +105,9 @@ function Seat({ seat, view, disconnected }: { seat: ThirteenPublicSeat; view: Th
           />
         ))}
       </div>
-      <p className="flex max-w-full items-center gap-1.5 text-base font-bold text-bone">
-        {player?.isBot && <Bot className="size-4 shrink-0 text-brass-lit" aria-label={`${DIFFICULTY_LABEL[player.botDifficulty ?? "medium"]} bot`} />}
+      {/* Whose turn it is shows on the seat itself: its name turns brass. */}
+      <p className={clsx("flex max-w-full items-center gap-1.5 rounded-full px-3 py-0.5 text-base font-bold transition", isTurn ? "bg-brass text-smoke ring-2 ring-brass-lit" : "text-bone")}>
+        {player?.isBot && <Bot className={clsx("size-4 shrink-0", isTurn ? "text-smoke/75" : "text-brass-lit")} aria-label={`${DIFFICULTY_LABEL[player.botDifficulty ?? "medium"]} bot`} />}
         <span className="truncate">{player?.name}</span>
       </p>
       <p className="flex items-baseline gap-2 text-sm text-bone">
@@ -137,7 +142,7 @@ function Pile({ view, name, chop }: { view: ThirteenView; name: (id: string) => 
   const top = view.trick.at(-1);
   const under = view.trick.slice(-3, -1);
   return (
-    <div className="relative mt-8 mb-6 flex min-h-44 flex-col items-center justify-center gap-3">
+    <div className="relative mt-8 mb-6 flex min-h-44 flex-col items-center justify-center gap-3 md:my-2 md:min-h-40">
       {/* Embers under a fresh bomb. */}
       <AnimatePresence>
         {chop && (
@@ -262,30 +267,33 @@ function MyHand({
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {bombs.length > 0 && (
-        <div role="group" aria-label="Bombs in your hand" className="flex max-w-full flex-wrap justify-center gap-2">
-          {bombs.slice(0, 6).map((b) => {
-            const ids = b.cards.map((c) => c.id);
-            const on = ids.length === selected.length && ids.every((id) => selected.includes(id));
-            const live = canAct && !!legal.context && judgePlay(legal.context, b.cards).allowed.length > 0;
-            return (
-              <button
-                key={b.combo.tier}
-                onClick={() => setSelected(on ? [] : ids)}
-                aria-pressed={on}
-                className={clsx(
-                  "flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-bold transition",
-                  on ? "bg-bone text-smoke" : live ? "bg-black/25 text-bone ring-2 ring-brass-lit hover:bg-black/35" : "bg-black/20 text-parchment ring-1 ring-bone/20 hover:text-bone",
-                )}
-              >
-                <Bomb className="size-4" aria-hidden />
-                <span className="font-display text-base tabular-nums">Tier {b.combo.tier}</span>
-                <span className="font-normal">{describeCombo(b.combo)}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* The bombs row keeps its height even with none left, so your hand doesn't jump when you play the last. */}
+      <div className="flex min-h-10 max-w-full items-center">
+        {bombs.length > 0 && (
+          <div role="group" aria-label="Bombs in your hand" className="flex max-w-full flex-wrap justify-center gap-2">
+            {bombs.slice(0, 6).map((b) => {
+              const ids = b.cards.map((c) => c.id);
+              const on = ids.length === selected.length && ids.every((id) => selected.includes(id));
+              const live = canAct && !!legal.context && judgePlay(legal.context, b.cards).allowed.length > 0;
+              return (
+                <button
+                  key={b.combo.tier}
+                  onClick={() => setSelected(on ? [] : ids)}
+                  aria-pressed={on}
+                  className={clsx(
+                    "flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-bold transition",
+                    on ? "bg-bone text-smoke" : live ? "bg-black/25 text-bone ring-2 ring-brass-lit hover:bg-black/35" : "bg-black/20 text-parchment ring-1 ring-bone/20 hover:text-bone",
+                  )}
+                >
+                  <Bomb className="size-4" aria-hidden />
+                  <span className="font-display text-base tabular-nums">Tier {b.combo.tier}</span>
+                  <span className="font-normal">{describeCombo(b.combo)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <ul aria-label="Your hand" className="flex max-w-full flex-wrap justify-center pt-5" style={{ paddingLeft: -step }}>
         {sorted.map((c, i) => {
@@ -347,19 +355,19 @@ function MyHand({
           )}
         </div>
 
-        {canAct && (
+        {/* Pass and Play stay through others' turns, greyed out, so the row doesn't come and go. */}
+        {view.phase === "playing" && (
           <div className="flex gap-2">
-            {!legal.leading && (
-              <button
-                onClick={() => onAction({ type: "PASS", playerId: seat.id })}
-                className="min-h-12 rounded-full border border-bone/50 px-6 font-display text-xl font-bold text-bone transition hover:border-bone"
-              >
-                Pass
-              </button>
-            )}
+            <button
+              onClick={() => onAction({ type: "PASS", playerId: seat.id })}
+              disabled={!canAct || legal.leading}
+              className="min-h-12 rounded-full border border-bone/50 px-6 font-display text-xl font-bold text-bone transition hover:border-bone disabled:opacity-40"
+            >
+              Pass
+            </button>
             <button
               onClick={play}
-              disabled={!chosen}
+              disabled={!canAct || !chosen}
               className={clsx(
                 "min-h-12 rounded-full px-8 font-display text-xl font-bold shadow-lg transition disabled:opacity-40",
                 chopping ? "bg-chip text-bone hover:bg-chip/85" : "bg-brass text-smoke hover:bg-brass-lit",
@@ -372,7 +380,7 @@ function MyHand({
       </div>
 
       <p className="flex items-baseline gap-2 text-base text-bone">
-        <span className={clsx("font-bold", legal.isMyTurn && "text-brass-lit")}>{name}</span>
+        <span className={clsx("rounded-full px-3 py-0.5 font-bold transition", canAct ? "bg-brass text-smoke ring-2 ring-brass-lit" : "")}>{name}</span>
         {you && name !== "You" && <span className="text-sm text-brass-lit">you</span>}
         <span className="text-sm">
           <span className="font-display text-lg font-bold tabular-nums">{hand.length}</span> {hand.length === 1 ? "card" : "cards"}

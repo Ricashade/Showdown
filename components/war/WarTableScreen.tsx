@@ -77,7 +77,6 @@ export function WarTableScreen({ view, controlIds, actingId, isHost, onAction, o
   const duelist = !!view.sides?.some((x) => x.id === actingId);
   const leftId = duelist ? actingId! : (view.sides?.[0].id ?? "");
   const name = (id: string) => view.players.find((p) => p.id === id)?.name ?? "";
-  const others = view.sides?.filter((x) => !x.ready && !controlIds.includes(x.id)).map((x) => name(x.id)) ?? [];
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "the host";
 
   return (
@@ -97,48 +96,46 @@ export function WarTableScreen({ view, controlIds, actingId, isHost, onAction, o
               onStart={onStartGame}
             />
           ) : view.sides ? (
-            <main className="mx-auto max-w-6xl space-y-5 pt-6 sm:px-4">
+            <main className="mx-auto max-w-6xl space-y-8 pt-6 sm:px-4">
               <TugOfWar view={view} leftId={leftId} />
               <WarTable view={view} leftId={leftId} speed={speed} connectedIds={connectedIds} />
 
               <div className="mx-4 flex flex-col items-center gap-5 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
-                {tactical ? (
-                  legal.canAct && acting && !acting.isBot ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <h2 className="font-display text-3xl font-bold text-bone">{view.stage === "war" ? "Pick the card that settles the War" : `Pick a card, ${acting.name}`}</h2>
-                      <ul className="flex gap-3">
-                        {legal.hand.map((c) => (
-                          <li key={c.id}>
-                            <button
-                              onClick={() => onAction({ type: "PLAY", playerId: acting.id, cardId: c.id })}
-                              aria-label={`Play the ${cardName(c, true)}`}
-                              className="block rounded-xl transition hover:-translate-y-2 focus-visible:-translate-y-2"
-                            >
-                              <PlayingCard card={c} size="lg" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <p className="text-lg text-parchment">{others.length ? `Waiting for ${others.join(" and ")}.` : "Watching."}</p>
-                  )
-                ) : waitingOn.length > 0 ? (
+                {/* Your controls stay through the other side's move, greyed out, so they don't come and go. */}
+                {!duelist || acting?.isBot ? (
+                  <p className="text-lg text-parchment">Watching.</p>
+                ) : tactical ? (
+                  <div className={clsx("flex flex-col items-center gap-3 transition-opacity", !legal.canAct && "opacity-40")} inert={!legal.canAct}>
+                    <h2 className="font-display text-2xl font-bold text-bone">{view.stage === "war" ? "Pick the card that settles the War" : "Pick a card"}</h2>
+                    <ul className="flex gap-3">
+                      {(legal.canAct ? legal.hand : (view.sides?.find((x) => x.id === actingId)?.hand ?? [])).map((c) => (
+                        <li key={c.id}>
+                          <button
+                            onClick={() => onAction({ type: "PLAY", playerId: actingId!, cardId: c.id })}
+                            aria-label={`Play the ${cardName(c, true)}`}
+                            className="block rounded-xl transition hover:-translate-y-2 focus-visible:-translate-y-2"
+                          >
+                            <PlayingCard card={c} size="lg" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
                   <motion.button
                     key={view.version}
                     initial={{ scale: 0.96 }}
                     animate={{ scale: 1 }}
                     onClick={flip}
+                    disabled={waitingOn.length === 0}
                     className={clsx(
-                      "min-h-16 rounded-full px-12 font-display text-3xl font-extrabold shadow-lg transition",
+                      "min-h-16 rounded-full px-12 font-display text-3xl font-extrabold shadow-lg transition disabled:opacity-40",
                       view.stage === "war" ? "bg-chip text-bone hover:bg-chip/85" : "bg-brass text-smoke hover:bg-brass-lit",
                     )}
                   >
                     {view.stage === "war" ? "Flip for the War" : "Flip"}
                     <kbd className="ml-3 rounded-md bg-black/20 px-2 py-0.5 align-middle font-sans text-sm font-bold">Space</kbd>
                   </motion.button>
-                ) : (
-                  <p className="text-lg text-parchment">{controlIds.length === 0 ? "Watching." : others.length ? `Waiting for ${others.join(" and ")} to flip.` : ""}</p>
                 )}
 
                 <div className="flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-3">

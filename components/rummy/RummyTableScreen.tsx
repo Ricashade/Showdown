@@ -63,7 +63,6 @@ export function RummyTableScreen({ view, actingId, isHost, onAction, onStartGame
   const legal = getRummyLegal(view, actingId);
   const acting = view.players.find((p) => p.id === actingId);
   const humanTurn = legal.isMyTurn && !!acting && !acting.isBot;
-  const turnPlayer = view.players.find((p) => p.id === view.currentTurnId);
   const focusId = view.viewerId ?? view.currentTurnId ?? view.players[0]?.id ?? null;
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "the host";
   const mustPlay = legal.mustPlayId ? acting?.hand?.find((c) => c.id === legal.mustPlayId) : null;
@@ -73,7 +72,7 @@ export function RummyTableScreen({ view, actingId, isHost, onAction, onStartGame
     if (humanTurn && legal.mustDraw) prompt = "Draw from the stock or the discard pile.";
     else if (humanTurn && mustPlay) prompt = `Meld or lay off the ${cardLabel(mustPlay)} before you discard.`;
     else if (humanTurn) prompt = "Pick cards to meld or lay off, then discard one.";
-    else prompt = turnPlayer?.isBot ? `${turnPlayer.name} is playing…` : `Waiting for ${turnPlayer?.name}.`;
+    // Off your turn the seat's brass name box says whose turn it is; the line stays, empty, so nothing shifts.
   }
 
   const showRound = view.phase === "round_over" && !!view.result && closedRound !== view.result.round;
@@ -81,7 +80,7 @@ export function RummyTableScreen({ view, actingId, isHost, onAction, onStartGame
   const showWinner = view.phase === "game_over" && !showResult;
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-16 md:pb-5">
       <div inert={showRound || showResult || showWinner}>
         <ScreenHeader title="Rummy" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
@@ -97,7 +96,7 @@ export function RummyTableScreen({ view, actingId, isHost, onAction, onStartGame
               onStart={onStartGame}
             />
           ) : (
-            <main className="mx-auto max-w-6xl space-y-5 pt-6 sm:px-4">
+            <main className="mx-auto max-w-6xl space-y-7 pt-6 sm:px-4">
               <p className="min-h-8 text-center font-display text-2xl font-bold text-bone">{prompt}</p>
               <LayoutGroup>
                 <RummyTable view={view} focusId={focusId} legal={humanTurn ? legal : { ...legal, isMyTurn: false, mustDraw: false, canPlay: false }} actingId={actingId} onAction={onAction} connectedIds={connectedIds} />
