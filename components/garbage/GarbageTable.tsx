@@ -51,7 +51,7 @@ export function GarbageTable({ view, focusId, legal, actingId, onAction, connect
   };
 
   return (
-    <section aria-label="Table" className="felt mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
+    <section aria-label="Table" className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
       {/* With one or two opponents, their boards sit in a column beside yours so it all fits on screen. */}
       <div className={clsx("flex flex-col items-center gap-7", others.length <= 2 && "lg:flex-row lg:items-start lg:justify-center lg:gap-14")}>
         {others.length > 0 && (

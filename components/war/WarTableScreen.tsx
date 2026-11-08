@@ -17,7 +17,7 @@ import { TugOfWar, WarTable, type WarSpeed } from "./WarTable";
 
 export interface WarTableScreenProps {
   view: WarView;
-  /** Duelists this screen flips for: you online; every human duelist in the simulator. */
+  /** Duelists this screen flips for: you, when you're one of them. */
   controlIds: string[];
   /** Whose Tactical hand is shown. */
   actingId: string | null;

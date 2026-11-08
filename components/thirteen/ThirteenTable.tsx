@@ -52,7 +52,7 @@ export function ThirteenTable({ view, focusId, legal, actingId, onAction, connec
   }, [chop?.n, reduceMotion, shake]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <motion.section animate={shake} aria-label="Table" className="felt relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
+    <motion.section animate={shake} aria-label="Table" className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8">
       <ul className="flex flex-wrap items-start justify-center gap-x-3 gap-y-4 sm:justify-between sm:gap-x-10">
         {others.map((x) => (
           <li key={x.id}>
@@ -137,7 +137,7 @@ function Pile({ view, name, chop }: { view: ThirteenView; name: (id: string) => 
   const top = view.trick.at(-1);
   const under = view.trick.slice(-3, -1);
   return (
-    <div className="relative mt-12 mb-6 flex min-h-44 flex-col items-center justify-center gap-3">
+    <div className="relative mt-8 mb-6 flex min-h-44 flex-col items-center justify-center gap-3">
       {/* Embers under a fresh bomb. */}
       <AnimatePresence>
         {chop && (

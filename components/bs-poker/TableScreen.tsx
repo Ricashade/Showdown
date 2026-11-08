@@ -42,8 +42,6 @@ export interface TableScreenProps {
   headerExtra?: React.ReactNode;
   /** Shared rooms: the host's choices once a match is over, in place of Play again. */
   postGameActions?: React.ReactNode;
-  /** Local simulator: who to switch to when it's someone else's turn. */
-  onViewAs?: (playerId: string) => void;
 }
 
 /** One sentence for screen readers describing what just changed. */
@@ -73,7 +71,6 @@ export function TableScreen({
   topBar,
   headerExtra,
   postGameActions,
-  onViewAs,
 }: TableScreenProps) {
   const deal = useDealClock({
     key: view.phase === "bidding" ? `round-${view.round}` : null,
@@ -130,7 +127,7 @@ export function TableScreen({
 
   return (
     <DealProvider value={deal}>
-      <div className="min-h-screen pb-16">
+      <div className="min-h-screen pb-16 md:pb-5">
         {/* Everything behind an open dialog is inert, so focus can't wander under it. */}
         <div inert={dialogOpen}>
           <ScreenHeader title="BS Poker" exit={exit} extra={headerExtra} />
@@ -150,11 +147,11 @@ export function TableScreen({
                 onStart={onStartGame}
               />
             ) : (
-              <main className="mx-auto max-w-6xl space-y-6 pt-5 sm:px-4">
+              <main className="mx-auto max-w-6xl space-y-6 pt-3 sm:px-4">
                 <GameTable view={view} highlights={highlights} connectedIds={connectedIds} />
 
                 {view.phase === "bidding" && (
-                  <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
+                  <div className="mx-4 rounded-[2rem] bg-smoke-raised p-5 ring-1 ring-leather-lit sm:px-6">
                     {dealing ? (
                       <p role="status" className="text-lg text-parchment">
                         {shuffling ? "Shuffling the deck…" : `Dealing round ${view.round}…`}
@@ -167,22 +164,11 @@ export function TableScreen({
                         currentBidderName={bidder?.name}
                         disabledHandTypes={view.disabledHandTypes}
                         canCallBS={legal.canCallBS}
-                        actingName={acting.name}
                         onBid={(bid) => onAction({ type: "PLACE_BID", playerId: acting.id, bid })}
                         onCallBS={() => onAction({ type: "CALL_BS", playerId: acting.id })}
                       />
                     ) : (
-                      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
-                        {turnPlayer && onViewAs && !turnPlayer.isBot && (
-                          <button
-                            onClick={() => onViewAs(turnPlayer.id)}
-                            className="min-h-11 rounded-full border border-dashed border-ash/60 px-4 text-sm text-parchment hover:text-bone"
-                          >
-                            View as {turnPlayer.name}
-                          </button>
-                        )}
-                      </div>
+                      <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
                     )}
                   </div>
                 )}

@@ -15,19 +15,19 @@ npm run build
 app/
   page.tsx                  Main menu: one-game-at-a-time carousel (components/menu/)
   room/[code]/              Online room (host or guest), shared by every game
-  bs-poker/page.tsx         Choose: create a room on this game, join one, or local simulator
+  bs-poker/page.tsx         Choose: create a room on this game, join one, or play solo against bots
   bs-poker/room/[code]/     Old invite links; redirects to room/[code]
-  bs-poker/local/           Local simulator (every seat on one screen)
+  bs-poker/local/           Solo table: you against bots on this screen
   rules/, rules/demo/       How to play + guided 30-second demo
-  texas-holdem/              Hold'em: chooser, room/[code]/ (redirect), local/ (simulator)
+  texas-holdem/              Hold'em: chooser, room/[code]/ (redirect), local/ (solo vs bots)
   blackjack/                Blackjack: same three routes
   garbage/                  Garbage: same three routes
   rummy/                    Rummy: same three routes
   war/                      War: same three routes
-  go-fish/                  Go Fish: same three routes (local/?bots=1 seats you against two bots)
-  thirteen/                 Thirteen: chooser and local/ (local/?bots=1 seats you against two bots)
+  go-fish/                  Go Fish: same three routes
+  thirteen/                 Thirteen: chooser and local/
   speed/                    Speed: chooser and local/ (you against a bot)
-  bouillotte/               Bouillotte: chooser and local/ (local/?bots=1 seats you against three bots)
+  bouillotte/               Bouillotte: chooser and local/
 types/
   cards.ts                  Card, Rank, Suit
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
@@ -59,8 +59,8 @@ lib/
   bot-ai.ts                 Bots for every game (entry point); brains in bots/*-bot.ts
   multiplayer/              Room protocol (room.ts), encryption (crypto.ts), channels: Supabase,
                             same-browser tabs, in-memory (tests)
-  multiplayer/transport.ts  LocalTransport for the simulator
-  hooks/                    useOnlineRoom, useGameRoom, useBotDriver, useTableClock
+  multiplayer/transport.ts  LocalTransport for solo tables
+  hooks/                    useOnlineRoom, useGameRoom, useBotDriver, useTableClock, useSoloTable
 components/
   ui/                       PlayingCard (flip/deal animations), Toggle/Stepper/Segmented
   bs-poker/                 TableScreen (shared), LocalGame, OnlineGame, Lobby, GameTable, BidBuilder, …
@@ -268,7 +268,7 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
   `getPlayerView` real players get). Tests check a bot's choice doesn't change when the hidden
   cards of others do.
 - **Pacing:** 0.9–1.8 s of "Thinking…", plus time for any deal animation still running.
-- **Who runs them:** the local simulator, or the online host's tab only, so each bot move is made
+- **Who runs them:** a solo table, or the online host's tab only, so each bot move is made
   once and broadcast like any other.
 - **BS Poker:** Easy bids by feel; Medium runs 100 Monte Carlo rollouts (calls BS under 22%);
   Hard runs 350 with bid inference (earlier bidders likely hold what they bid), calls under 28%,

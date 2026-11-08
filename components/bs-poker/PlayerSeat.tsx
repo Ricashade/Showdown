@@ -53,7 +53,7 @@ export function PlayerSeat({
   const shouldDim = !!dimUnmatched && !!highlights && highlights.cardIds.size > 0;
 
   return (
-    <div className={clsx("relative flex w-max max-w-44 flex-col items-center gap-1.5", out && "opacity-55")}>
+    <div className={clsx("relative flex w-max max-w-44 flex-col items-center gap-2.5", out && "opacity-55")}>
       {/* Cards */}
       <div className="flex min-h-14 items-end">
         {out && !cards?.length ? (

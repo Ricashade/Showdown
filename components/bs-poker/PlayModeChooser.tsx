@@ -5,9 +5,10 @@ import { GAMES, ROOM, ROOM_PATH, type GameId } from "@/lib/games";
 import { createSession, getTransport, type TransportKind } from "@/lib/multiplayer/session";
 import { generateRoomCode, isRoomCode, normalizeRoomCode } from "@/lib/multiplayer/room-code";
 import { RoomLink, useRoomTransition } from "@/components/ui/RoomTransition";
+import { MainMenuLink } from "@/components/table/chrome";
 import { NameField, rememberName, useRememberedName } from "./NameField";
 
-/** Create a room starting on this game, join one by code, or open this game's local simulator. */
+/** Create a room starting on this game, join one by code, or play it solo against bots. */
 export default function PlayModeChooser({ game }: { game: GameId }) {
   const info = GAMES[game];
   const rooms = useRoomTransition();
@@ -35,9 +36,7 @@ export default function PlayModeChooser({ game }: { game: GameId }) {
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
       <header className="flex items-center justify-between gap-3">
         <h1 className="font-display text-4xl font-extrabold text-bone">{info.title}</h1>
-        <RoomLink href="/" className="flex min-h-11 items-center px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline">
-          Main menu
-        </RoomLink>
+        <MainMenuLink />
       </header>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1.2fr_1fr]">
@@ -99,13 +98,13 @@ export default function PlayModeChooser({ game }: { game: GameId }) {
 
         <section aria-labelledby="local-heading" className="self-start">
           <h2 id="local-heading" className="font-display text-4xl font-bold text-bone">
-            Local simulator
+            Play solo
           </h2>
           <RoomLink
             href={`${info.path}/local`}
             className="mt-5 inline-flex min-h-12 items-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone"
           >
-            Open the simulator
+            Play against bots
           </RoomLink>
         </section>
       </div>

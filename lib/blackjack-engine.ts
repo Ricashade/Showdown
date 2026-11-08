@@ -513,7 +513,7 @@ export interface BlackjackView extends Omit<BlackjackState, "rngState" | "shoe" 
 
 /**
  * What one player may see. Every player's cards are face up in blackjack; the shoe order and
- * the dealer's hole card never leave the host (not even in the simulator's "Everyone" view).
+ * the dealer's hole card never leave the host.
  */
 export function getBlackjackView(state: BlackjackState, viewer: string | "god"): BlackjackView {
   const godMode = viewer === "god";

@@ -69,7 +69,7 @@ export function WarTable({ view, leftId, speed, connectedIds }: WarTableProps) {
   const round = atWar ? view.battles + 1 : (view.last?.number ?? 0);
 
   return (
-    <section aria-label="Table" className="felt relative mx-4 overflow-hidden rounded-[2.5rem] px-4 py-8 sm:px-8">
+    <section aria-label="Table" className="felt felt-line relative mx-4 overflow-hidden rounded-[2.5rem] px-4 py-8 sm:px-8">
       <motion.div
         key={atWar ? `war-${view.wars}` : "calm"}
         // A small shake when a War breaks out.

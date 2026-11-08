@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import LocalThirteen from "@/components/thirteen/LocalThirteen";
 
-export const metadata: Metadata = { title: "Local simulator | Thirteen" };
+export const metadata: Metadata = { title: "Play solo | Thirteen" };
 
-/** `?bots=1` (from the demo) seats you against two bots. */
-export default async function LocalThirteenPage({ searchParams }: { searchParams: Promise<{ bots?: string }> }) {
-  const { bots } = await searchParams;
-  return <LocalThirteen vsBots={bots === "1"} />;
+export default function LocalThirteenPage() {
+  return <LocalThirteen />;
 }

@@ -46,9 +46,9 @@ export function HoldemTable({ view, winningCardIds, connectedIds }: HoldemTableP
 
   return (
     <section aria-label="Table">
-      {/* Desktop: oval table, bets pushed out in front of each seat. */}
-      <div className="relative mx-auto hidden h-[640px] w-full max-w-5xl md:block">
-        <div className="felt absolute inset-x-[5%] inset-y-[9%] rounded-[50%]" />
+      {/* Desktop: oval table, bets pushed out in front of each seat; as tall as the window leaves room for. */}
+      <div className="relative mx-auto hidden h-[clamp(24rem,calc(100dvh-16rem),40rem)] w-full max-w-5xl md:block">
+        <div className="felt felt-line absolute inset-x-[5%] inset-y-[9%] rounded-[50%]" />
         <div className="absolute inset-x-[24%] inset-y-[30%] flex items-center justify-center">
           <Center view={view} winningCardIds={winningCardIds} />
         </div>
@@ -56,13 +56,19 @@ export function HoldemTable({ view, winningCardIds, connectedIds }: HoldemTableP
           {ordered.map((p, i) => {
             const angle = Math.PI / 2 + (i * 2 * Math.PI) / ordered.length;
             const at = (rx: number, ry: number) => ({ left: `${50 + rx * Math.cos(angle)}%`, top: `${50 + ry * Math.sin(angle)}%` });
+            const seatAt = at(45, 41);
+            // A bet sits a fixed distance in from its seat, so it never lands on the cards however short the table.
+            const betAt = {
+              left: `calc(${seatAt.left} - ${Math.round(Math.cos(angle) * 130)}px)`,
+              top: `calc(${seatAt.top} - ${Math.round(Math.sin(angle) * 108)}px)`,
+            };
             return (
               <li key={p.id}>
-                <div className="absolute z-10 -translate-x-1/2 -translate-y-1/2" style={{ ...at(45, 41), zIndex: i === 0 ? 20 : 10 }}>
+                <div className="absolute z-10 -translate-x-1/2 -translate-y-1/2" style={{ ...seatAt, zIndex: i === 0 ? 20 : 10 }}>
                   {seat(p, i === 0 && view.viewerId ? "md" : "sm", false)}
                 </div>
                 {p.bet > 0 && (
-                  <div className="absolute -translate-x-1/2 -translate-y-1/2" style={at(31, 24)}>
+                  <div className="absolute -translate-x-1/2 -translate-y-1/2" style={betAt}>
                     <BetChips amount={p.bet} />
                   </div>
                 )}
@@ -112,7 +118,7 @@ function Seat({
   const overlap = size === "md" ? "-ml-4" : "-ml-3";
 
   return (
-    <div className={clsx("relative flex w-max flex-col items-center gap-1.5", (busted || p.folded) && "opacity-50")}>
+    <div className={clsx("relative flex w-max flex-col items-center gap-2.5", (busted || p.folded) && "opacity-50")}>
       <div className="flex min-h-14 items-end">
         {busted ? (
           <span className="text-sm text-ash">Out</span>

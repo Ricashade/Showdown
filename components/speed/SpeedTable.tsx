@@ -191,7 +191,7 @@ export function SpeedTable({ view, focusId, canAct, onAction, bounce, connectedI
   const doubles = view.settings.allowDoubles;
 
   return (
-    <section aria-label="Table" className="felt relative mx-4 overflow-hidden rounded-[2.5rem] px-3 py-6 sm:px-8 sm:py-8">
+    <section aria-label="Table" className="felt felt-line relative mx-4 overflow-hidden rounded-[2.5rem] px-3 py-6 sm:px-8 sm:py-8">
       <SideBar side={top} view={view} run={runs[top.id]?.count} disconnected={!!connectedIds && !connectedIds.has(top.id)} />
       <div aria-hidden className="mt-3 flex justify-center gap-1.5 sm:gap-2">
         {top.filled.map((on, i) => (

@@ -3,6 +3,21 @@
 import { useEffect, useState } from "react";
 import { RoomLink } from "@/components/ui/RoomTransition";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, LogOut } from "lucide-react";
+
+/** Header ways out read as exits: an icon and a standing underline, not just grey text. */
+const EXIT = "group flex min-h-11 items-center gap-2 px-2 text-base font-bold text-parchment transition hover:text-bone";
+const EXIT_TEXT = "underline decoration-parchment/45 decoration-2 underline-offset-[6px] transition group-hover:decoration-bone";
+
+/** Back to the main menu, from a header. */
+export function MainMenuLink() {
+  return (
+    <RoomLink href="/" className={EXIT}>
+      <ArrowLeft className="size-4" aria-hidden />
+      <span className={EXIT_TEXT}>Main menu</span>
+    </RoomLink>
+  );
+}
 
 export interface HeaderExit {
   label: string;
@@ -25,9 +40,7 @@ export function ScreenHeader({ title, exit, extra }: { title: string; exit?: Hea
         <h1 className="font-display text-4xl font-extrabold text-bone">{title}</h1>
       )}
       {!exit ? (
-        <RoomLink href="/" className="flex min-h-11 items-center px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline">
-          Main menu
-        </RoomLink>
+        <MainMenuLink />
       ) : confirming && exit.confirm ? (
         <div role="group" aria-label={exit.confirm} className="flex flex-wrap items-center gap-2">
           <span className="text-base text-parchment">{exit.confirm}</span>
@@ -55,9 +68,10 @@ export function ScreenHeader({ title, exit, extra }: { title: string; exit?: Hea
         <button
           id="header-exit"
           onClick={() => (exit.confirm ? setConfirming(true) : exit.onExit())}
-          className="min-h-11 px-2 text-base text-parchment underline-offset-4 hover:text-bone hover:underline"
+          className={EXIT}
         >
-          {exit.label}
+          <LogOut className="size-4" aria-hidden />
+          <span className={EXIT_TEXT}>{exit.label}</span>
         </button>
       )}
     </header>

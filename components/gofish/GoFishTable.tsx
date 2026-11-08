@@ -51,7 +51,7 @@ export function GoFishTable({ view, focusId, legal, actingId, onAction, connecte
   const ready = canAsk && !!target && rank !== null && legal.targets.includes(target) && legal.ranks.includes(rank);
 
   return (
-    <section aria-label="Table" className="felt mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
+    <section aria-label="Table" className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
       <ul className="flex flex-wrap items-start justify-center gap-x-6 gap-y-6">
         {others.map((p) => {
           const selectable = canAsk && legal.targets.includes(p.id);

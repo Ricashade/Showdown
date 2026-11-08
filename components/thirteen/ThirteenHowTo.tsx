@@ -298,7 +298,7 @@ function Demo({ onExit }: { onExit: () => void }) {
         )}
         {step === 2 && (
           <>
-            <RoomLink href="/thirteen/local?bots=1" className="flex min-h-12 items-center rounded-full bg-brass px-7 font-display text-2xl font-bold text-smoke hover:bg-brass-lit">
+            <RoomLink href="/thirteen/local" className="flex min-h-12 items-center rounded-full bg-brass px-7 font-display text-2xl font-bold text-smoke hover:bg-brass-lit">
               Play against bots
             </RoomLink>
             <RoomLink href="/thirteen" className="flex min-h-12 items-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">

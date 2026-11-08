@@ -22,7 +22,7 @@ export function GoFishHowTo({ onClose }: { onClose: () => void }) {
   );
 }
 
-const VS_BOTS = "/go-fish/local?bots=1";
+const VS_BOTS = "/go-fish/local";
 
 // ---------------------------------------------------------------------------
 // Guide

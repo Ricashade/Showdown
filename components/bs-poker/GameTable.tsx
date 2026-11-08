@@ -42,8 +42,8 @@ export function GameTable({ view, highlights, connectedIds }: GameTableProps) {
   return (
     <section aria-label="Table">
       {/* Desktop: seats sit on the rail of an oval table. */}
-      <div className="relative mx-auto hidden h-[640px] w-full max-w-5xl md:block">
-        <div className="felt absolute inset-x-[5%] inset-y-[9%] rounded-[50%]" />
+      <div className="relative mx-auto hidden h-[clamp(24rem,calc(100dvh-22.5rem),40rem)] w-full max-w-5xl md:block">
+        <div className="felt felt-line absolute inset-x-[5%] inset-y-[9%] rounded-[50%]" />
         <div className="absolute inset-x-[22%] inset-y-[27%] flex items-center justify-center">
           <TableCenter view={view} highlights={highlights} />
         </div>

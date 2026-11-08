@@ -17,7 +17,7 @@ import { brelanWords, chips } from "./words";
 
 export interface BouillotteTableScreenProps {
   view: BouillotteView;
-  /** Whose controls to show: you online; the chosen or current seat in the simulator. */
+  /** Whose controls to show: yours. */
   actingId: string | null;
   isHost: boolean;
   onAction: (action: BouillotteAction) => void;
@@ -47,9 +47,21 @@ export function BouillotteTableScreen({ view, actingId, isHost, onAction, onStar
   else if (view.phase === "betting") prompt = myTurn ? (legal.canCheck ? "Your move." : `${chips(legal.callAmount)} to call.`) : turn?.isBot ? `${turn.name} is thinking…` : `Waiting for ${turn?.name}.`;
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-16 md:pb-5">
       <div inert={view.phase === "game_over"}>
-        <ScreenHeader title="Bouillotte" exit={exit} extra={headerExtra} />
+        <ScreenHeader
+          title="Bouillotte"
+          exit={exit}
+          extra={
+            view.phase === "lobby"
+              ? headerExtra
+              : prompt && (
+                  <p aria-live="polite" className="font-display text-2xl font-bold text-bone">
+                    {prompt}
+                  </p>
+                )
+          }
+        />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
         <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="bouillotte" />}>
@@ -63,12 +75,7 @@ export function BouillotteTableScreen({ view, actingId, isHost, onAction, onStar
               onStart={onStartGame}
             />
           ) : (
-            <main className="mx-auto max-w-6xl space-y-5 pt-6 sm:px-4">
-              {prompt && (
-                <p aria-live="polite" className="mx-4 font-display text-2xl font-bold text-bone">
-                  {prompt}
-                </p>
-              )}
+            <main className="mx-auto max-w-6xl space-y-4 pt-3 sm:px-4">
               <BouillotteTable view={view} focusId={focusId} connectedIds={connectedIds} />
               {myTurn && <BouillotteActions view={view} legal={legal} actingId={actingId!} onAction={onAction} />}
               <AnimatePresence>

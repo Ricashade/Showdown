@@ -14,7 +14,7 @@ import { GarbageTable } from "./GarbageTable";
 
 export interface GarbageTableScreenProps {
   view: GarbageView;
-  /** Whose controls to show: you online; the chosen or current seat in the simulator. */
+  /** Whose controls to show: yours. */
   actingId: string | null;
   isHost: boolean;
   onAction: (action: GarbageAction) => void;

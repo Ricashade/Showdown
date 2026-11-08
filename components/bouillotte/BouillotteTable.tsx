@@ -25,7 +25,7 @@ export function BouillotteTable({ view, focusId, connectedIds }: BouillotteTable
   const winning = new Set(view.result?.pots.map((p) => p.cardId).filter(Boolean) as string[]);
 
   return (
-    <section aria-label="Table" className="felt mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
+    <section aria-label="Table" className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
       <ul className="flex flex-wrap items-start justify-center gap-x-2 gap-y-5 sm:gap-x-10">
         {others.map((p) => (
           <li key={p.id}>
@@ -56,7 +56,7 @@ function Seat({ player: p, view, winning, big, you, disconnected }: { player: Bo
   const busted = p.status === "busted";
 
   return (
-    <div className={clsx("flex flex-col items-center gap-2", busted && "opacity-40")}>
+    <div className={clsx("flex flex-col items-center gap-3", busted && "opacity-40")}>
       <div className={clsx("flex min-h-14 items-end", p.folded && "opacity-45")}>
         {busted ? (
           <span className="text-sm text-ash">Out</span>

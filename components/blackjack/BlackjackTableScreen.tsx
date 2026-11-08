@@ -14,7 +14,7 @@ import { BlackjackGameOver, RoundResult } from "./RoundResult";
 
 export interface BlackjackTableScreenProps {
   view: BlackjackView;
-  /** Whose controls to show: you online; the chosen or current seat in the simulator. */
+  /** Whose controls to show: yours. */
   actingId: string | null;
   isHost: boolean;
   onAction: (action: BlackjackAction) => void;
@@ -83,7 +83,7 @@ export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStart
     timer = { total: view.settings.betSeconds, label: "Betting closes" };
     panel =
       actingHuman && legal.canBet ? (
-        <BettingPanel key={`${view.roundNumber}-${actingHuman.id}`} view={view} legal={legal} actingId={actingHuman.id} actingName={actingHuman.name} onAction={onAction} />
+        <BettingPanel key={`${view.roundNumber}-${actingHuman.id}`} view={view} legal={legal} actingId={actingHuman.id} onAction={onAction} />
       ) : (
         <p className="text-lg text-parchment">{acting?.status === "busted" ? "You're out of chips." : "Bets are going down."}</p>
       );
@@ -91,7 +91,7 @@ export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStart
     timer = { total: view.settings.betSeconds, label: "Insurance closes" };
     panel =
       actingHuman && legal.insuranceOffer !== null ? (
-        <InsurancePanel legal={legal} actingId={actingHuman.id} actingName={actingHuman.name} onAction={onAction} />
+        <InsurancePanel legal={legal} actingId={actingHuman.id} onAction={onAction} />
       ) : (
         <p className="text-lg text-parchment">Waiting on insurance.</p>
       );
@@ -99,7 +99,7 @@ export function BlackjackTableScreen({ view, actingId, isHost, onAction, onStart
     timer = { total: TURN_SECONDS, label: "Time to play" };
     panel =
       actingHuman && legal.isMyTurn ? (
-        <PlayPanel key={`${view.version}`} view={view} legal={legal} actingId={actingHuman.id} actingName={actingHuman.name} onAction={onAction} />
+        <PlayPanel key={`${view.version}`} view={view} legal={legal} actingId={actingHuman.id} onAction={onAction} />
       ) : (
         <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
       );

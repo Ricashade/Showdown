@@ -35,7 +35,7 @@ export function BlackjackTable({ view, connectedIds }: BlackjackTableProps) {
   const dealOrder = (seat: number, card: number) => (card * (dealtIn.length + 1) + seat) * DEAL_STAGGER;
 
   return (
-    <section aria-label="Table" className="felt relative mx-4 rounded-t-[3rem] rounded-b-[45%_30%] px-4 pt-7 pb-14 sm:px-10">
+    <section aria-label="Table" className="felt felt-line relative mx-4 rounded-t-[3rem] rounded-b-[45%_30%] px-4 pt-7 pb-14 sm:px-10">
       <Dealer view={view} delayFor={(i) => (i < 2 ? dealOrder(dealtIn.length, i) : 0)} />
 
       <div aria-hidden className="mt-5 text-center font-display text-bone">

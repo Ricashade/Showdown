@@ -49,12 +49,11 @@ interface ActionsProps {
   view: BlackjackView;
   legal: BlackjackLegal;
   actingId: string;
-  actingName: string;
   onAction: (action: BlackjackAction) => void;
 }
 
 /** Stack chips into a bet, then place it. A placed bet can be changed until the cards come out. */
-export function BettingPanel({ view, legal, actingId, actingName, onAction }: ActionsProps) {
+export function BettingPanel({ view, legal, actingId, onAction }: ActionsProps) {
   const me = view.players.find((p) => p.id === actingId)!;
   const [amount, setAmount] = useState(() => me.bet || Math.min(me.lastBet, me.chips));
   const placed = me.bet;
@@ -62,9 +61,9 @@ export function BettingPanel({ view, legal, actingId, actingName, onAction }: Ac
   const ok = amount >= MIN_BET && amount <= legal.maxBet;
 
   return (
-    <section aria-label={`${actingName}'s bet`} className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+    <section aria-label="Your bet" className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
       <div>
-        <h2 className="font-display text-3xl font-bold text-bone">Place your bet, {actingName}</h2>
+        <h2 className="font-display text-3xl font-bold text-bone">Place your bet</h2>
         <div className="mt-4 flex flex-wrap items-center gap-3" role="group" aria-label="Add chips">
           {CHIP_VALUES.map((v) => (
             <button
@@ -118,11 +117,11 @@ export function BettingPanel({ view, legal, actingId, actingName, onAction }: Ac
   );
 }
 
-export function InsurancePanel({ legal, actingId, actingName, onAction }: Omit<ActionsProps, "view">) {
+export function InsurancePanel({ legal, actingId, onAction }: Omit<ActionsProps, "view">) {
   const cost = legal.insuranceOffer!;
   return (
-    <section aria-label={`${actingName}'s insurance`}>
-      <h2 className="font-display text-3xl font-bold text-bone">Insurance, {actingName}?</h2>
+    <section aria-label="Insurance">
+      <h2 className="font-display text-3xl font-bold text-bone">Insurance?</h2>
       <p className="mt-1 text-base text-parchment">Costs {chips(cost)}, pays {chips(cost * 2)} if the dealer has blackjack.</p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button
@@ -142,14 +141,14 @@ export function InsurancePanel({ legal, actingId, actingName, onAction }: Omit<A
   );
 }
 
-export function PlayPanel({ view, legal, actingId, actingName, onAction }: ActionsProps) {
+export function PlayPanel({ view, legal, actingId, onAction }: ActionsProps) {
   const me = view.players.find((p) => p.id === actingId)!;
   const hand = me.hands[view.currentHand];
   const btn = "min-h-14 rounded-full px-7 font-display text-2xl font-bold transition disabled:opacity-35";
   return (
-    <section aria-label={`${actingName}'s move`}>
+    <section aria-label="Your move">
       <h2 className="font-display text-3xl font-bold text-bone">
-        Your move, {actingName}
+        Your move
         {me.hands.length > 1 && <span className="ml-3 text-xl text-parchment">Hand {view.currentHand + 1} of {me.hands.length}</span>}
       </h2>
       <div className="mt-4 flex flex-wrap gap-2">

@@ -69,7 +69,7 @@ export function RummyTable({ view, focusId, legal, actingId, onAction, connected
   const toggle = (id: string) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   return (
-    <section aria-label="Table" className="felt mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
+    <section aria-label="Table" className="felt felt-line relative mx-4 rounded-[2.5rem] px-4 py-6 sm:px-8 sm:py-8">
       {others.length > 0 && (
         <ul className="flex flex-wrap items-start justify-center gap-x-8 gap-y-4">
           {others.map((p) => (

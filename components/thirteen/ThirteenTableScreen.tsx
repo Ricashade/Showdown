@@ -18,7 +18,7 @@ import { describeEvent } from "./words";
 
 export interface ThirteenTableScreenProps {
   view: ThirteenView;
-  /** Whose controls to show: you online; the chosen or current seat in the simulator. */
+  /** Whose controls to show: yours. */
   actingId: string | null;
   isHost: boolean;
   onAction: (action: ThirteenAction) => void;
@@ -85,7 +85,7 @@ export function ThirteenTableScreen({ view, actingId, isHost, onAction, onStartG
   const chip = "flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-bold text-parchment ring-1 ring-leather-lit transition hover:text-bone hover:ring-brass";
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-16 md:pb-5">
       <div inert={view.phase === "game_over"}>
         <ScreenHeader title="Thirteen" exit={exit} extra={headerExtra} />
         {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
@@ -101,7 +101,7 @@ export function ThirteenTableScreen({ view, actingId, isHost, onAction, onStartG
               onStart={onStartGame}
             />
           ) : (
-            <main className="mx-auto max-w-6xl space-y-4 pt-6 sm:px-4">
+            <main className="mx-auto max-w-6xl space-y-4 pt-3 sm:px-4">
               <div className="mx-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0 flex-1" aria-live="polite">
                   <AnimatePresence mode="wait">

@@ -15,7 +15,7 @@ import { describeEvent } from "./words";
 
 export interface GoFishTableScreenProps {
   view: GoFishView;
-  /** Whose controls to show: you online; the chosen or current seat in the simulator. */
+  /** Whose controls to show: yours. */
   actingId: string | null;
   isHost: boolean;
   onAction: (action: GoFishAction) => void;

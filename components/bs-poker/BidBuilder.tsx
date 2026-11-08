@@ -22,7 +22,6 @@ interface BidBuilderProps {
   /** Hand types banned this round: hidden from the picker. */
   disabledHandTypes: HandType[];
   canCallBS: boolean;
-  actingName: string;
   onBid: (bid: Bid) => void;
   onCallBS: () => void;
 }
@@ -77,7 +76,6 @@ export function BidBuilder({
   currentBidderName,
   disabledHandTypes,
   canCallBS,
-  actingName,
   onBid,
   onCallBS,
 }: BidBuilderProps) {
@@ -106,10 +104,10 @@ export function BidBuilder({
   const isLegal = !!selected && legalBids.some((b) => bidsEqual(b, selected));
 
   return (
-    <section aria-label={`${actingName}'s move`} className="grid gap-x-10 gap-y-6 md:grid-cols-[1fr_auto]">
+    <section aria-label="Your move" className="grid gap-x-6 gap-y-6 md:grid-cols-[1fr_auto]">
       <div>
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2 className="font-display text-3xl font-bold text-bone">Your move, {actingName}</h2>
+          <h2 className="font-display text-xl font-bold text-bone">Your move</h2>
           {minBid && (
             <button
               onClick={() => setSelected(minBid)}
@@ -126,7 +124,7 @@ export function BidBuilder({
           </p>
         ) : (
           <>
-            <div role="radiogroup" aria-label="Hand" className="mt-4 flex flex-wrap gap-1.5">
+            <div role="radiogroup" aria-label="Hand" className="mt-3 flex flex-wrap gap-1">
               {HAND_TYPE_ORDER.filter((t) => !disabledHandTypes.includes(t)).map((t) => {
                 const available = (byType.get(t)?.length ?? 0) > 0;
                 return (
@@ -137,7 +135,7 @@ export function BidBuilder({
                     onClick={() => pickType(t)}
                     disabled={!available}
                     className={clsx(
-                      "min-h-10 rounded-full px-4 text-sm font-bold transition",
+                      "min-h-10 rounded-full px-3 text-sm font-bold transition",
                       type === t
                         ? "bg-bone text-smoke"
                         : available
@@ -156,8 +154,9 @@ export function BidBuilder({
               </p>
             )}
 
+            {/* Two card pickers sit side by side on wide screens, so the panel keeps one height. */}
             {type && (
-              <div className="mt-5 space-y-4">
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3">
                 <RankRow
                   label={PRIMARY_LABEL[type]}
                   choices={primaryChoices(type)}
@@ -176,24 +175,25 @@ export function BidBuilder({
                 )}
               </div>
             )}
-
-            <button
-              onClick={() => selected && onBid(selected)}
-              disabled={!isLegal}
-              className="mt-6 min-h-12 w-full rounded-full bg-brass px-6 font-display text-2xl font-bold text-smoke transition hover:bg-brass-lit disabled:opacity-40 sm:w-auto"
-            >
-              Place bid
-            </button>
           </>
         )}
       </div>
 
-      {/* The one bold element: calling BS. */}
-      <div className="flex flex-col items-center justify-center gap-3 md:border-l md:border-leather-lit md:pl-10">
+      {/* Committing: place the bid you built, or the one bold element, calling BS. */}
+      <div className="flex flex-col items-center justify-center gap-4 md:border-l md:border-leather-lit md:pl-6">
+        {legalBids.length > 0 && (
+          <button
+            onClick={() => selected && onBid(selected)}
+            disabled={!isLegal}
+            className="min-h-12 w-full rounded-full bg-brass px-6 font-display text-2xl font-bold whitespace-nowrap text-smoke transition hover:bg-brass-lit disabled:opacity-40"
+          >
+            Place bid
+          </button>
+        )}
         <button
           onClick={onCallBS}
           disabled={!canCallBS}
-          className="poker-chip relative grid size-36 place-items-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5"
+          className="poker-chip relative grid size-32 place-items-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5"
         >
           <span className={clsx("relative font-display text-4xl leading-none font-extrabold", canCallBS ? "text-bone" : "text-ash")}>
             Call BS
@@ -219,8 +219,8 @@ function RankRow({
 }) {
   return (
     <div role="radiogroup" aria-label={label}>
-      <div className="mb-2 text-sm text-ash">{label}</div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="mb-1.5 text-sm text-ash">{label}</div>
+      <div className="flex flex-wrap gap-1.5 lg:gap-1">
         {choices.map((r) => {
           const enabled = isEnabled(r);
           const on = selected === r;
@@ -233,7 +233,7 @@ function RankRow({
               onClick={() => onPick(r)}
               disabled={!enabled}
               className={clsx(
-                "h-12 w-9 rounded-md font-display text-lg font-extrabold transition",
+                "h-12 w-9 rounded-md font-display text-lg font-extrabold transition lg:h-11 lg:w-7",
                 on
                   ? "-translate-y-1 bg-bone text-smoke shadow-[0_6px_0_var(--color-brass)]"
                   : enabled

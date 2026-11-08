@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Check, Crown, Link2, UserPlus, X } from "lucide-react";
+import { Bot, Check, Crown, Link2, X } from "lucide-react";
 import type { BotDifficulty } from "@/types/game";
 import { DIFFICULTY_LABEL } from "@/lib/bot-ai";
 import { ROOM_PATH } from "@/lib/games";
@@ -13,8 +13,6 @@ export interface LobbyOptions {
   canRemove: (playerId: string) => boolean;
   onRemove: (playerId: string) => void;
   onRename: (playerId: string, name: string) => void;
-  /** Local simulator only: add another seat on this screen. */
-  onAddPlayer?: () => void;
   /** Host only: seat a bot. */
   onAddBot?: (difficulty: BotDifficulty) => void;
   /** Shared rooms: matches each player has won tonight, across games. */
@@ -131,16 +129,6 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
             </button>
           ))}
         </div>
-      )}
-
-      {options.onAddPlayer && (
-        <button
-          onClick={options.onAddPlayer}
-          disabled={players.length >= maxPlayers}
-          className="mt-4 flex min-h-11 items-center gap-2 rounded-full border border-bone/40 px-4 text-sm font-bold text-bone transition hover:border-bone disabled:opacity-40"
-        >
-          <UserPlus className="size-4" /> Add a player
-        </button>
       )}
 
       {isHost ? (

@@ -371,7 +371,7 @@ function Drawer({
   );
 }
 
-/** Chat for a local simulator: everyone's on this screen, and you talk as whoever you're viewing as. */
+/** Chat for a solo table: you and the bots, on this screen. */
 export function LocalRoomChat({ state, speakerId }: { state: ActiveGameState; speakerId: string }) {
   const { chat, post } = useLocalChat();
   const [banter, setBanter] = useBanterSetting();

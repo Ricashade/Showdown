@@ -136,9 +136,9 @@ export function HoldemTableScreen({
 
   return (
     <DealProvider value={deal}>
-      <div className="min-h-screen pb-16">
+      <div className="min-h-screen pb-16 md:pb-5">
         <div inert={showResult || showGameOver}>
-          <ScreenHeader title="Texas Hold'em" exit={exit} extra={headerExtra} />
+          <ScreenHeader title="Texas Hold'em" exit={exit} extra={view.phase === "lobby" ? headerExtra : <HandRankingsButton myCards={myCards} />} />
           {topBar && <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-8">{topBar}</div>}
 
           <RoomStage room={view.phase === "lobby" ? "lobby" : "table"} loader={<TableLoader game="texas-holdem" />}>
@@ -152,19 +152,16 @@ export function HoldemTableScreen({
                 onStart={onStartGame}
               />
             ) : (
-              <main className="mx-auto max-w-6xl space-y-6 pt-5 sm:px-4">
-                <div className="flex justify-end px-4 sm:px-0">
-                  <HandRankingsButton myCards={myCards} />
-                </div>
+              <main className="mx-auto max-w-6xl space-y-6 pt-3 sm:px-4">
                 <HoldemTable view={view} winningCardIds={winningCardIds} connectedIds={connectedIds} />
                 {view.phase === "betting" && (
-                  <div className="mx-4 rounded-[2rem] bg-smoke-raised p-6 ring-1 ring-leather-lit sm:p-8">
+                  <div className="mx-4 rounded-[2rem] bg-smoke-raised p-5 ring-1 ring-leather-lit sm:px-7">
                     {dealing ? (
                       <p role="status" className="text-lg text-parchment">
                         Dealing…
                       </p>
                     ) : legal.isMyTurn && acting && !acting.isBot ? (
-                      <HoldemActions key={`${view.version}-${acting.id}`} view={view} legal={legal} actingId={acting.id} actingName={acting.name} onAction={onAction} />
+                      <HoldemActions key={`${view.version}-${acting.id}`} view={view} legal={legal} actingId={acting.id} onAction={onAction} />
                     ) : (
                       <p className="text-lg text-parchment">{turnPlayer?.isBot ? `${turnPlayer.name} is thinking…` : `Waiting for ${turnPlayer?.name}.`}</p>
                     )}
