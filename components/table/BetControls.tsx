@@ -15,7 +15,7 @@ export interface RaiseRange {
   potAfterCall: number;
   /** Chips you already have in this round, so all in reads as what you add. */
   myBet: number;
-  /** "Raise to", "Bet", "Open"… */
+  /** "Raise by", "Bet", "Open"… (the amount shown is what goes on top of the current bet) */
   verb: string;
   /** "All in", "Va-tout"… */
   allInWord: string;
@@ -44,11 +44,14 @@ export function BetControls({
   resetKey: unknown;
 }) {
   const sliderId = useId();
+  // Amounts read as a raise by: what goes on top of the bet to match. The game is told the total.
+  const base = raise?.currentBet ?? 0;
   // What's in the box, as typed: digits only, no leading zeros ("010" reads as 10).
-  const [text, setText] = useState(String(raise?.min ?? 0));
-  const setAmount = (n: number) => setText(String(n));
-  useEffect(() => setText(String(raise?.min ?? 0)), [raise?.min, resetKey]);
-  const amount = Number(text);
+  const [text, setText] = useState(String((raise?.min ?? 0) - base));
+  /** Show a "raise to" total as its raise by. */
+  const setAmount = (to: number) => setText(String(to - base));
+  useEffect(() => setText(String((raise?.min ?? 0) - base)), [raise?.min, base, resetKey]);
+  const amount = base + Number(text);
 
   const stops = raise ? raiseStops(raise) : [];
   const clamp = (n: number) => (raise ? Math.max(raise.min, Math.min(raise.max, Math.round(n))) : 0);
@@ -101,7 +104,7 @@ export function BetControls({
             list={sliderId}
             onChange={(e) => setAmount(stops[Number(e.target.value)].to)}
             aria-label={`${raise.verb} amount`}
-            aria-valuetext={`${stops[nearest].label}, ${chips(stops[nearest].to)}`}
+            aria-valuetext={`${stops[nearest].label}, ${chips(stops[nearest].to - base)}`}
             className="h-10 min-w-48 flex-1 accent-brass"
           />
           <datalist id={sliderId}>
@@ -122,7 +125,7 @@ export function BetControls({
             onClick={() => raise.onRaise(to, allIn)}
             className="min-h-12 rounded-full bg-brass px-6 font-display text-2xl font-bold whitespace-nowrap text-smoke transition hover:bg-brass-lit"
           >
-            {allIn ? `${raise.allInWord} ${chips(raise.max - raise.myBet)}` : `${raise.verb} ${chips(to)}`}
+            {allIn ? `${raise.allInWord} ${chips(raise.max - raise.myBet)}` : `${raise.verb} ${chips(to - base)}`}
           </button>
         </div>
       )}

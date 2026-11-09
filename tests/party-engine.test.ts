@@ -23,7 +23,7 @@ function room(ids = ["h", "a"], game: Parameters<typeof createParty>[0]["game"] 
   return s;
 }
 
-const war = (s: PartyState) => s.activeGameState as WarState;
+const war = (s: PartyState) => s.tables[0].state as WarState;
 
 /** Flip until the War match ends (blitz caps it at 50 battles). */
 function finishWar(s: PartyState) {
@@ -44,18 +44,18 @@ describe("switching games", () => {
   it("only the host switches, and the new game starts on its default house rules", () => {
     let s = room(["h", "a"], "garbage");
     s = move(s, { type: "UPDATE_SETTINGS", playerId: "h", settings: { lastTurn: false } });
-    expect((s.activeGameState.settings as typeof GARBAGE_DEFAULTS).lastTurn).toBe(false);
+    expect((s.tables[0].state.settings as typeof GARBAGE_DEFAULTS).lastTurn).toBe(false);
     expect(applyPartyAction(s, { type: "SWITCH_GAME", playerId: "a", newGameType: "war" }).ok).toBe(false);
 
     s = act(s, { type: "SWITCH_GAME", playerId: "h", newGameType: "war" });
     expect(s.selectedGame).toBe("war");
-    expect(s.activeGameState.mode).toBe("war");
+    expect(s.tables[0].state.mode).toBe("war");
     expect(s.phase).toBe("lobby");
     expect(war(s).settings).toEqual(WAR_DEFAULTS);
     expect(war(s).players.map((p) => p.id)).toEqual(["h", "a"]);
 
     s = act(s, { type: "SWITCH_GAME", playerId: "h", newGameType: "garbage" });
-    expect(s.activeGameState.settings).toEqual(GARBAGE_DEFAULTS);
+    expect(s.tables[0].state.settings).toEqual(GARBAGE_DEFAULTS);
   });
 
   it("can't switch in the middle of a match", () => {
@@ -115,7 +115,7 @@ describe("joining and leaving", () => {
   it("keeps lobby renames on the room's roster too", () => {
     const s = move(room(), { type: "RENAME_PLAYER", playerId: "a", name: "Ann" });
     expect(s.players.find((p) => p.id === "a")!.name).toBe("Ann");
-    expect(s.activeGameState.players.find((p) => p.id === "a")!.name).toBe("Ann");
+    expect(s.tables[0].state.players.find((p) => p.id === "a")!.name).toBe("Ann");
   });
 });
 
@@ -150,7 +150,7 @@ describe("after a match", () => {
     let s = act(room(["h", "a"]), { type: "SWITCH_GAME", playerId: "h", newGameType: "blackjack" });
     s = move(s, { type: "START_GAME", playerId: "h", seed: 3 });
     const rigged = structuredClone(s);
-    const bj = rigged.activeGameState as BlackjackState;
+    const bj = rigged.tables[0].state as BlackjackState;
     bj.players[1].chips = bj.settings.startingChips + 250;
     s = act(rigged, { type: "RETURN_TO_LOBBY", playerId: "h" });
     expect(s.players.find((p) => p.id === "a")!.sessionWins).toBe(1);
@@ -249,20 +249,162 @@ describe("Go Fish in a shared room", () => {
   it("switches to Go Fish, plays to the end with bots, and crowns the most books", () => {
     let s = act(room(["h", "a"]), { type: "SWITCH_GAME", playerId: "h", newGameType: "go-fish" });
     s = act(s, { type: "JOIN", player: { id: "bot", name: "Bot", isBot: true, botDifficulty: "hard" } });
-    expect(s.activeGameState.players.map((p) => p.id)).toEqual(["h", "a", "bot"]);
+    expect(s.tables[0].state.players.map((p) => p.id)).toEqual(["h", "a", "bot"]);
     s = move(s, { type: "START_GAME", playerId: "h", seed: 3 });
     expect(s.phase).toBe("in_game");
     // Everyone plays bot-style: the room's bot runner for the bot, the same brain for the people.
     for (let i = 0; i < 3000 && s.phase === "in_game"; i++) {
-      const g = s.activeGameState as import("@/types/gofish").GoFishState;
+      const g = s.tables[0].state as import("@/types/gofish").GoFishState;
       const turn = g.currentTurnId!;
       const asBot = { ...g, players: g.players.map((p) => ({ ...p, isBot: true })) };
-      const next = partyBots.decide({ ...s, activeGameState: asBot }, turn, () => 0.5);
+      const next = partyBots.decide({ ...s, tables: [{ ...s.tables[0], state: asBot }] }, turn, () => 0.5);
       s = act(s, next!);
     }
     expect(s.phase).toBe("post_game");
-    const g = s.activeGameState as import("@/types/gofish").GoFishState;
+    const g = s.tables[0].state as import("@/types/gofish").GoFishState;
     expect(s.lastWinnerIds).toEqual(g.winnerIds);
     for (const id of g.winnerIds) expect(s.players.find((p) => p.id === id)!.sessionWins).toBe(1);
+  });
+});
+
+describe("tables", () => {
+  const warRoom = (ids = ["h", "a", "b", "c"]) => act(room(ids), { type: "SWITCH_GAME", playerId: "h", newGameType: "war" });
+  const at = (s: PartyState, id: string) => s.tables.find((t) => t.id === id)!.state.players.map((p) => p.id);
+  /** Two tables of two: h and a at the first, b and c at the second (by their own choice). */
+  const twoTables = (ids = ["h", "a", "b", "c"]) => {
+    let s = act(warRoom(ids), { type: "SET_TABLES", playerId: "h", seats: [2, 2] });
+    for (const id of ids.slice(2)) s = act(s, { type: "SIT", playerId: id, tableId: "t2" });
+    return s;
+  };
+
+  it("starts as one table; extra tables open empty and fill only by choice", () => {
+    let s = warRoom();
+    expect(s.tables).toHaveLength(1);
+    expect(getPartyView(s, "c").seatedIds).toEqual(["h", "a", "b", "c"]);
+    s = act(s, { type: "SET_TABLES", playerId: "h", seats: [2, 2] });
+    expect(at(s, "t1")).toEqual(["h", "a"]);
+    // b and c lost their seats at table one: they sit out rather than land at the new table.
+    expect(at(s, "t2")).toEqual([]);
+    expect(getPartyView(s, "b").tableId).toBeNull();
+    s = act(s, { type: "SIT", playerId: "b", tableId: "t2" });
+    expect(at(s, "t2")).toEqual(["b"]);
+    // Newcomers only ever take a free seat at the first table.
+    s = act(s, { type: "JOIN", player: { id: "d", name: "d" } });
+    expect(getPartyView(s, "d").tableId).toBeNull();
+    // Every table answers to the room's host, sitting there or not.
+    expect(s.tables[1].state.hostId).toBe("h");
+    expect(applyPartyAction(s, { type: "SET_TABLES", playerId: "a", seats: [2] }).ok).toBe(false);
+  });
+
+  it("lets people pick a table with room, and the host move anyone (bots included)", () => {
+    let s = twoTables(["h", "a", "b"]);
+    s = act(s, { type: "JOIN", player: { id: "x", name: "X", isBot: true } });
+    expect(getPartyView(s, "h").tableId).toBe("t1");
+    expect(getPartyView(s, "x").tableId).toBeNull(); // the first table is full
+    expect(applyPartyAction(s, { type: "SIT", playerId: "b", tableId: "t2", who: "x" }).ok).toBe(false);
+    s = act(s, { type: "SIT", playerId: "h", tableId: "t2", who: "x" });
+    expect(at(s, "t2")).toEqual(["b", "x"]);
+    expect(applyPartyAction(s, { type: "SIT", playerId: "a", tableId: "t2" }).ok).toBe(false); // full
+    // Closing a table: its people sit out until the first table has room.
+    s = act(s, { type: "SET_TABLES", playerId: "h", seats: [2] });
+    expect(getPartyView(s, "b").seatedIds).toEqual(["h", "a"]);
+  });
+
+  it("won't deal until every table has enough players, one of them a person", () => {
+    let s = act(warRoom(["h", "a", "b"]), { type: "SET_TABLES", playerId: "h", seats: [2, 2] });
+    const start = (st: PartyState) => applyPartyAction(st, { type: "GAME", playerId: "h", action: { type: "START_GAME", playerId: "h", seed: 1 } });
+    expect(getPartyView(s, "h").notReady).toBe("Table 2 needs at least 2 players.");
+    expect(start(s).ok).toBe(false);
+    s = act(s, { type: "JOIN", player: { id: "x", name: "X", isBot: true } });
+    s = act(s, { type: "JOIN", player: { id: "y", name: "Y", isBot: true } });
+    s = act(s, { type: "SIT", playerId: "h", tableId: "t2", who: "x" });
+    s = act(s, { type: "SIT", playerId: "h", tableId: "t2", who: "y" });
+    expect(start(s).ok).toBe(false); // bots only
+    expect(applyPartyAction(s, { type: "SIT", playerId: "h", tableId: "t1", who: "y" }).ok).toBe(false); // full
+    expect(applyPartyAction(s, { type: "SIT", playerId: "b", tableId: "t2" }).ok).toBe(false); // two bots already
+    expect(at(s, "t2")).toEqual(["x", "y"]);
+    s = act(s, { type: "SET_TABLES", playerId: "h", seats: [2, 3] });
+    s = act(s, { type: "SIT", playerId: "b", tableId: "t2" });
+    expect(getPartyView(s, "h").notReady).toBeNull();
+    expect(start(s).ok).toBe(true);
+  });
+
+  it("deals every table at once, keeps each game to its own table, and shows the others as a spectator would", () => {
+    let s = twoTables();
+    s = move(s, { type: "UPDATE_SETTINGS", playerId: "h", settings: { winCondition: "blitz" } });
+    expect(s.tables.every((t) => (t.state as WarState).settings.winCondition === "blitz")).toBe(true);
+    s = move(s, { type: "START_GAME", playerId: "h", seed: 5 });
+    expect(s.tables.every((t) => t.state.phase === "playing")).toBe(true);
+    s = move(s, { type: "FLIP", playerId: "b" });
+    expect((s.tables[1].state as WarState).sides!.find((x) => x.id === "b")!.ready).toBe(true);
+    expect((s.tables[0].state as WarState).sides!.every((x) => !x.ready)).toBe(true);
+    const view = getPartyView(s, "a");
+    expect(view.tableId).toBe("t1");
+    expect(view.otherTables.map((t) => t.id)).toEqual(["t2"]);
+    expect(view.otherTables[0].view).toEqual(getWarView(s.tables[1].state as WarState, "a"));
+  });
+
+  it("stays in the match until every table is done, crowning each table's winner", () => {
+    let s = twoTables();
+    s = move(s, { type: "UPDATE_SETTINGS", playerId: "h", settings: { winCondition: "blitz" } });
+    s = move(s, { type: "START_GAME", playerId: "h", seed: 5 });
+    const flipAll = (t: number) => {
+      for (let i = 0; i < 2000 && s.tables[t].state.phase === "playing"; i++) {
+        for (const side of (s.tables[t].state as WarState).sides!) if (!side.ready && s.tables[t].state.phase === "playing") s = move(s, { type: "FLIP", playerId: side.id });
+      }
+    };
+    flipAll(0);
+    expect(s.tables[0].state.phase).toBe("game_over");
+    expect(s.phase).toBe("in_game");
+    expect(applyPartyAction(s, { type: "PLAY_AGAIN", playerId: "h", seed: 1 }).ok).toBe(false);
+    flipAll(1);
+    expect(s.phase).toBe("post_game");
+    const winners = s.tables.map((t) => (t.state as WarState).winnerId).filter(Boolean) as string[];
+    expect(s.lastWinnerIds.sort()).toEqual([...winners].sort());
+    for (const id of winners) expect(s.players.find((p) => p.id === id)!.sessionWins).toBe(1);
+    s = act(s, { type: "PLAY_AGAIN", playerId: "h", seed: 2 });
+    expect(s.tables.every((t) => t.state.phase === "playing")).toBe(true);
+    expect(at(s, "t2")).toEqual(["b", "c"]);
+  });
+
+  it("at a table without the host, its first person deals the next hand", () => {
+    let s = act(room(["h", "a", "b", "c"], "texas-holdem"), { type: "SET_TABLES", playerId: "h", seats: [2, 2] });
+    s = act(act(s, { type: "SIT", playerId: "b", tableId: "t2" }), { type: "SIT", playerId: "c", tableId: "t2" });
+    s = move(s, { type: "START_GAME", playerId: "h", seed: 9 });
+    const t2 = () => s.tables[1].state as import("@/types/holdem").HoldemState;
+    s = move(s, { type: "FOLD", playerId: t2().currentTurnId! });
+    expect(t2().phase).toBe("hand_over");
+    // b leads table two: their view names them its host, and their Next hand deals it.
+    expect(getPartyView(s, "b").activeGameView.hostId).toBe("b");
+    expect(applyPartyAction(s, { type: "GAME", playerId: "c", action: { type: "NEXT_HAND", playerId: "c" } }).ok).toBe(false);
+    s = move(s, { type: "NEXT_HAND", playerId: "b" });
+    expect(t2().phase).toBe("betting");
+    expect(t2().handNumber).toBe(2);
+  });
+
+  it("keeps people's chosen seats when the host shrinks a table, moving bots out first", () => {
+    let s = warRoom(["h", "a"]);
+    s = act(s, { type: "JOIN", player: { id: "x", name: "X", isBot: true } });
+    s = act(s, { type: "JOIN", player: { id: "y", name: "Y", isBot: true } });
+    expect(at(s, "t1")).toEqual(["h", "a", "x", "y"]);
+    s = act(s, { type: "SET_TABLES", playerId: "h", seats: [3] });
+    expect(at(s, "t1")).toEqual(["h", "a", "x"]);
+    s = act(s, { type: "SET_TABLES", playerId: "h", seats: [2] });
+    expect(at(s, "t1")).toEqual(["h", "a"]);
+  });
+
+  it("runs bots at every table and routes their moves home", () => {
+    let s = act(warRoom(["h", "a"]), { type: "SET_TABLES", playerId: "h", seats: [2, 2] });
+    s = act(s, { type: "JOIN", player: { id: "x", name: "X", isBot: true, botDifficulty: "easy" } });
+    s = act(s, { type: "JOIN", player: { id: "y", name: "Y", isBot: true, botDifficulty: "easy" } });
+    s = act(s, { type: "SIT", playerId: "a", tableId: "t2" });
+    s = act(s, { type: "SIT", playerId: "h", tableId: "t2", who: "y" });
+    expect(at(s, "t1")).toEqual(["h", "x"]);
+    expect(at(s, "t2")).toEqual(["a", "y"]);
+    s = move(s, { type: "START_GAME", playerId: "h", seed: 5 });
+    const pending = partyBots.pending(s)!;
+    const next = partyBots.decide(s, pending.botId, () => 0.5)!;
+    expect(next).toMatchObject({ type: "GAME", tableId: pending.botId === "x" ? "t1" : "t2" });
+    s = act(s, next);
   });
 });

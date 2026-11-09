@@ -13,6 +13,7 @@ import { RoomLink, RoomStage } from "@/components/ui/RoomTransition";
 import { TableLoader } from "@/components/table/TableLoader";
 import { RummyLobby } from "./RummyLobby";
 import { RummyTable } from "./RummyTable";
+import { says } from "@/lib/grammar";
 
 export interface RummyTableScreenProps {
   view: RummyView;
@@ -37,12 +38,12 @@ const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : "0");
 /** One sentence for screen readers about what just happened. */
 function describe(prev: RummyView, next: RummyView): string | null {
   const name = (id: string | null | undefined) => next.players.find((p) => p.id === id)?.name ?? "";
-  if (next.round !== prev.round) return `Round ${next.round}. ${name(next.currentTurnId)} goes first.`;
+  if (next.round !== prev.round) return `Round ${next.round}. ${says(name(next.currentTurnId), "goes", "go")} first.`;
   if (next.phase !== "playing") return null;
-  if (next.currentTurnId !== prev.currentTurnId) return `${name(prev.currentTurnId)} discards the ${cardLabel(next.discard.at(-1)!)}. ${name(next.currentTurnId)}'s turn.`;
-  if (next.melds.length > prev.melds.length) return `${name(next.currentTurnId)} melds ${next.melds.at(-1)!.cards.map(cardLabel).join(" ")}.`;
+  if (next.currentTurnId !== prev.currentTurnId) return `${says(name(prev.currentTurnId), "discards", "discard")} the ${cardLabel(next.discard.at(-1)!)}. ${name(next.currentTurnId)}'s turn.`;
+  if (next.melds.length > prev.melds.length) return `${says(name(next.currentTurnId), "melds", "meld")} ${next.melds.at(-1)!.cards.map(cardLabel).join(" ")}.`;
   const grew = next.melds.find((m, i) => prev.melds[i] && m.cards.length > prev.melds[i].cards.length);
-  if (grew) return `${name(next.currentTurnId)} lays off on ${grew.cards.map(cardLabel).join(" ")}.`;
+  if (grew) return `${says(name(next.currentTurnId), "lays", "lay")} off on ${grew.cards.map(cardLabel).join(" ")}.`;
   return null;
 }
 
@@ -141,7 +142,7 @@ function RoundOver({ view, action, waitingText }: { view: RummyView; action: { l
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div role="dialog" aria-modal="true" aria-labelledby="round-title" className="my-auto w-full max-w-xl rounded-[2rem] bg-smoke-raised p-6 shadow-2xl ring-1 ring-leather-lit sm:p-8">
         <h2 id="round-title" className="font-display text-4xl leading-tight font-extrabold text-bone">
-          {winner ? `${winner.name} goes out` : "The cards ran out"}
+          {winner ? `${says(winner.name, "goes", "go")} out` : "The cards ran out"}
         </h2>
         {r.rummy && <p className="mt-1 font-display text-2xl font-bold text-brass-lit">Rummy! Double points.</p>}
 
@@ -199,7 +200,7 @@ function GameOver({ view, actions, canPlayAgain, hostName, onPlayAgain }: { view
     <motion.div className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-black/80 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div role="dialog" aria-modal="true" aria-labelledby="winner-title" className="felt my-auto w-full max-w-md rounded-[2rem] p-7 sm:p-9">
         <h2 id="winner-title" className="font-display text-6xl leading-none font-extrabold text-bone">
-          {winner ? `${winner.name} wins` : "Game over"}
+          {winner ? says(winner.name, "wins", "win") : "Game over"}
         </h2>
         <ol className="mt-6 divide-y divide-baize-deep border-y border-baize-deep">
           {standings.map((p, i) => (

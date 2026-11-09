@@ -55,7 +55,7 @@ export function BouillotteActions({ view, legal, actingId, onAction, disabled = 
                 currentBet: view.currentBet,
                 potAfterCall: view.pot + legal.callAmount,
                 myBet: me.bet,
-                verb: legal.isOpening ? "Open" : "Raise to",
+                verb: legal.isOpening ? "Open" : "Raise by",
                 allInWord: "Va-tout",
                 onRaise: (to, allIn) => onAction(allIn ? { type: "ALL_IN", playerId: actingId } : { type: "RAISE", playerId: actingId, to }),
               }

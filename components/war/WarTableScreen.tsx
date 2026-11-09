@@ -14,6 +14,7 @@ import { RoomLink, RoomStage } from "@/components/ui/RoomTransition";
 import { TableLoader } from "@/components/table/TableLoader";
 import { WarLobby } from "./WarLobby";
 import { TugOfWar, WarTable, type WarSpeed } from "./WarTable";
+import { says } from "@/lib/grammar";
 
 export interface WarTableScreenProps {
   view: WarView;
@@ -181,7 +182,7 @@ function GameOver({ view, actions, canPlayAgain, hostName, onPlayAgain }: { view
     <motion.div className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-black/80 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div role="dialog" aria-modal="true" aria-labelledby="winner-title" className="felt my-auto w-full max-w-md rounded-[2rem] p-7 sm:p-9">
         <h2 id="winner-title" className="font-display text-6xl leading-none font-extrabold text-bone">
-          {winner ? `${winner.name} wins` : "Game over"}
+          {winner ? says(winner.name, "wins", "win") : "Game over"}
         </h2>
         <ul className="mt-6 divide-y divide-baize-deep border-y border-baize-deep">
           {view.sides!.map((x) => (

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { RoomLink } from "@/components/ui/RoomTransition";
 import { motion } from "framer-motion";
 import type { BsPokerView } from "@/lib/bs-poker-game";
+import { says } from "@/lib/grammar";
 
 export function GameOver({
   view,
@@ -44,7 +45,7 @@ export function GameOver({
         className="felt my-auto w-full max-w-md rounded-[2rem] p-7 sm:p-9"
       >
         <h2 id="winner-title" className="font-display text-6xl leading-none font-extrabold text-bone">
-          {winner ? `${winner.name} wins` : "No winner"}
+          {winner ? says(winner.name, "wins", "win") : "No winner"}
         </h2>
         <p className="mt-2 text-base text-bone">
           Last player standing after {view.round} {view.round === 1 ? "round" : "rounds"}.

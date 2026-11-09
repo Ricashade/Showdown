@@ -5,6 +5,7 @@ import { RoomLink } from "@/components/ui/RoomTransition";
 import { motion } from "framer-motion";
 import type { HoldemView } from "@/lib/holdem-game";
 import { PlayingCard } from "@/components/ui/PlayingCard";
+import { says } from "@/lib/grammar";
 
 const chips = (n: number) => n.toLocaleString("en-US");
 
@@ -53,7 +54,7 @@ export function HandResult({ view, winningCardIds, continueLabel, onContinue, wa
                 <p className="font-display text-4xl leading-tight font-extrabold text-bone">
                   {split
                     ? `${names(pot.winnerIds.map(name))} split ${chips(pot.amount)}`
-                    : `${name(pot.winnerIds[0])} wins ${chips(pot.amount)}`}
+                    : `${says(name(pot.winnerIds[0]), "wins", "win")} ${chips(pot.amount)}`}
                 </p>
                 {label && <p className="text-lg text-brass-lit">{label}</p>}
               </li>
@@ -126,7 +127,7 @@ export function HoldemGameOver({ view, actions, canPlayAgain, onPlayAgain }: { v
     <motion.div className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-black/80 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div role="dialog" aria-modal="true" aria-labelledby="winner-title" className="felt my-auto w-full max-w-md rounded-[2rem] p-7 sm:p-9">
         <h2 id="winner-title" className="font-display text-6xl leading-none font-extrabold text-bone">
-          {winner ? `${winner.name} wins` : "No winner"}
+          {winner ? says(winner.name, "wins", "win") : "No winner"}
         </h2>
         <ol className="mt-6 divide-y divide-baize-deep border-y border-baize-deep">
           {standings.map((p, i) => (

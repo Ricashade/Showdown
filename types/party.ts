@@ -24,8 +24,20 @@ export interface PartyPlayer extends BasePlayer {
 export type RoomPhase = "lobby" | "in_game" | "post_game";
 
 /**
+ * One table in the room. Every table plays the room's game under the same house rules; the room
+ * splits its people across them when there are more than one table seats.
+ */
+export interface PartyTable {
+  id: string;
+  /** Seats the host has opened here, within the game's limits. */
+  seats: number;
+  /** The game at this table. Its host is always the room's host, seated here or not. */
+  state: ActiveGameState;
+}
+
+/**
  * One room code for the whole night. The roster and the scoreboard live here; the game on the
- * table is swapped out underneath without anyone reconnecting.
+ * tables is swapped out underneath without anyone reconnecting.
  */
 export interface PartyState {
   mode: "party";
@@ -37,13 +49,14 @@ export interface PartyState {
   players: PartyPlayer[];
   selectedGame: GameMode;
   /**
-   * The selected game's own state. In the lobby it sits in its own lobby phase, holding that
-   * game's house rules (fresh defaults whenever the game changes) and who's dealt in.
+   * The tables, each with the selected game's own state. In the lobby every table sits in its
+   * lobby phase, holding the house rules (fresh defaults whenever the game changes) and who's
+   * sitting there. Most rooms need just the one.
    */
-  activeGameState: ActiveGameState;
+  tables: PartyTable[];
   /** Wins of anyone who left, given back if they come back. */
   pastWins: Record<string, number>;
-  /** Who won the match that just ended. */
+  /** Who won the match that just ended, at every table. */
   lastWinnerIds: string[];
 }
 
@@ -56,5 +69,9 @@ export type PartyAction =
   | { type: "PLAY_AGAIN"; playerId: string; seed: number }
   /** Host: back to the lobby, ending a match in progress. */
   | { type: "RETURN_TO_LOBBY"; playerId: string }
-  /** A move in the game itself. */
-  | { type: "GAME"; playerId: string; action: ActiveGameAction };
+  /** Take a seat at another table (the host can also seat someone else, a bot say). Lobby only. */
+  | { type: "SIT"; playerId: string; tableId: string; who?: string }
+  /** Host: how many tables, and how many seats each. Lobby only. */
+  | { type: "SET_TABLES"; playerId: string; seats: number[] }
+  /** A move in the game itself, at the sender's table (or `tableId`, for bots and timers the host runs). */
+  | { type: "GAME"; playerId: string; action: ActiveGameAction; tableId?: string };

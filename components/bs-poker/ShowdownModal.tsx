@@ -8,6 +8,7 @@ import { bidLabel, isWildCard } from "@/lib/bs-poker-engine";
 import { sortCards } from "@/lib/cards";
 import { PlayingCard } from "@/components/ui/PlayingCard";
 import { wildLabel } from "./PlayerSeat";
+import { says } from "@/lib/grammar";
 
 interface ShowdownModalProps {
   view: BsPokerView;
@@ -142,13 +143,13 @@ export function ShowdownModal({ view, onContinue, continueLabel, waitingText }: 
               {!ev.exists && <p className="mt-1 text-base text-parchment">{ev.summary}</p>}
               <p className="mt-4 text-lg text-bone">
                 {sd.loserBusted ? (
-                  <span className="font-bold text-chip-lit">{loser} is out of the game.</span>
+                  <span className="font-bold text-chip-lit">{says(loser, "is", "are")} out of the game.</span>
                 ) : (
-                  <>{loser} takes a card.</>
+                  <>{says(loser, "takes", "take")} a card.</>
                 )}
               </p>
               {gameOver && view.winnerId && (
-                <p className="mt-1 text-lg text-brass-lit">{name(view.winnerId)} is the last player standing.</p>
+                <p className="mt-1 text-lg text-brass-lit">{says(name(view.winnerId), "is", "are")} the last player standing.</p>
               )}
               {waitingText ? (
                 <p className="mt-6 text-base text-ash">{waitingText}</p>

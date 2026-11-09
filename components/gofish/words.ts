@@ -1,6 +1,7 @@
 import type { Rank } from "@/types/cards";
 import type { GoFishEvent } from "@/types/gofish";
 import { rankName, rankPlural, rankShort } from "@/lib/cards";
+import { says, them } from "@/lib/grammar";
 
 const COUNT = ["no", "one", "two", "three", "four"];
 
@@ -17,10 +18,10 @@ export const plural = (rank: Rank) => (rank >= 11 ? rankPlural(rank) : `${rankSh
 
 /** A line for the table feed and history log. */
 export function describeEvent(e: GoFishEvent, name: (id: string) => string): string {
-  if (e.kind === "book") return `📚 ${name(e.playerId)} completes a book of ${plural(e.rank)}`;
-  if (e.kind === "refill") return `${name(e.playerId)} is out of cards and draws ${e.count === 1 ? "one" : e.count}`;
-  const head = `${name(e.askerId)} asks ${name(e.targetId)} for ${plural(e.rank)}`;
-  if (e.got > 0) return `🎯 ${name(e.askerId)} takes ${cardsOf(e.got, e.rank)} from ${name(e.targetId)}`;
+  if (e.kind === "book") return `📚 ${says(name(e.playerId), "completes", "complete")} a book of ${plural(e.rank)}`;
+  if (e.kind === "refill") return `${says(name(e.playerId), "is out of cards and draws", "are out of cards and draw")} ${e.count === 1 ? "one" : e.count}`;
+  const head = `${says(name(e.askerId), "asks", "ask")} ${them(name(e.targetId))} for ${plural(e.rank)}`;
+  if (e.got > 0) return `🎯 ${says(name(e.askerId), "takes", "take")} ${cardsOf(e.got, e.rank)} from ${them(name(e.targetId))}`;
   if (e.lucky) return `🍀 ${head}: go fish! Lucky catch, they drew one`;
   if (!e.fished) return `🐟 ${head}: go fish! The pond is empty`;
   return `🐟 ${head}: go fish!`;
@@ -28,7 +29,7 @@ export function describeEvent(e: GoFishEvent, name: (id: string) => string): str
 
 /** What a player's speech bubble says about their last ask. */
 export function bubbleFor(e: Extract<GoFishEvent, { kind: "ask" }>, name: (id: string) => string): string {
-  const ask = `Asked ${name(e.targetId)} for ${plural(e.rank)}`;
+  const ask = `Asked ${them(name(e.targetId))} for ${plural(e.rank)}`;
   if (e.got > 0) return `${ask}: got ${COUNT[e.got] ?? e.got}`;
   return e.lucky ? `${ask}: lucky catch!` : `${ask}: go fish`;
 }

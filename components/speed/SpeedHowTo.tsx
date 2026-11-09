@@ -235,7 +235,7 @@ function Drill({ onExit }: { onExit: () => void }) {
       <div className="mt-6 flex min-h-14 flex-wrap items-center gap-3">
         {step === "done" && (
           <>
-            <RoomLink href="/speed/local?demo=1" className={clsx("flex min-h-12 items-center rounded-full bg-brass px-7 font-display text-2xl font-bold text-smoke hover:bg-brass-lit")}>
+            <RoomLink href="/speed/local" className={clsx("flex min-h-12 items-center rounded-full bg-brass px-7 font-display text-2xl font-bold text-smoke hover:bg-brass-lit")}>
               Play against a bot
             </RoomLink>
             <RoomLink href="/speed" className="flex min-h-12 items-center rounded-full border border-bone/40 px-6 text-base font-bold text-bone hover:border-bone">

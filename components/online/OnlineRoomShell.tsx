@@ -74,7 +74,7 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
 }: ShellProps<S, A, V>) {
   const rooms = useRoomTransition();
   const roomKey = info.roomKey(code);
-  const { room, transport, setSession, act, removePlayer, leave, say, postAsBot } = useOnlineRoom(game, { roomKey, code, createState });
+  const { room, setSession, act, removePlayer, leave, say, postAsBot } = useOnlineRoom(game, { roomKey, code, createState });
   // Bots are played by the host's tab only, from the full state it holds.
   const hostState = room.phase === "ready" ? room.hostState : null;
   useBotDriver(hostState, bots, act);
@@ -118,7 +118,6 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
     : { label: "Leave room", confirm: inLobby ? "Leave this room?" : "Leave this game?", onExit: leaveAndGoBack };
 
   const notices = [
-    transport === "tabs" && "Test mode: no Supabase keys, so this room only connects tabs in this browser.",
     status === "host-away" && `${hostName ?? "The host"} lost connection.`,
   ].filter(Boolean) as string[];
 

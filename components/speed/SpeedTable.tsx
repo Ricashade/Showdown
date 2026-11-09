@@ -9,7 +9,9 @@ import type { SpeedAction, SpeedEvent } from "@/types/speed";
 import { targetsFor, type SpeedPublicSide, type SpeedView } from "@/lib/speed-engine";
 import { DIFFICULTY_LABEL } from "@/lib/bot-ai";
 import { playCardFlip, playThud } from "@/lib/sound-effects";
+import { useWatching } from "@/components/table/watching";
 import { PlayingCard, cardName } from "@/components/ui/PlayingCard";
+import { says } from "@/lib/grammar";
 
 interface SpeedTableProps {
   view: SpeedView;
@@ -106,7 +108,8 @@ export function SpeedTable({ view, focusId, canAct, onAction, bounce, connectedI
     return out;
   }, [view.log, bottom.id]);
 
-  // Sounds for whatever just happened, once each.
+  // Sounds for whatever just happened, once each (none when only watching another table).
+  const quiet = useWatching();
   const heard = useRef(view.log.at(-1)?.n ?? -1);
   const [runs, setRuns] = useState<Record<string, { n: number; count: number }>>({});
   useEffect(() => {
@@ -115,12 +118,13 @@ export function SpeedTable({ view, focusId, canAct, onAction, bounce, connectedI
       heard.current = e.n;
       if (e.kind === "play") {
         const chain = chainAt(view.log, e.n);
-        playCardFlip(chain);
+        if (!quiet) playCardFlip(chain);
         if (chain >= 3) setRuns((r) => ({ ...r, [e.by]: { n: e.n, count: chain } }));
-      } else if (e.kind === "flip") playCardFlip(0);
+      } else if (quiet) continue;
+      else if (e.kind === "flip") playCardFlip(0);
       else playThud();
     }
-  }, [view.log]);
+  }, [view.log, quiet]);
   useEffect(() => {
     const ids = Object.keys(runs);
     if (!ids.length) return;
@@ -238,7 +242,7 @@ export function SpeedTable({ view, focusId, canAct, onAction, bounce, connectedI
         {view.phase === "slap" && (
           <div className="absolute inset-0 z-10 grid place-items-center bg-smoke/55 backdrop-blur-[1px]">
             <div className="flex flex-col items-center gap-3">
-              <p className="text-base font-bold text-bone">{view.emptyId === bottom.id && canAct ? "You're out. Slap it!" : `${name(view.emptyId!)} is out`}</p>
+              <p className="text-base font-bold text-bone">{view.emptyId === bottom.id && canAct ? "You're out. Slap it!" : `${says(name(view.emptyId!), "is", "are")} out`}</p>
               <motion.button
                 onClick={slap}
                 disabled={!canAct}

@@ -1,24 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
-import type { PlayerSeed } from "@/types/game";
-import { applyThirteenAction, createThirteenRoom, getThirteenView } from "@/lib/thirteen-engine";
+import { applyThirteenAction, createThirteenRoom, getThirteenView, THIRTEEN_SEATS } from "@/lib/thirteen-engine";
 import { thirteenBots } from "@/lib/bot-ai";
-import { ME, seatBots, useSoloTable } from "@/lib/hooks/use-solo-table";
+import { ME, useSoloTable } from "@/lib/hooks/use-solo-table";
 import { LocalRoomChat } from "@/components/RoomChat";
 import { ThirteenTableScreen } from "./ThirteenTableScreen";
 
-/** The demo's two bots. */
-const BOTS: PlayerSeed[] = [
-  { id: "bot-vinnie", name: "Shark Vinnie", isBot: true, botDifficulty: "hard" },
-  { id: "bot-ivy", name: "Ice Cold Ivy", isBot: true, botDifficulty: "medium" },
-];
 
-const create = () => seatBots(createThirteenRoom({ roomId: "local-thirteen", host: { id: ME, name: "You" } }), applyThirteenAction, BOTS);
+const create = () => createThirteenRoom({ roomId: "local-thirteen", host: { id: ME, name: "You" } });
 
-/** You against bots, on this screen. */
+/** You and the bots you seat, on this screen. */
 export default function LocalThirteen() {
-  const { state, dispatch, table } = useSoloTable({ create, apply: applyThirteenAction, bots: thirteenBots });
+  const { state, dispatch, table } = useSoloTable({ create, apply: applyThirteenAction, bots: thirteenBots, seats: THIRTEEN_SEATS });
   const view = useMemo(() => getThirteenView(state, ME), [state]);
 
   return (

@@ -11,6 +11,7 @@ import { RoomLink, RoomStage } from "@/components/ui/RoomTransition";
 import { TableLoader } from "@/components/table/TableLoader";
 import { GarbageLobby } from "./GarbageLobby";
 import { GarbageTable } from "./GarbageTable";
+import { says } from "@/lib/grammar";
 
 export interface GarbageTableScreenProps {
   view: GarbageView;
@@ -35,14 +36,14 @@ const names = (list: string[]) => (list.length <= 1 ? list.join("") : `${list.sl
 /** One sentence for screen readers about what just happened. */
 function describe(prev: GarbageView, next: GarbageView): string | null {
   const name = (id: string | null | undefined) => next.players.find((p) => p.id === id)?.name ?? "";
-  if (next.round !== prev.round) return `Round ${next.round}. ${name(next.currentTurnId)} goes first.`;
+  if (next.round !== prev.round) return `Round ${next.round}. ${says(name(next.currentTurnId), "goes", "go")} first.`;
   if (next.phase === "reveal" && prev.phase !== "reveal") return "Last lap over. Everyone still playing turns their cards over and can rearrange them.";
   if (next.phase !== "playing") return null;
   if (next.currentTurnId !== prev.currentTurnId) return `${name(next.currentTurnId)}'s turn.`;
   if (next.active && next.active.id !== prev.active?.id) {
     const from = next.activeFrom;
     const where = from?.source === "slot" ? `from slot ${slotLabel(from.slot)}` : from?.source === "discard" ? "off the discard pile" : "from the stock";
-    return `${name(next.currentTurnId)} has the ${cardLabel(next.active)}, ${where}.`;
+    return `${says(name(next.currentTurnId), "has", "have")} the ${cardLabel(next.active)}, ${where}.`;
   }
   return null;
 }
@@ -220,7 +221,7 @@ function GameOver({ view, actions, canPlayAgain, hostName, onPlayAgain }: { view
     <motion.div className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-black/80 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div role="dialog" aria-modal="true" aria-labelledby="winner-title" className="felt my-auto w-full max-w-md rounded-[2rem] p-7 sm:p-9">
         <h2 id="winner-title" className="font-display text-6xl leading-none font-extrabold text-bone">
-          {winner ? `${winner.name} wins` : "Game over"}
+          {winner ? says(winner.name, "wins", "win") : "Game over"}
         </h2>
         <ol className="mt-6 divide-y divide-baize-deep border-y border-baize-deep">
           {standings.map((p, i) => (

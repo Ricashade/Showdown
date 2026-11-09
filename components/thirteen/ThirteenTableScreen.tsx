@@ -7,6 +7,7 @@ import type { ThirteenAction, ThirteenPlay, ThirteenSettings } from "@/types/thi
 import { getThirteenLegal, standings, type ThirteenView } from "@/lib/thirteen-engine";
 import { describeCombo } from "@/lib/thirteen-combos";
 import { playBombImpact, setSoundOn, soundOn } from "@/lib/sound-effects";
+import { useWatching } from "@/components/table/watching";
 import { ScreenHeader, Toast, type HeaderExit } from "@/components/table/chrome";
 import type { LobbyOptions } from "@/components/table/SeatsPanel";
 import { RoomLink, RoomStage } from "@/components/ui/RoomTransition";
@@ -42,12 +43,13 @@ function useChopMoment(view: ThirteenView): ChopEvent | null {
   const latest = view.log.findLast((e): e is Extract<typeof e, { kind: "play" }> => e.kind === "play" && !!e.chop) ?? null;
   const seen = useRef(latest?.n ?? -1);
   const [moment, setMoment] = useState<ChopEvent | null>(null);
+  const quiet = useWatching();
   // Keyed by the event's number: every move hands over a fresh copy of the log.
   useEffect(() => {
     if (!latest || latest.n <= seen.current) return;
     seen.current = latest.n;
     setMoment(latest);
-    playBombImpact(latest.combo.tier);
+    if (!quiet) playBombImpact(latest.combo.tier);
   }, [latest?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!moment) return;

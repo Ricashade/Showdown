@@ -42,7 +42,7 @@ export function HoldemActions({ view, legal, actingId, onAction, disabled = fals
                 currentBet: view.currentBet,
                 potAfterCall: legal.pot + toCall,
                 myBet: me.bet,
-                verb: legal.isOpeningBet ? "Bet" : "Raise to",
+                verb: legal.isOpeningBet ? "Bet" : "Raise by",
                 allInWord: "All in",
                 onRaise: (to, allIn) => onAction(allIn ? { type: "ALL_IN", playerId: actingId } : { type: "RAISE", playerId: actingId, to }),
               }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpen, Shuffle } from "lucide-react";
 import type { ActiveGameAction, PartyAction, PartyState } from "@/types/party";
-import { createParty, partyBots, partyClock, partyGame, type PartyView } from "@/lib/party-engine";
+import { createParty, partyBots, partyClock, partyGame, PARTY_MAX_TABLES, seatsFor, tableOf, type ActiveGameView, type PartyView } from "@/lib/party-engine";
 import { GAMES, ROOM, type GameId } from "@/lib/games";
 import { OnlineRoomShell, type ReadyRoom } from "@/components/online/OnlineRoomShell";
 import { Notices, Toast } from "@/components/table/chrome";
@@ -19,6 +19,7 @@ import { ThirteenTableScreen } from "@/components/thirteen/ThirteenTableScreen";
 import { SpeedTableScreen } from "@/components/speed/SpeedTableScreen";
 import { BouillotteTableScreen } from "@/components/bouillotte/BouillotteTableScreen";
 import { GamePicker } from "./GamePicker";
+import { OtherTables } from "./OtherTables";
 import { PostGameActions } from "./PostGameActions";
 import { HOW_TO } from "./how-to";
 import { RoomChat } from "@/components/RoomChat";
@@ -53,7 +54,7 @@ function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, 
 
   // The chat lives here, above whichever game is on, so it carries across game switches.
   const [banter, setBanter] = useBanterSetting();
-  useBotBanter(hostState?.activeGameState ?? null, isHost && banter, postAsBot);
+  useBotBanter(hostState ? (tableOf(hostState, me) ?? hostState.tables[0]).state : null, isHost && banter, postAsBot);
   const roomEvents = useRoomEvents({
     players: view.players,
     game: view.selectedGame,
@@ -80,6 +81,9 @@ function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, 
   };
 
   const sittingOut = view.players.filter((p) => !view.seatedIds.includes(p.id));
+  const nameOf = (id: string) => view.players.find((p) => p.id === id)?.name ?? "";
+  const isBotId = (id: string) => !!view.players.find((p) => p.id === id)?.isBot;
+  const tableLabel = (id: string) => `Table ${view.tables.findIndex((t) => t.id === id) + 1}`;
   const lobby: LobbyOptions = {
     roomCode: code,
     canRename: (id) => id === me,
@@ -89,6 +93,17 @@ function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, 
     onRename: (id, name) => onAction({ type: "RENAME_PLAYER", playerId: id, name }),
     crowns: Object.fromEntries(view.players.map((p) => [p.id, p.sessionWins])),
     sittingOut,
+    hostName,
+    tables: {
+      list: view.tables.map((t) => ({ id: t.id, seats: t.seats, players: t.playerIds.map((id) => ({ id, name: nameOf(id), isBot: isBotId(id) })) })),
+      mine: view.tableId,
+      ...seatsFor(view.selectedGame),
+      most: PARTY_MAX_TABLES,
+      onSit: (tableId) => act({ type: "SIT", playerId: me, tableId }),
+      onSetSeats: isHost ? (seats) => act({ type: "SET_TABLES", playerId: me, seats }) : undefined,
+      onMove: isHost ? (who, tableId) => act({ type: "SIT", playerId: me, tableId, who }) : undefined,
+      blocked: view.notReady,
+    },
   };
 
   const chip = "flex min-h-11 items-center gap-2 rounded-full border border-bone/40 px-4 text-sm font-bold text-bone transition hover:border-bone";
@@ -115,16 +130,18 @@ function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, 
       onLobby={() => act({ type: "RETURN_TO_LOBBY", playerId: me })}
       onSwitch={() => setDialog("picker")}
       onLeave={exit.onExit}
+      othersPlaying={view.phase === "in_game"}
     />
   );
 
-  const watching = view.phase !== "lobby" && !view.seatedIds.includes(me);
+  const watching = view.phase !== "lobby" && !view.playing;
   const topItems = [...notices, ...(watching ? ["You're sitting this one out."] : [])];
   const topBar = topItems.length > 0 && <Notices items={topItems} />;
 
   const common = {
     actingId: me,
-    isHost,
+    // Mid-match, whoever deals at your table (the host, or a table's first person) runs it.
+    isHost: view.phase === "lobby" ? isHost : game.hostId === me,
     onAction,
     onStartGame: () => onAction({ type: "START_GAME", playerId: me, seed: randomSeed() }),
     exit,
@@ -135,31 +152,25 @@ function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, 
     headerExtra,
     postGameActions,
   };
+  // Another table, read-only: no moves, no host controls, nothing of yours on it.
+  const watchOnly: ScreenProps = {
+    actingId: null,
+    isHost: false,
+    onAction: () => {},
+    onStartGame: () => {},
+    connectedIds,
+    error: null,
+    lobby: { canRename: () => false, canRemove: () => false, onRemove: () => {}, onRename: () => {} },
+    postGameActions: <></>,
+  };
   const HowTo = HOW_TO[view.selectedGame];
 
   return (
     <>
-      {game.mode === "bs-poker" ? (
-        <TableScreen view={game} canDealNextRound={isHost} {...common} />
-      ) : game.mode === "texas-holdem" ? (
-        <HoldemTableScreen view={game} {...common} />
-      ) : game.mode === "blackjack" ? (
-        <BlackjackTableScreen view={game} {...common} />
-      ) : game.mode === "garbage" ? (
-        <GarbageTableScreen view={game} {...common} />
-      ) : game.mode === "rummy" ? (
-        <RummyTableScreen view={game} {...common} />
-      ) : game.mode === "go-fish" ? (
-        <GoFishTableScreen view={game} {...common} />
-      ) : game.mode === "thirteen" ? (
-        <ThirteenTableScreen view={game} {...common} />
-      ) : game.mode === "speed" ? (
-        <SpeedTableScreen view={game} {...common} />
-      ) : game.mode === "bouillotte" ? (
-        <BouillotteTableScreen view={game} {...common} />
-      ) : (
-        <WarTableScreen view={game} controlIds={game.sides?.some((x) => x.id === me) ? [me] : []} {...common} />
-      )}
+      <GameScreen game={game} me={me} common={common} />
+      <OtherTables
+        tables={view.otherTables.map((t) => ({ id: t.id, label: tableLabel(t.id), screen: <GameScreen game={t.view} me={me} common={watchOnly} /> }))}
+      />
 
       {dialog === "picker" && <GamePicker current={view.selectedGame} people={view.players.length} onPick={pick} onClose={() => setDialog(null)} />}
       {dialog === "howto" && <HowTo onClose={() => setDialog(null)} />}
@@ -174,5 +185,45 @@ function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, 
         banter={isHost ? { on: banter, set: setBanter } : undefined}
       />
     </>
+  );
+}
+
+type ScreenProps = {
+  actingId: string | null;
+  isHost: boolean;
+  onAction: (move: ActiveGameAction) => void;
+  onStartGame: () => void;
+  exit?: React.ComponentProps<typeof TableScreen>["exit"];
+  connectedIds?: Set<string>;
+  error?: { message: string; id: number } | null;
+  lobby: LobbyOptions;
+  topBar?: React.ReactNode;
+  headerExtra?: React.ReactNode;
+  postGameActions?: React.ReactNode;
+};
+
+/** Whichever game's table is on, for one view of it: your own, or another table you're watching. */
+function GameScreen({ game, me, common }: { game: ActiveGameView; me: string; common: ScreenProps }) {
+  const isHost = common.isHost;
+  return game.mode === "bs-poker" ? (
+    <TableScreen view={game} canDealNextRound={isHost} {...common} />
+  ) : game.mode === "texas-holdem" ? (
+    <HoldemTableScreen view={game} {...common} />
+  ) : game.mode === "blackjack" ? (
+    <BlackjackTableScreen view={game} {...common} />
+  ) : game.mode === "garbage" ? (
+    <GarbageTableScreen view={game} {...common} />
+  ) : game.mode === "rummy" ? (
+    <RummyTableScreen view={game} {...common} />
+  ) : game.mode === "go-fish" ? (
+    <GoFishTableScreen view={game} {...common} />
+  ) : game.mode === "thirteen" ? (
+    <ThirteenTableScreen view={game} {...common} />
+  ) : game.mode === "speed" ? (
+    <SpeedTableScreen view={game} {...common} />
+  ) : game.mode === "bouillotte" ? (
+    <BouillotteTableScreen view={game} {...common} />
+  ) : (
+    <WarTableScreen view={game} controlIds={common.actingId && game.sides?.some((x) => x.id === me) ? [me] : []} {...common} />
   );
 }

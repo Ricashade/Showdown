@@ -258,7 +258,7 @@ function Center({ view, winningCardIds }: { view: HoldemView; winningCardIds: Se
       )}
 
       {/* The blinds, quietly, while they're news: until someone makes a real move this hand. The row keeps its height. */}
-      <div className="flex h-7 items-center justify-center">
+      <div className="flex h-7 translate-y-2 items-center justify-center">
         <AnimatePresence>
           {blindsNews && (
             <motion.p

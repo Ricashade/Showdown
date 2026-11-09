@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GAMES, ROOM, ROOM_PATH, type GameId } from "@/lib/games";
-import { createSession, getTransport, type TransportKind } from "@/lib/multiplayer/session";
+import { createSession } from "@/lib/multiplayer/session";
 import { generateRoomCode, isRoomCode, normalizeRoomCode } from "@/lib/multiplayer/room-code";
 import { RoomLink, useRoomTransition } from "@/components/ui/RoomTransition";
 import { MainMenuLink } from "@/components/table/chrome";
@@ -15,8 +15,6 @@ export default function PlayModeChooser({ game }: { game: GameId }) {
   const [name, setName] = useRememberedName();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<"create" | "join" | null>(null);
-  const [transport, setTransport] = useState<TransportKind>("supabase");
-  useEffect(() => setTransport(getTransport().kind), []);
 
   const hasName = name.trim().length > 0;
   const codeOk = isRoomCode(code);
@@ -89,11 +87,6 @@ export default function PlayModeChooser({ game }: { game: GameId }) {
             </form>
           </div>
           {!hasName && <p className="mt-6 text-sm text-bone">Enter your name first.</p>}
-          {transport === "tabs" && (
-            <p role="status" className="mt-6 rounded-2xl bg-baize-deep/80 px-4 py-3 text-sm text-bone">
-              Test mode: no Supabase keys, so rooms only connect tabs in this browser.
-            </p>
-          )}
         </section>
 
         <section aria-labelledby="local-heading" className="self-start">

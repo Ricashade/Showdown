@@ -318,6 +318,14 @@ The host can seat Easy, Medium or Hard bots in any game, mixed freely with peopl
 - **Seats:** the room holds up to 9. A game seats people in room order up to its own limit; the rest sit
   out that game and watch, and are dealt in as soon as a game has room (a smaller game, someone leaving,
   or the next deal). People who arrive mid-match watch until the next deal.
+- **Tables:** the host can split the room into up to 4 tables of the same game (*Add a table*, and − / +
+  for each table's seats, within the game's limits). Extra tables open empty: people pick one themselves
+  (*Sit here*), and the host moves bots between tables; newcomers only take a free seat at the first table.
+  *Start game* waits until every table has enough players, at least one a person; at a table the host
+  isn't at, its first person deals the next hand. Mid-match, the other tables
+  show as small previews in the right-hand margin (a slim tab on narrower screens): click one to watch it
+  up close, read-only. A table that finishes waits for the rest; then the host's *Play again* deals every
+  table again with the same seats. Switching games goes back to one table.
 - **War:** the host picks the two duelists; everyone else watches. With *Winner stays on*, the winner keeps
   their seat and the next player round the table takes them on.
 - **Wins tonight:** each finished match gives its winner a crown, shown beside their name in the lobby.

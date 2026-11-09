@@ -16,6 +16,7 @@ import { DealProvider, useDealClock } from "@/components/table/deal";
 import { RoomStage } from "@/components/ui/RoomTransition";
 import { TableLoader } from "@/components/table/TableLoader";
 import { planDeal } from "@/lib/deal-plan";
+import { says, whose } from "@/lib/grammar";
 
 export type { HeaderExit };
 
@@ -49,10 +50,10 @@ function describeChange(prev: BsPokerView, next: BsPokerView): string | null {
   const name = (id: string | null | undefined) => next.players.find((p) => p.id === id)?.name ?? "";
   if (next.phase !== "bidding") return null; // The showdown dialog announces its own verdict.
   if (next.round !== prev.round || prev.phase !== "bidding") {
-    return `Round ${next.round}. ${name(next.currentTurnPlayerId)} opens the bidding.`;
+    return `Round ${next.round}. ${says(name(next.currentTurnPlayerId), "opens", "open")} the bidding.`;
   }
   if (next.currentBid && next.bidHistory.length > prev.bidHistory.length) {
-    return `${name(next.currentBid.playerId)} bid ${bidPhrase(next.currentBid.bid)}. ${name(next.currentTurnPlayerId)}'s turn.`;
+    return `${name(next.currentBid.playerId)} bid ${bidPhrase(next.currentBid.bid)}. ${whose(name(next.currentTurnPlayerId))} turn.`;
   }
   return null;
 }
