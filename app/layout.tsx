@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible_Next, Big_Shoulders } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { MotionProvider } from "@/components/ui/MotionProvider";
 import { IdleBackground } from "@/components/IdleBackground";
 import { RoomTransitionProvider } from "@/components/ui/RoomTransition";
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <IdleBackground />
           <RoomTransitionProvider>{children}</RoomTransitionProvider>
         </MotionProvider>
+        <Analytics />
       </body>
     </html>
   );
