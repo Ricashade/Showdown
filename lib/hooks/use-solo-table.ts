@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { ActionResult, BasePlayer, PlayerSeed } from "@/types/game";
+import type { Seed } from "@/types/cards";
+import { randomSeed } from "@/lib/cards";
 import { createLocalTransport } from "@/lib/multiplayer/transport";
 import { newBot, type BotRunner } from "@/lib/bot-ai";
 import type { LobbyOptions } from "@/components/table/SeatsPanel";
@@ -26,9 +28,6 @@ interface SoloState {
   phase: string;
   players: BasePlayer[];
 }
-
-import { randomSeed } from "@/lib/cards";
-import type { Seed } from "@/types/cards";
 
 /**
  * You and the bots you seat, on this screen: the whole game runs here, bots and table timers included.
