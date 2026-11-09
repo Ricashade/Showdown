@@ -3,7 +3,10 @@ import Link from "next/link";
 import { CornerNav } from "@/components/rules/CornerNav";
 import { RulesTabs } from "@/components/rules/RulesTabs";
 
-export const metadata: Metadata = { title: "How to play BS Poker | Showdown" };
+export const metadata: Metadata = {
+  title: "How to Play BS Poker | Showdown",
+  description: "The rules of BS Poker: claim a poker hand exists among everyone's cards and the table, and call BS when a bid goes too far.",
+};
 
 export default function RulesPage() {
   return (
