@@ -25,7 +25,6 @@ import { HOW_TO } from "./how-to";
 import { RoomChat } from "@/components/RoomChat";
 import { mergeChat } from "@/lib/chat";
 import { useBanterSetting, useBotBanter, useRoomEvents } from "@/lib/hooks/use-room-chat";
-
 import { randomSeed } from "@/lib/cards";
 
 /** One room code for the night: the host switches games and nobody reconnects. */

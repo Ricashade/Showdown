@@ -33,8 +33,16 @@ types/
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
   bs-poker.ts               Bid, Settings, BsPokerState, BsPokerAction, ShowdownResult
 lib/
+  games.ts                  Each game's title, path and room key (GAMES, ROOM)
+  site.ts                   Site URL, titles and descriptions for metadata and the sitemap
   cards.ts                  Deck, the deck's ChaCha20 stream (seedRng, shuffle), bots' seeded PRNG, labels
   names.ts                  cleanName: the one rule for player names
+  chat.ts                   Room chat messages and reactions: cleaning, merging, sender colours
+  bot-banter.ts             What bots say in chat when the table turns on them
+  grammar.ts                "You win" / "Ann wins": lines that read right when the player is you
+  privacy.ts                scrubUrl: room codes and host keys never reach analytics
+  deal-plan.ts              The order cards leave the deck, for deal animations (BS Poker, Hold'em)
+  raise-stops.ts            Quick raise amounts (min, pot fractions, all in) for betting games
   bs-poker-engine.ts        isBidHigher, evaluateBid / doesHandExistInPool, hand rules, bid ladder
   holdem-hand.ts            Best 5 of 7 cards, full kicker comparison
   holdem-pots.ts            Side pots (layered by contribution) and split pots with odd chips
@@ -61,10 +69,17 @@ lib/
   multiplayer/              Room protocol (room.ts), encryption (crypto.ts), channels: Supabase,
                             same-browser tabs, in-memory (tests)
   multiplayer/transport.ts  LocalTransport for solo tables
-  hooks/                    useOnlineRoom, useGameRoom, useBotDriver, useTableClock, useSoloTable
+  hooks/                    useOnlineRoom, useGameRoom, useBotDriver, useTableClock, useSoloTable,
+                            room chat (events, bot banter, local chat)
 components/
-  ui/                       PlayingCard (flip/deal animations), Toggle/Stepper/Segmented
-  bs-poker/                 TableScreen (shared), LocalGame, OnlineGame, Lobby, GameTable, BidBuilder, …
+  RoomChat.tsx              Room chat and reactions, online and solo
+  IdleBackground.tsx, Telemetry.tsx   Background art; analytics with room codes scrubbed
+  ui/                       PlayingCard (flip/deal animations), Toggle/Stepper/Segmented, room transitions
+  table/                    What every table shares: header and exits, notices, toasts, seats panel and
+                            tables, bet controls, the shuffle-and-deal animation, loader
+  online/                   OnlineRoomShell: joining from a link, connection states, leaving
+  bs-poker/                 TableScreen, LocalGame, Lobby, GameTable, BidBuilder, PlayModeChooser (every
+                            game's create / join / solo page), NameField, …
   rules/                    Rules tabs, QuickDemo; HowToDialog (guide + demo dialog shared by Hold'em and Blackjack)
   holdem/                   Hold'em table, actions, results, HoldemHowTo
   blackjack/                Table, lobby, actions, round results, how-to-play dialog with demo

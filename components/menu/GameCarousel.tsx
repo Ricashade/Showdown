@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { motion, type PanInfo } from "framer-motion";
@@ -9,15 +9,7 @@ import { GAMES, type GameId } from "@/lib/games";
 import { PlayingCard } from "@/components/ui/PlayingCard";
 import { RoomLink } from "@/components/ui/RoomTransition";
 import { cards } from "@/components/rules/sample-cards";
-import { BlackjackHowTo } from "@/components/blackjack/BlackjackHowTo";
-import { HoldemHowTo } from "@/components/holdem/HoldemHowTo";
-import { GarbageHowTo } from "@/components/garbage/GarbageHowTo";
-import { RummyHowTo } from "@/components/rummy/RummyHowTo";
-import { WarHowTo } from "@/components/war/WarHowTo";
-import { GoFishHowTo } from "@/components/gofish/GoFishHowTo";
-import { ThirteenHowTo } from "@/components/thirteen/ThirteenHowTo";
-import { SpeedHowTo } from "@/components/speed/SpeedHowTo";
-import { BouillotteHowTo } from "@/components/bouillotte/BouillotteHowTo";
+import { HOW_TO } from "@/components/party/how-to";
 import { JoinWithCode } from "./JoinWithCode";
 import { GAME_ART } from "./game-art";
 
@@ -26,64 +18,25 @@ interface Slide {
   /** Face-up cards for the showcase, plus how many face down. */
   show: string;
   hidden: number;
-  /** Where "How to play" goes: a page, or a dialog with a guide and demo. */
-  howTo: { href: string } | { Dialog: ComponentType<{ onClose: () => void }> };
+  /** "How to play" goes to this page instead of the game's dialog (HOW_TO). */
+  rulesHref?: string;
   /** The button's wording, if not "How to play & demo". */
   howToLabel?: string;
 }
 
+const slide = (id: GameId, extra?: Pick<Slide, "rulesHref" | "howToLabel">): Slide => ({ id, ...GAME_ART[id], ...extra });
+
 const SLIDES: Slide[] = [
-  {
-    id: "texas-holdem",
-    ...GAME_ART["texas-holdem"],
-    howTo: { Dialog: HoldemHowTo },
-  },
-  {
-    id: "bs-poker",
-    ...GAME_ART["bs-poker"],
-    howTo: { href: "/rules" },
-  },
-  {
-    id: "blackjack",
-    ...GAME_ART["blackjack"],
-    howTo: { Dialog: BlackjackHowTo },
-  },
-  {
-    id: "garbage",
-    ...GAME_ART["garbage"],
-    howTo: { Dialog: GarbageHowTo },
-  },
-  {
-    id: "rummy",
-    ...GAME_ART["rummy"],
-    howTo: { Dialog: RummyHowTo },
-  },
-  {
-    id: "war",
-    ...GAME_ART["war"],
-    howTo: { Dialog: WarHowTo },
-  },
-  {
-    id: "go-fish",
-    ...GAME_ART["go-fish"],
-    howTo: { Dialog: GoFishHowTo },
-    howToLabel: "Learn to play",
-  },
-  {
-    id: "thirteen",
-    ...GAME_ART["thirteen"],
-    howTo: { Dialog: ThirteenHowTo },
-  },
-  {
-    id: "speed",
-    ...GAME_ART["speed"],
-    howTo: { Dialog: SpeedHowTo },
-  },
-  {
-    id: "bouillotte",
-    ...GAME_ART["bouillotte"],
-    howTo: { Dialog: BouillotteHowTo },
-  },
+  slide("texas-holdem"),
+  slide("bs-poker", { rulesHref: "/rules" }),
+  slide("blackjack"),
+  slide("garbage"),
+  slide("rummy"),
+  slide("war"),
+  slide("go-fish", { howToLabel: "Learn to play" }),
+  slide("thirteen"),
+  slide("speed"),
+  slide("bouillotte"),
 ];
 
 const SLIDE_KEY = "showdown:menu-slide";
@@ -105,8 +58,8 @@ export function GameCarousel() {
   // No animation until the remembered game is back in front.
   const [settled, setSettled] = useState(false);
   const [dialog, setDialog] = useState<"join" | "howto" | null>(null);
-  const slide = SLIDES[index];
-  const info = GAMES[slide.id];
+  const current = SLIDES[index];
+  const HowTo = HOW_TO[current.id];
   // Last offsets, so a card that wraps round (left peek → right peek) jumps instead of sweeping across.
   const lastOffsets = useRef<Record<string, number>>({});
   useEffect(() => {
@@ -126,11 +79,11 @@ export function GameCarousel() {
   }, []);
   useEffect(() => {
     try {
-      sessionStorage.setItem(SLIDE_KEY, slide.id);
+      sessionStorage.setItem(SLIDE_KEY, current.id);
     } catch {
       // Not critical.
     }
-  }, [slide.id]);
+  }, [current.id]);
 
   const go = useCallback((step: number) => setIndex((i) => (i + step + SLIDES.length) % SLIDES.length), []);
 
@@ -224,7 +177,7 @@ export function GameCarousel() {
       </nav>
 
       {dialog === "join" && <JoinWithCode onClose={() => setDialog(null)} />}
-      {dialog === "howto" && "Dialog" in slide.howTo && <slide.howTo.Dialog onClose={() => setDialog(null)} />}
+      {dialog === "howto" && !current.rulesHref && <HowTo onClose={() => setDialog(null)} />}
     </main>
   );
 }
@@ -247,14 +200,14 @@ function SlideFace({ slide, onJoin, onHowTo }: { slide: Slide; onJoin: () => voi
         <button onClick={onJoin} className={secondary}>
           Join with code
         </button>
-        {"Dialog" in slide.howTo ? (
+        {slide.rulesHref ? (
+          <Link href={slide.rulesHref} className={secondary}>
+            {slide.howToLabel ?? "How to play & demo"}
+          </Link>
+        ) : (
           <button onClick={onHowTo} className={secondary}>
             {slide.howToLabel ?? "How to play & demo"}
           </button>
-        ) : (
-          <Link href={slide.howTo.href} className={secondary}>
-            How to play &amp; demo
-          </Link>
         )}
       </div>
     </>
