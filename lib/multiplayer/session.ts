@@ -3,9 +3,10 @@
  * never shares it with other tabs, so two tabs in one browser can be two players.
  */
 import type { PeerRole, RoomChannelFactory } from "./channel";
-import { exportIdentity, generateIdentity, importIdentity, type Identity, type StoredIdentity } from "./crypto";
+import { exportIdentity, generateIdentity, importIdentity, isFingerprint, type Identity, type StoredIdentity } from "./crypto";
 import type { HostSnapshot } from "./room";
 import { randomId } from "./room-code";
+import { cleanName } from "@/lib/names";
 import { createSupabaseChannel, isSupabaseConfigured } from "./supabase-channel";
 import { createTabChannel } from "./tab-channel";
 
@@ -25,6 +26,7 @@ export interface RoomSession {
  */
 const sessionKey = (roomKey: string) => `showdown:session:${roomKey}`;
 const hostKey = (roomKey: string) => `showdown:host:${roomKey}`;
+const hostPinKey = (roomKey: string) => `showdown:hostpin:${roomKey}`;
 
 function read<T>(key: string): T | null {
   try {
@@ -50,7 +52,7 @@ export async function createSession(roomKey: string, code: string, name: string,
   const session: RoomSession = {
     code,
     playerId: randomId(role === "host" ? "h" : "p"),
-    name: name.trim().slice(0, 20) || "Player",
+    name: cleanName(name) ?? "Player",
     role,
     joinedAt: Date.now(),
     identity: await exportIdentity(identity),
@@ -64,10 +66,36 @@ export const sessionIdentity = (s: RoomSession): Promise<Identity> => importIden
 export const loadHostSnapshot = <S>(roomKey: string) => read<HostSnapshot<S>>(hostKey(roomKey));
 export const saveHostSnapshot = <S>(roomKey: string, snap: HostSnapshot<S>) => write(hostKey(roomKey), snap);
 
+/** The host public key this tab trusts for a room (a guest's), so a refresh can't be talked into another. */
+export const loadHostPin = (roomKey: string) => read<string>(hostPinKey(roomKey));
+export const saveHostPin = (roomKey: string, publicKey: string) => write(hostPinKey(roomKey), publicKey);
+
+/** The host's fingerprint from an invite link ("#h=…"), if it carries one. */
+export function linkFingerprint(): string | null {
+  try {
+    const h = new URLSearchParams(window.location.hash.slice(1)).get("h");
+    return isFingerprint(h) ? h : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Put the host's fingerprint in this tab's address, so the link anyone copies from here is a safe invite. */
+export function showFingerprintInUrl(fp: string) {
+  try {
+    const url = new URL(window.location.href);
+    url.hash = `h=${fp}`;
+    window.history.replaceState(window.history.state, "", url);
+  } catch {
+    // Nothing to update: the room still works, links just won't carry the host's key.
+  }
+}
+
 export function clearSession(roomKey: string) {
   try {
     sessionStorage.removeItem(sessionKey(roomKey));
     sessionStorage.removeItem(hostKey(roomKey));
+    sessionStorage.removeItem(hostPinKey(roomKey));
   } catch {
     // Nothing to clear.
   }

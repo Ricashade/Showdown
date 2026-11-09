@@ -1,4 +1,4 @@
-import type { Card, Rank, Suit } from "./cards";
+import type { Card, Rank, Suit, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 export type HandType =
@@ -113,7 +113,7 @@ export interface BsPokerState {
   hostId: string;
   round: number;
   /** SECRET: PRNG state. Never send to clients — it predicts future deals. */
-  rngState: number;
+  rngState: RngState;
   roundStarterId: string | null;
   currentTurnPlayerId: string | null;
   /** Shared face-up cards dealt each round. Every bid counts these plus all players' hands. */
@@ -133,7 +133,7 @@ export type BsPokerAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<BsPokerSettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   | { type: "PLACE_BID"; playerId: string; bid: Bid }
   | { type: "CALL_BS"; playerId: string }
   | { type: "NEXT_ROUND"; playerId: string }

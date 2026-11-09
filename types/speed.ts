@@ -1,4 +1,4 @@
-import type { Card } from "./cards";
+import type { Card, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 /** "empty": the last card wins on its own. "slap": then race to hit Speed. */
@@ -57,7 +57,7 @@ export interface SpeedState {
   players: SpeedPlayer[];
   hostId: string;
   /** SECRET: PRNG state. */
-  rngState: number;
+  rngState: RngState;
   sides: [SpeedSide, SpeedSide] | null;
   /** The two piles in the middle, top card last. Face down during the countdown. */
   piles: [Card[], Card[]];
@@ -79,7 +79,7 @@ export type SpeedAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<SpeedSettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   /** Slam these cards (one, or a set of one rank) onto a pile, as it looked when you moved. */
   | { type: "PLAY"; playerId: string; cardIds: string[]; pile: 0 | 1; expectedTopId: string }
   /** Fill empty hand slots from your stock (when the hand doesn't refill itself). */

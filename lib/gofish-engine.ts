@@ -6,10 +6,11 @@
  * again, or they say "Go fish!" and you draw from the pond. Four of a kind (two, in the pairs
  * variant) makes a book. When every card is booked, most books wins.
  */
+import { cleanName } from "./names";
 import type { Card, Rank } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import type { GoFishAction, GoFishEvent, GoFishPlayer, GoFishSettings, GoFishState } from "@/types/gofish";
-import { createDeck, nextRandom, shuffle } from "./cards";
+import { createDeck, nextRandom, shuffle, seedRng } from "./cards";
 import type { GameDefinition } from "./multiplayer/room";
 
 export const GOFISH_MIN_PLAYERS = 2;
@@ -38,7 +39,7 @@ export function sanitizeGoFishSettings(s: Partial<GoFishSettings>): GoFishSettin
 
 const seat = (seed: PlayerSeed, isHost: boolean): GoFishPlayer => ({
   id: seed.id,
-  name: seed.name.trim() || "Player",
+  name: cleanName(seed.name) ?? "Player",
   isBot: !!seed.isBot,
   ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
   isHost,
@@ -55,7 +56,7 @@ export function createGoFishRoom(params: { roomId: string; host: PlayerSeed; set
     settings: sanitizeGoFishSettings({ ...GOFISH_DEFAULTS, ...params.settings }),
     players: [seat(params.host, true)],
     hostId: params.host.id,
-    rngState: 0,
+    rngState: seedRng(0),
     pond: [],
     currentTurnId: null,
     log: [],
@@ -196,7 +197,8 @@ export function applyGoFishAction(state: GoFishState, action: GoFishAction): Res
     case "RENAME_PLAYER": {
       if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
       if (!getPlayer(state, action.playerId)) return fail(state, "Player not in room");
-      const name = action.name.slice(0, 20);
+      const name = cleanName(action.name);
+      if (!name) return fail(state, "Pick a name");
       return succeed({ ...state, players: state.players.map((p) => (p.id === action.playerId ? { ...p, name } : p)) });
     }
     case "UPDATE_SETTINGS": {
@@ -209,7 +211,7 @@ export function applyGoFishAction(state: GoFishState, action: GoFishAction): Res
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
       if (state.players.length < GOFISH_MIN_PLAYERS) return fail(state, `Need at least ${GOFISH_MIN_PLAYERS} players`);
       const s = structuredClone(resetToLobby(state));
-      const [r, rng] = nextRandom(action.seed >>> 0);
+      const [r, rng] = nextRandom(seedRng(action.seed));
       const { result, rngState } = shuffle(createDeck(false), rng);
       s.rngState = rngState;
       s.pond = result;
@@ -273,8 +275,8 @@ export interface GoFishView extends Omit<GoFishState, "players" | "rngState" | "
   pondCount: number;
 }
 
-export function getGoFishView(state: GoFishState, viewer: string | "god"): GoFishView {
-  const godMode = viewer === "god";
+export function getGoFishView(state: GoFishState, viewer: ViewerId): GoFishView {
+  const godMode = viewer === GOD_VIEW;
   const { rngState: _r, pond, players, ...rest } = state;
   void _r;
   return {

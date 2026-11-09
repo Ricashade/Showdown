@@ -5,8 +5,9 @@
  * same code can run in the browser (local dev simulator) or authoritatively on a
  * server that broadcasts state over Supabase Realtime / PartyKit.
  */
-import type { Card } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { cleanName } from "./names";
+import type { Card, Seed } from "@/types/cards";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import type {
   Bid,
   BidEntry,
@@ -16,7 +17,7 @@ import type {
   BsPokerState,
   ShowdownResult,
 } from "@/types/bs-poker";
-import { createDeck, deckSize, nextRandom, shuffle } from "./cards";
+import { createDeck, deckSize, nextRandom, shuffle, seedRng } from "./cards";
 import type { GameDefinition } from "./multiplayer/room";
 import {
   DEFAULT_SETTINGS,
@@ -97,7 +98,7 @@ export function sanitizeSettings(s: BsPokerSettings, playerCount: number): BsPok
 function seatPlayer(seed: PlayerSeed, isHost: boolean, settings: BsPokerSettings): BsPokerPlayer {
   return {
     id: seed.id,
-    name: seed.name.trim() || "Player",
+    name: cleanName(seed.name) ?? "Player",
     isBot: !!seed.isBot,
     ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
     isHost,
@@ -160,7 +161,7 @@ export function createRoom(params: {
     players: [seatPlayer(params.host, true, settings)],
     hostId: params.host.id,
     round: 0,
-    rngState: 0,
+    rngState: seedRng(0),
     roundStarterId: null,
     currentTurnPlayerId: null,
     currentBid: null,
@@ -195,7 +196,8 @@ export function leaveRoom(state: BsPokerState, playerId: string): Result {
 export function renamePlayer(state: BsPokerState, playerId: string, name: string): Result {
   if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
   if (!getPlayer(state, playerId)) return fail(state, "Player not in room");
-  const clean = name.slice(0, 20);
+  const clean = cleanName(name);
+  if (!clean) return fail(state, "Pick a name");
   return succeed({ ...state, players: state.players.map((p) => (p.id === playerId ? { ...p, name: clean } : p)) });
 }
 
@@ -207,7 +209,7 @@ export function updateSettings(state: BsPokerState, playerId: string, patch: Par
 }
 
 /** `seed` must come from a real RNG (crypto) on whoever is authoritative — the server in online play. */
-export function startGame(state: BsPokerState, playerId: string, seed: number): Result {
+export function startGame(state: BsPokerState, playerId: string, seed: Seed): Result {
   if (state.phase !== "lobby") return fail(state, "Game already started");
   if (playerId !== state.hostId) return fail(state, "Only the host can start the game");
   if (state.players.length < MIN_PLAYERS) return fail(state, `Need at least ${MIN_PLAYERS} players`);
@@ -217,14 +219,14 @@ export function startGame(state: BsPokerState, playerId: string, seed: number): 
   }
   const players = state.players.map((p) => ({
     ...p,
-    name: p.name.trim() || "Player",
+    name: cleanName(p.name) ?? "Player",
     cardCount: settings.startingCards,
     hand: [],
     status: "active" as const,
     eliminatedInRound: undefined,
   }));
   // Random first bidder.
-  const [r, rngState] = nextRandom(seed >>> 0);
+  const [r, rngState] = nextRandom(seedRng(seed));
   const starter = players[Math.floor(r * players.length)];
   return succeed(dealRound({ ...state, settings, players, rngState, round: 1, winnerId: null }, starter.id));
 }
@@ -368,8 +370,8 @@ export interface BsPokerView extends Omit<BsPokerState, "players" | "rngState" |
  * Redacted state for one viewer. In online play this is what the server sends each
  * client; `rngState` and the burned cards are always stripped: they'd reveal hidden cards.
  */
-export function getPlayerView(state: BsPokerState, viewer: string | "god"): BsPokerView {
-  const godMode = viewer === "god";
+export function getPlayerView(state: BsPokerState, viewer: ViewerId): BsPokerView {
+  const godMode = viewer === GOD_VIEW;
   const reveal = state.phase === "showdown" || state.phase === "game_over";
   const { rngState: _secret, burnCards, players, ...rest } = state;
   void _secret;

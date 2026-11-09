@@ -118,7 +118,7 @@ describe("online room", () => {
     const mallory = await generateIdentity();
     const fakeKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt"]);
     void mallory;
-    const forged = { from: "ann", sealed: await seal(fakeKey, { n: Date.now() + 1e6, action: { type: "RENAME_PLAYER", playerId: "ann", name: "Pwned" } }) };
+    const forged = { from: "ann", sealed: await seal(fakeKey, { n: Date.now() + 1e6, action: { type: "RENAME_PLAYER", playerId: "ann", name: "Pwned" } }, "action:ann") };
     const attacker = hub.factory("ABCD");
     await attacker.send("action", forged);
     await settle();
@@ -293,7 +293,7 @@ describe("online room", () => {
 
       const fakeKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const attacker = hub.factory("ABCD");
-      await attacker.send("chat", { from: "ann", sealed: await seal(fakeKey, { n: Date.now() + 1e6, chat: { kind: "chat", text: "forged" } }) });
+      await attacker.send("chat", { from: "ann", sealed: await seal(fakeKey, { n: Date.now() + 1e6, chat: { kind: "chat", text: "forged" } }, "chat-in:ann") });
       await ann.say("chat", "real");
       await settle();
       await new Promise((r) => setTimeout(r, 300));

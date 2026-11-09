@@ -1,4 +1,4 @@
-import type { Card } from "./cards";
+import type { Card, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 /** "classic": flip the top card. "tactical": hold three cards and pick one each battle. */
@@ -66,7 +66,7 @@ export interface WarState {
   players: WarPlayer[];
   hostId: string;
   /** SECRET: PRNG state. */
-  rngState: number;
+  rngState: RngState;
   sides: [WarSide, WarSide] | null;
   /** "battle": waiting for both to flip. "war": a tie is on the table; flip again to settle it. */
   stage: "battle" | "war";
@@ -85,7 +85,7 @@ export type WarAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<WarSettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   /** Classic: flip your top card (or, in a War, your bounty and deciding card). */
   | { type: "FLIP"; playerId: string }
   /** Tactical: play this card from your hand. */

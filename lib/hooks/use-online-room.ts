@@ -3,13 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RoomGuest, RoomHost, type GameDefinition, type GuestStatus, type RoomAction, type RoomState } from "@/lib/multiplayer/room";
 import type { ChatMessage } from "@/lib/chat";
+import { fingerprint } from "@/lib/multiplayer/crypto";
 import {
   clearSession,
   getTransport,
+  linkFingerprint,
+  loadHostPin,
   loadHostSnapshot,
   loadSession,
+  saveHostPin,
   saveHostSnapshot,
   sessionIdentity,
+  showFingerprintInUrl,
   type RoomSession,
   type TransportKind,
 } from "@/lib/multiplayer/session";
@@ -30,6 +35,8 @@ export type OnlineRoom<S, V> =
       /** The full game state — host only, never sent anywhere. Bots are run from it. */
       hostState: S | null;
       chat: ChatMessage[];
+      /** Host only: newcomers are turned away. */
+      locked: boolean;
     };
 
 /** How long a new host listens for an existing host before claiming the code. */
@@ -96,6 +103,7 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
             error: prev.phase === "ready" ? prev.error : null,
             hostState: host.getState(),
             chat: host.getChat(),
+            locked: host.isLocked(),
           }));
         };
         const unsubscribe = host.subscribe(publish);
@@ -105,6 +113,8 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
         };
         await host.start();
         if (cancelled) return;
+        // The invite link carries this host's key, so guests who follow it can't be fooled by an impostor.
+        showFingerprintInUrl(await fingerprint(identity.publicKey));
         if (!snapshot) {
           await new Promise((r) => setTimeout(r, CLAIM_WAIT_MS));
           if (cancelled) return;
@@ -117,7 +127,14 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
         }
         if (!cancelled) publish();
       } else {
-        const guest = new RoomGuest<A, V>(channel, identity, meta);
+        const guest = new RoomGuest<A, V>(channel, identity, meta, {
+          fingerprint: linkFingerprint(),
+          pinnedKey: loadHostPin(roomKey),
+          onTrusted: (publicKey, fp) => {
+            saveHostPin(roomKey, publicKey);
+            showFingerprintInUrl(fp);
+          },
+        });
         guestRef.current = guest;
         const publish = () => {
           const snap = guest.getSnapshot();
@@ -132,6 +149,7 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
             error: snap.error,
             hostState: null,
             chat: snap.chat,
+            locked: false,
           });
         };
         const unsubscribe = guest.subscribe(publish);
@@ -170,6 +188,9 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
 
   const removePlayer = useCallback((playerId: string) => hostRef.current?.removePlayer(playerId), []);
 
+  /** Host only: stop letting new people in (anyone who already had a seat can still come back). */
+  const setLocked = useCallback((locked: boolean) => hostRef.current?.setLocked(locked), []);
+
   /** Say something in the room chat as this player. */
   const say = useCallback((kind: "chat" | "reaction", text: string) => {
     const host = hostRef.current;
@@ -187,5 +208,5 @@ export function useOnlineRoom<S extends RoomState, A extends RoomAction, V>(
     clearSession(roomKey);
   }, [roomKey]);
 
-  return { room, transport, setSession, act, removePlayer, leave, say, postAsBot };
+  return { room, transport, setSession, act, removePlayer, setLocked, leave, say, postAsBot };
 }

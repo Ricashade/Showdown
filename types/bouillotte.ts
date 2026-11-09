@@ -1,4 +1,4 @@
-import type { Card, Rank, Suit } from "./cards";
+import type { Card, Rank, Suit, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 /** "everyone": each player antes. "dealer": the dealer antes for the whole table. */
@@ -78,7 +78,7 @@ export interface BouillotteState {
   players: BouillottePlayer[];
   hostId: string;
   /** SECRET: PRNG state. */
-  rngState: number;
+  rngState: RngState;
   handNumber: number;
   dealerId: string | null;
   /** The communal card turned face up. */
@@ -102,7 +102,7 @@ export type BouillotteAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<BouillotteSettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   | { type: "CARRE"; playerId: string; post: boolean }
   /** Pass while nobody has opened. */
   | { type: "CHECK"; playerId: string }

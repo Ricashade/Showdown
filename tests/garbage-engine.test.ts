@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GOD_VIEW } from "@/types/game";
 import type { GarbageAction, GarbageSettings, GarbageState } from "@/types/garbage";
 import { applyGarbageAction, cardRole, createGarbageRoom, getGarbageLegal, getGarbageView, legalSlots, GARBAGE_DEFAULTS } from "@/lib/garbage-engine";
 import { chooseWildSlot, garbageBots, observeGarbage } from "@/lib/bot-ai";
@@ -203,7 +204,7 @@ describe("rounds and winning", () => {
 describe("what players see", () => {
   it("keeps face-down cards and the draw pile hidden from everyone, owner included", () => {
     const s = rig(game(["a", "b"]), { turn: "a", boards: { a: "2C 3C 5C", b: "9D 8D 7D" }, stock: "4S" });
-    for (const viewer of ["a", "b", "god"]) {
+    for (const viewer of ["a", "b", GOD_VIEW] as const) {
       const v = getGarbageView(s, viewer);
       const json = JSON.stringify(v);
       for (const id of ["2C", "3C", "5C", "9D", "4S"]) expect(json).not.toContain(`"${id}"`);

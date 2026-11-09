@@ -1,4 +1,4 @@
-import type { Card, Rank } from "./cards";
+import type { Card, Rank, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 export interface GoFishSettings {
@@ -53,7 +53,7 @@ export interface GoFishState {
   players: GoFishPlayer[];
   hostId: string;
   /** SECRET: PRNG state. */
-  rngState: number;
+  rngState: RngState;
   /** SECRET: the draw pile ("the pond"), top card first. */
   pond: Card[];
   currentTurnId: string | null;
@@ -70,7 +70,7 @@ export type GoFishAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<GoFishSettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   /** Ask another player for every card of a rank you hold. */
   | { type: "ASK"; playerId: string; targetId: string; rank: Rank }
   | { type: "RETURN_TO_LOBBY"; playerId: string };

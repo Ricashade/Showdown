@@ -1,4 +1,4 @@
-import type { Card } from "./cards";
+import type { Card, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 export interface BlackjackSettings {
@@ -65,7 +65,7 @@ export interface BlackjackState {
   players: BlackjackPlayer[];
   hostId: string;
   /** SECRET: PRNG state. */
-  rngState: number;
+  rngState: RngState;
   /** SECRET: the cards left in the shoe, next card first. */
   shoe: Card[];
   /** When the shoe gets this small, it's reshuffled before the next deal. */
@@ -86,7 +86,7 @@ export type BlackjackAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<BlackjackSettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   /** Amount 0 takes the bet back. */
   | { type: "PLACE_BET"; playerId: string; amount: number }
   | { type: "INSURANCE"; playerId: string; take: boolean }

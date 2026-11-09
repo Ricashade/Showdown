@@ -8,10 +8,11 @@
  * since changed still lands if it fits the new top card; otherwise it's too slow. When nobody
  * can go, a spare turns onto each pile. First to play every card wins.
  */
+import { cleanName } from "./names";
 import type { Card, Rank } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import { HAND_SLOTS, type SpeedAction, type SpeedEvent, type SpeedPlayer, type SpeedSettings, type SpeedSide, type SpeedState, type SpeedWinBy } from "@/types/speed";
-import { createDeck, nextRandom, shuffle } from "./cards";
+import { createDeck, nextRandom, shuffle, seedRng } from "./cards";
 import type { GameDefinition } from "./multiplayer/room";
 
 export const SPEED_MIN_PLAYERS = 2;
@@ -46,7 +47,7 @@ export function sanitizeSpeedSettings(s: Partial<SpeedSettings>): SpeedSettings 
 
 const seat = (seed: PlayerSeed, isHost: boolean): SpeedPlayer => ({
   id: seed.id,
-  name: seed.name.trim() || "Player",
+  name: cleanName(seed.name) ?? "Player",
   isBot: !!seed.isBot,
   ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
   isHost,
@@ -61,7 +62,7 @@ export function createSpeedRoom(params: { roomId: string; host: PlayerSeed; sett
     settings: sanitizeSpeedSettings({ ...SPEED_DEFAULTS, ...params.settings }),
     players: [seat(params.host, true)],
     hostId: params.host.id,
-    rngState: 0,
+    rngState: seedRng(0),
     sides: null,
     piles: [[], []],
     spares: [[], []],
@@ -258,7 +259,8 @@ export function applySpeedAction(state: SpeedState, action: SpeedAction, now = 0
     case "RENAME_PLAYER": {
       if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
       if (!state.players.some((p) => p.id === action.playerId)) return fail(state, "Player not in room");
-      const name = action.name.slice(0, 20);
+      const name = cleanName(action.name);
+      if (!name) return fail(state, "Pick a name");
       return succeed({ ...state, players: state.players.map((p) => (p.id === action.playerId ? { ...p, name } : p)) });
     }
     case "UPDATE_SETTINGS": {
@@ -271,7 +273,7 @@ export function applySpeedAction(state: SpeedState, action: SpeedAction, now = 0
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
       if (state.players.length < SPEED_MIN_PLAYERS) return fail(state, "Speed needs two players");
       const s = structuredClone(resetToLobby(state));
-      const [, rng] = nextRandom(action.seed >>> 0);
+      const [, rng] = nextRandom(seedRng(action.seed));
       const { result, rngState } = shuffle(createDeck(false), rng);
       s.rngState = rngState;
       const deck = [...result];
@@ -363,8 +365,8 @@ export interface SpeedView extends Omit<SpeedState, "rngState" | "sides" | "pile
 }
 
 /** What one player (or spectator) sees: your own hand, the piles, and how many cards everyone has. */
-export function getSpeedView(state: SpeedState, viewer: string | "god"): SpeedView {
-  const godMode = viewer === "god";
+export function getSpeedView(state: SpeedState, viewer: ViewerId): SpeedView {
+  const godMode = viewer === GOD_VIEW;
   const { rngState: _r, sides, piles, spares, ...rest } = state;
   void _r;
   const hidden = state.phase === "countdown";

@@ -7,10 +7,11 @@
  * on 2s (as many as its tier allows) or on a weaker bomb. When everyone else has passed, the
  * last player to play leads again. First to empty their hand wins.
  */
+import { cleanName } from "./names";
 import type { Card } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import type { BombTiebreaker, Combo, ThirteenAction, ThirteenPlay, ThirteenPlayer, ThirteenSeat, ThirteenSettings, ThirteenState } from "@/types/thirteen";
-import { createDeck, nextRandom, shuffle } from "./cards";
+import { createDeck, nextRandom, shuffle, seedRng } from "./cards";
 import { beats, comboKey, describeCombo, isBombable, readCombos } from "./thirteen-combos";
 import type { GameDefinition } from "./multiplayer/room";
 
@@ -43,7 +44,7 @@ export function sanitizeThirteenSettings(s: Partial<ThirteenSettings>): Thirteen
 
 const seat = (seed: PlayerSeed, isHost: boolean): ThirteenPlayer => ({
   id: seed.id,
-  name: seed.name.trim() || "Player",
+  name: cleanName(seed.name) ?? "Player",
   isBot: !!seed.isBot,
   ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
   isHost,
@@ -58,7 +59,7 @@ export function createThirteenRoom(params: { roomId: string; host: PlayerSeed; s
     settings: sanitizeThirteenSettings({ ...THIRTEEN_DEFAULTS, ...params.settings }),
     players: [seat(params.host, true)],
     hostId: params.host.id,
-    rngState: 0,
+    rngState: seedRng(0),
     seats: null,
     currentTurnId: null,
     trick: [],
@@ -255,7 +256,8 @@ export function applyThirteenAction(state: ThirteenState, action: ThirteenAction
     case "RENAME_PLAYER": {
       if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
       if (!state.players.some((p) => p.id === action.playerId)) return fail(state, "Player not in room");
-      const name = action.name.slice(0, 20);
+      const name = cleanName(action.name);
+      if (!name) return fail(state, "Pick a name");
       return succeed({ ...state, players: state.players.map((p) => (p.id === action.playerId ? { ...p, name } : p)) });
     }
     case "UPDATE_SETTINGS": {
@@ -268,7 +270,7 @@ export function applyThirteenAction(state: ThirteenState, action: ThirteenAction
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
       if (state.players.length < THIRTEEN_MIN_PLAYERS) return fail(state, "Thirteen needs three players");
       const s = structuredClone(resetToLobby(state));
-      const [, rng] = nextRandom(action.seed >>> 0);
+      const [, rng] = nextRandom(seedRng(action.seed));
       const { result, rngState } = shuffle(createDeck(true), rng);
       s.rngState = rngState;
       const ids = trioOf(s);
@@ -312,8 +314,8 @@ export interface ThirteenView extends Omit<ThirteenState, "rngState" | "seats"> 
 }
 
 /** What one player (or spectator) sees: their own hand, everyone's card count, and the table. */
-export function getThirteenView(state: ThirteenState, viewer: string | "god"): ThirteenView {
-  const godMode = viewer === "god";
+export function getThirteenView(state: ThirteenState, viewer: ViewerId): ThirteenView {
+  const godMode = viewer === GOD_VIEW;
   const { rngState: _r, seats, ...rest } = state;
   void _r;
   return {

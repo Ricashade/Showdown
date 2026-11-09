@@ -12,7 +12,8 @@
 import type { ActionResult, PlayerSeed } from "@/types/game";
 import { CHAT_HISTORY, CHAT_MIN_GAP_MS, cleanChat, isChatMessage, makeChat, mergeChat, type ChatMessage } from "@/lib/chat";
 import type { PresenceMeta, RoomChannel } from "./channel";
-import { deriveSharedKey, isSealed, open, seal, type Identity, type Sealed } from "./crypto";
+import { deriveSharedKey, fingerprint, isSealed, open, seal, type Identity, type Sealed } from "./crypto";
+import { isPlayerId } from "./room-code";
 
 /** The parts of a game's state the room needs. */
 export interface RoomState {
@@ -37,6 +38,10 @@ export interface GameDefinition<S extends RoomState, A extends RoomAction, V> {
 }
 
 export type SeatStatus = "seated" | "rejected" | "removed" | "closed";
+const SEAT_STATUSES: readonly SeatStatus[] = ["seated", "rejected", "removed", "closed"];
+
+/** Answer a guest's "hello" (a full re-send of the state) at most this often. */
+const HELLO_GAP_MS = 1000;
 
 /** What the host sends one guest (always sealed with that guest's key). */
 export interface GuestEnvelope<V> {
@@ -89,6 +94,9 @@ export interface HostSnapshot<S> {
   lastNonce: [string, number][];
   removed: string[];
   chat?: ChatMessage[];
+  /** Locked: only people who already had a seat tonight get back in. */
+  locked?: boolean;
+  admitted?: string[];
 }
 
 export class RoomHost<S extends RoomState, A extends RoomAction, V> {
@@ -107,6 +115,10 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
   private closing = false;
   private chat: ChatMessage[];
   private lastChatAt = new Map<string, number>();
+  private lastHelloAt = new Map<string, number>();
+  private locked: boolean;
+  /** Everyone who has had a seat in this room; they may come back while it's locked. */
+  private admitted: Set<string>;
 
   constructor(
     private game: GameDefinition<S, A, V>,
@@ -122,6 +134,8 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
     this.lastNonce = new Map(snap?.lastNonce ?? []);
     this.removed = new Set(snap?.removed ?? []);
     this.chat = (snap?.chat ?? []).filter(isChatMessage).slice(-CHAT_HISTORY);
+    this.locked = !!snap?.locked;
+    this.admitted = new Set(snap?.admitted ?? this.state.players.map((p) => p.id));
   }
 
   get hostId() {
@@ -152,7 +166,22 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
       lastNonce: [...this.lastNonce],
       removed: [...this.removed],
       chat: this.chat,
+      locked: this.locked,
+      admitted: [...this.admitted],
     };
+  }
+
+  isLocked() {
+    return this.locked;
+  }
+
+  /** Host: stop (or start again) letting new people in. Anyone who already had a seat can still come back. */
+  setLocked(locked: boolean) {
+    if (this.locked === locked) return;
+    this.locked = locked;
+    if (!locked) this.seatGuests({});
+    this.notify();
+    this.enqueue(() => this.publish());
   }
 
   getChat() {
@@ -184,9 +213,14 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
     // A guest that just (re)connected asks for the latest state, and the chat so far.
     this.channel.onMessage("hello", (p) =>
       this.enqueue(async () => {
-        await this.publish();
+        // Anyone can say hello, so only answer people we know, and not faster than once a second each.
         const from = (p as { from?: unknown } | null)?.from;
-        if (typeof from === "string" && this.chat.length) await this.publishChat(this.chat, from);
+        if (!isPlayerId(from) || !this.sharedKeys.has(from)) return;
+        const now = Date.now();
+        if (now - (this.lastHelloAt.get(from) ?? 0) < HELLO_GAP_MS) return;
+        this.lastHelloAt.set(from, now);
+        await this.publish();
+        if (this.chat.length) await this.publishChat(this.chat, from);
       }),
     );
     await this.channel.connect(this.meta);
@@ -247,12 +281,20 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
     const connected = new Map<string, PresenceMeta>();
 
     for (const m of members) {
-      if (m.role !== "guest" || m.playerId === this.hostId) continue;
+      if (m.role !== "guest" || m.playerId === this.hostId || !isPlayerId(m.playerId)) continue;
+      // Bots are the host's own; nobody joins as one.
+      if (this.state.players.some((p) => p.id === m.playerId && p.isBot)) continue;
       const known = this.guestPublicKeys.get(m.playerId);
       if (known && known !== m.publicKey) continue; // Someone else claiming this seat.
       if (!this.sharedKeys.has(m.playerId)) {
+        let key: CryptoKey;
+        try {
+          key = await deriveSharedKey(this.identity, m.publicKey);
+        } catch {
+          continue; // Not a real public key: skip them, not everyone else.
+        }
         this.guestPublicKeys.set(m.playerId, m.publicKey);
-        this.sharedKeys.set(m.playerId, await deriveSharedKey(this.identity, m.publicKey));
+        this.sharedKeys.set(m.playerId, key);
       }
       connected.set(m.playerId, m);
     }
@@ -268,8 +310,13 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
     if (open) {
       for (const [playerId, m] of this.connected) {
         if (this.state.players.some((p) => p.id === playerId) || this.removed.has(playerId)) continue;
+        if (this.locked && !this.admitted.has(playerId)) {
+          errors[playerId] = "This room is locked.";
+          continue;
+        }
         const error = this.apply(this.game.join({ id: playerId, name: m.name }));
         if (error) errors[playerId] = this.state.players.length >= this.game.maxPlayers ? "This table is full." : error;
+        else this.admitted.add(playerId);
       }
     }
     if (this.state.phase === "lobby") {
@@ -286,14 +333,15 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
     if (!key) return;
     let sealedAction: SealedAction<A>;
     try {
-      sealedAction = await open<SealedAction<A>>(key, msg.sealed);
+      sealedAction = await open<SealedAction<A>>(key, msg.sealed, `action:${msg.from}`);
     } catch {
       return; // Not sealed with this player's key: forged or tampered.
     }
-    if (!(sealedAction.n > (this.lastNonce.get(msg.from) ?? 0))) return; // Replay.
+    if (typeof sealedAction?.n !== "number" || !(sealedAction.n > (this.lastNonce.get(msg.from) ?? 0))) return; // Replay.
     this.lastNonce.set(msg.from, sealedAction.n);
 
     const { action } = sealedAction;
+    if (!action || typeof action !== "object" || typeof action.type !== "string") return;
     if (this.removed.has(msg.from)) return;
     // Guests may only act as themselves; joining (which has no playerId) happens through presence.
     if (typeof action?.playerId !== "string" || action.playerId !== msg.from) {
@@ -312,11 +360,11 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
     if (!key || this.removed.has(msg.from)) return;
     let sealedChat: SealedChat;
     try {
-      sealedChat = await open<SealedChat>(key, msg.sealed);
+      sealedChat = await open<SealedChat>(key, msg.sealed, `chat-in:${msg.from}`);
     } catch {
       return; // Not sealed with this player's key.
     }
-    if (!(sealedChat.n > (this.lastNonce.get(msg.from) ?? 0))) return; // Replay.
+    if (typeof sealedChat?.n !== "number" || !(sealedChat.n > (this.lastNonce.get(msg.from) ?? 0))) return; // Replay.
     this.lastNonce.set(msg.from, sealedChat.n);
     const clean = cleanChat(sealedChat.chat?.kind, sealedChat.chat?.text);
     if (!clean) return;
@@ -342,7 +390,7 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
     const envelopes: Record<string, Sealed> = {};
     for (const [playerId, key] of this.sharedKeys) {
       if (this.removed.has(playerId) || (onlyTo && playerId !== onlyTo)) continue;
-      envelopes[playerId] = await seal(key, { messages } satisfies ChatEnvelope);
+      envelopes[playerId] = await seal(key, { messages } satisfies ChatEnvelope, `chat-out:${playerId}`);
     }
     if (Object.keys(envelopes).length) await this.channel.send("chat", { envelopes } satisfies StateMessage);
   }
@@ -371,7 +419,7 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
             ? "This game has already started. Ask the host to start a new one, then join again."
             : undefined),
       };
-      envelopes[playerId] = await seal(key, envelope);
+      envelopes[playerId] = await seal(key, envelope, `state:${playerId}`);
     }
     this.notify();
     if (Object.keys(envelopes).length) await this.channel.send("state", { envelopes } satisfies StateMessage);
@@ -384,6 +432,8 @@ export class RoomHost<S extends RoomState, A extends RoomAction, V> {
 
 export type GuestStatus =
   | "connecting"
+  /** Someone is answering on this code, but not the host whose link this is. */
+  | "wrong-host"
   | "finding-host"
   | "waiting-for-seat"
   | "seated"
@@ -405,6 +455,16 @@ export interface GuestSnapshot<V> {
 
 const NOT_FOUND_MS = 7000;
 
+/** Which host a guest will trust. */
+export interface HostTrust {
+  /** From the invite link (after "#"): only the host whose key has this fingerprint. */
+  fingerprint?: string | null;
+  /** The host this tab already found (kept through a refresh). */
+  pinnedKey?: string | null;
+  /** Called once a host is trusted, to remember it. */
+  onTrusted?: (publicKey: string, fingerprint: string) => void;
+}
+
 export class RoomGuest<A extends RoomAction, V> {
   private hostKey: CryptoKey | null = null;
   private hostPublicKey: string | null = null;
@@ -419,6 +479,7 @@ export class RoomGuest<A extends RoomAction, V> {
     private channel: RoomChannel,
     private identity: Identity,
     private meta: PresenceMeta,
+    private trust: HostTrust = {},
   ) {}
 
   get playerId() {
@@ -453,14 +514,14 @@ export class RoomGuest<A extends RoomAction, V> {
   /** Seal a move with our key and send it to the host. */
   async act(action: A) {
     if (!this.hostKey) return;
-    const sealed = await seal(this.hostKey, { n: this.nextNonce(), action } satisfies SealedAction<A>);
+    const sealed = await seal(this.hostKey, { n: this.nextNonce(), action } satisfies SealedAction<A>, `action:${this.meta.playerId}`);
     await this.channel.send("action", { from: this.meta.playerId, sealed } satisfies ActionMessage);
   }
 
   /** Say something in the room chat. It shows once the host has passed it on. */
   async say(kind: "chat" | "reaction", text: string) {
     if (!this.hostKey || !cleanChat(kind, text)) return;
-    const sealed = await seal(this.hostKey, { n: this.nextNonce(), chat: { kind, text } } satisfies SealedChat);
+    const sealed = await seal(this.hostKey, { n: this.nextNonce(), chat: { kind, text } } satisfies SealedChat, `chat-in:${this.meta.playerId}`);
     await this.channel.send("chat", { from: this.meta.playerId, sealed } satisfies ActionMessage);
   }
 
@@ -475,7 +536,7 @@ export class RoomGuest<A extends RoomAction, V> {
     if (!this.hostKey || !isSealed(sealed)) return;
     let env: ChatEnvelope;
     try {
-      env = await open<ChatEnvelope>(this.hostKey, sealed);
+      env = await open<ChatEnvelope>(this.hostKey, sealed, `chat-out:${this.meta.playerId}`);
     } catch {
       return;
     }
@@ -487,21 +548,42 @@ export class RoomGuest<A extends RoomAction, V> {
     this.listeners.forEach((fn) => fn());
   }
 
+  /** The host to trust among those claiming the room, or null. */
+  private async pickHost(members: PresenceMeta[]): Promise<{ host: PresenceMeta; fp: string } | null> {
+    const claims = members.filter((m) => m.role === "host").sort((a, b) => a.joinedAt - b.joinedAt);
+    // Once a host is trusted (from the link, or the first one found), nobody else can take over.
+    const wanted = this.trust.fingerprint ?? null;
+    const pinned = this.hostPublicKey ?? this.trust.pinnedKey ?? null;
+    for (const m of claims) {
+      if (pinned && m.publicKey !== pinned) continue;
+      const fp = await fingerprint(m.publicKey).catch(() => null);
+      if (!fp || (wanted && fp !== wanted)) continue;
+      return { host: m, fp };
+    }
+    return null;
+  }
+
   private async onPresence(members: PresenceMeta[]) {
-    // If two clients claim to host, trust the one that joined first.
-    const host = members.filter((m) => m.role === "host").sort((a, b) => a.joinedAt - b.joinedAt)[0];
     if (this.snap.status === "closed" || this.snap.status === "removed") return;
-    if (!host) {
+    const picked = await this.pickHost(members);
+    if (!picked) {
       if (this.hostKey) this.update({ status: "host-away" });
+      else if (members.some((m) => m.role === "host")) this.update({ status: "wrong-host" });
       return;
     }
+    const { host, fp } = picked;
     const newHostKey = host.publicKey !== this.hostPublicKey;
     if (newHostKey) {
+      try {
+        this.hostKey = await deriveSharedKey(this.identity, host.publicKey);
+      } catch {
+        return;
+      }
       this.hostPublicKey = host.publicKey;
-      this.hostKey = await deriveSharedKey(this.identity, host.publicKey);
-      this.lastSeq = 0; // Only changes if the host lost its saved session and started over.
+      this.lastSeq = 0;
+      this.trust.onTrusted?.(host.publicKey, fp);
     }
-    const wasLooking = ["host-away", "finding-host", "not-found", "connecting"].includes(this.snap.status);
+    const wasLooking = ["host-away", "finding-host", "not-found", "connecting", "wrong-host"].includes(this.snap.status);
     if (wasLooking) this.update({ status: "waiting-for-seat", hostName: host.name });
     // Ask for the current state only when we've just found the host.
     if (newHostKey || wasLooking) await this.channel.send("hello", { from: this.meta.playerId });
@@ -512,17 +594,18 @@ export class RoomGuest<A extends RoomAction, V> {
     if (!this.hostKey || !isSealed(sealed)) return;
     let env: GuestEnvelope<V>;
     try {
-      env = await open<GuestEnvelope<V>>(this.hostKey, sealed);
+      env = await open<GuestEnvelope<V>>(this.hostKey, sealed, `state:${this.meta.playerId}`);
     } catch {
       return;
     }
+    if (!env || typeof env.seq !== "number" || !Number.isSafeInteger(env.seq) || !SEAT_STATUSES.includes(env.status)) return;
     if (env.seq <= this.lastSeq) return;
     this.lastSeq = env.seq;
     this.update({
       status: env.status === "seated" ? "seated" : env.status,
       view: env.view,
-      connectedIds: env.connectedIds,
-      ...(env.error ? { error: { message: env.error, id: ++this.errorId } } : {}),
+      connectedIds: Array.isArray(env.connectedIds) ? env.connectedIds.filter((id) => typeof id === "string") : [],
+      ...(typeof env.error === "string" && env.error ? { error: { message: env.error.slice(0, 200), id: ++this.errorId } } : {}),
     });
   }
 }

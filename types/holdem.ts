@@ -1,4 +1,4 @@
-import type { Card } from "./cards";
+import type { Card, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 export interface BlindIncrease {
@@ -75,7 +75,7 @@ export interface HoldemState {
   players: HoldemPlayer[];
   hostId: string;
   /** SECRET: PRNG state. */
-  rngState: number;
+  rngState: RngState;
   handNumber: number;
   buttonId: string | null;
   smallBlindId: string | null;
@@ -106,7 +106,7 @@ export type HoldemAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<HoldemSettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   | { type: "FOLD"; playerId: string }
   | { type: "CHECK"; playerId: string }
   | { type: "CALL"; playerId: string }

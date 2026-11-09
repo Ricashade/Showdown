@@ -5,8 +5,9 @@
  * Time comes in from outside (`now`), so the reducer stays pure: the host stamps its own clock
  * on every action, and a driver on the host fires TIME_UP / DEALER_STEP / NEXT_ROUND when due.
  */
+import { cleanName } from "./names";
 import type { Card } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import type {
   BlackjackAction,
   BlackjackHand,
@@ -16,7 +17,7 @@ import type {
   HandOutcome,
   RoundResult,
 } from "@/types/blackjack";
-import { createDeck, shuffle } from "./cards";
+import { createDeck, shuffle, seedRng } from "./cards";
 import type { GameDefinition } from "./multiplayer/room";
 
 export const BLACKJACK_MIN_PLAYERS = 1;
@@ -137,7 +138,7 @@ export function sanitizeBlackjackSettings(s: Partial<BlackjackSettings>): Blackj
 function seat(seed: PlayerSeed, isHost: boolean, chips: number): BlackjackPlayer {
   return {
     id: seed.id,
-    name: seed.name.trim() || "Player",
+    name: cleanName(seed.name) ?? "Player",
     isBot: !!seed.isBot,
     ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
     isHost,
@@ -160,7 +161,7 @@ export function createBlackjackRoom(params: { roomId: string; host: PlayerSeed; 
     settings,
     players: [seat(params.host, true, settings.startingChips)],
     hostId: params.host.id,
-    rngState: 0,
+    rngState: seedRng(0),
     shoe: [],
     cutCard: 0,
     dealer: { cards: [], holeRevealed: false },
@@ -411,7 +412,8 @@ export function applyBlackjackAction(state: BlackjackState, action: BlackjackAct
     case "RENAME_PLAYER": {
       if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
       if (!getPlayer(state, action.playerId)) return fail(state, "Player not in room");
-      const name = action.name.slice(0, 20);
+      const name = cleanName(action.name);
+      if (!name) return fail(state, "Pick a name");
       return succeed({ ...state, players: state.players.map((p) => (p.id === action.playerId ? { ...p, name } : p)) });
     }
     case "UPDATE_SETTINGS": {
@@ -425,7 +427,7 @@ export function applyBlackjackAction(state: BlackjackState, action: BlackjackAct
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
       if (state.players.length < BLACKJACK_MIN_PLAYERS) return fail(state, `Need at least ${BLACKJACK_MIN_PLAYERS} player`);
       const s = structuredClone(resetToLobby(state));
-      s.rngState = action.seed >>> 0;
+      s.rngState = seedRng(action.seed);
       newShoe(s);
       return succeed(beginBetting(s, now));
     }
@@ -515,8 +517,8 @@ export interface BlackjackView extends Omit<BlackjackState, "rngState" | "shoe" 
  * What one player may see. Every player's cards are face up in blackjack; the shoe order and
  * the dealer's hole card never leave the host.
  */
-export function getBlackjackView(state: BlackjackState, viewer: string | "god"): BlackjackView {
-  const godMode = viewer === "god";
+export function getBlackjackView(state: BlackjackState, viewer: ViewerId): BlackjackView {
+  const godMode = viewer === GOD_VIEW;
   const { rngState: _r, shoe, dealer, ...rest } = state;
   void _r;
   return {

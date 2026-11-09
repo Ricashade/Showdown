@@ -1,4 +1,4 @@
-import type { Card } from "./cards";
+import type { Card, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 export type FaceRole = "wild" | "dead";
@@ -58,7 +58,7 @@ export interface GarbageState {
   players: GarbagePlayer[];
   hostId: string;
   /** SECRET: PRNG state. */
-  rngState: number;
+  rngState: RngState;
   /** SECRET: the draw pile, top card first. */
   stock: Card[];
   /** Face up, oldest first; the last card is the top. */
@@ -81,7 +81,7 @@ export type GarbageAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<GarbageSettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   | { type: "DRAW"; playerId: string; source: "stock" | "discard" }
   /** Put the card in hand into one of your slots (0-based). */
   | { type: "PLACE"; playerId: string; slot: number }

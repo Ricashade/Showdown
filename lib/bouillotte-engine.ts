@@ -8,8 +8,9 @@
  * folded ones too, and the suit with the most points across the table (Le Point) decides: the
  * highest card of that suit still in the hand takes the pot.
  */
+import { cleanName } from "./names";
 import type { Card, Rank, StandardCard, Suit } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import type {
   AnteBy,
   BouillotteAction,
@@ -21,7 +22,7 @@ import type {
   BouillotteState,
   Brelan,
 } from "@/types/bouillotte";
-import { nextRandom, shuffle, SUITS } from "./cards";
+import { nextRandom, shuffle, SUITS, seedRng } from "./cards";
 import { buildPots } from "./holdem-pots";
 import type { GameDefinition } from "./multiplayer/room";
 
@@ -53,7 +54,7 @@ export function sanitizeBouillotteSettings(s: Partial<BouillotteSettings>): Boui
 
 const seat = (seed: PlayerSeed, isHost: boolean, chips = 0): BouillottePlayer => ({
   id: seed.id,
-  name: seed.name.trim() || "Player",
+  name: cleanName(seed.name) ?? "Player",
   isBot: !!seed.isBot,
   ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
   isHost,
@@ -78,7 +79,7 @@ export function createBouillotteRoom(params: { roomId: string; host: PlayerSeed;
     settings: sanitizeBouillotteSettings({ ...BOUILLOTTE_DEFAULTS, ...params.settings }),
     players: [seat(params.host, true)],
     hostId: params.host.id,
-    rngState: 0,
+    rngState: seedRng(0),
     handNumber: 0,
     dealerId: null,
     retourne: null,
@@ -379,6 +380,7 @@ function bet(state: BouillotteState, playerId: string, move: "check" | "call" | 
       break;
     case "raise":
     case "all_in": {
+      if (move === "raise" && !Number.isInteger(to)) return fail(state, "Pick an amount");
       const target = move === "all_in" ? p.bet + p.chips : to;
       if (target <= s.currentBet) {
         if (move === "raise") return fail(state, s.currentBet ? "Raise above the bet" : "Open for at least one chip");
@@ -435,7 +437,8 @@ export function applyBouillotteAction(state: BouillotteState, action: Bouillotte
     case "RENAME_PLAYER": {
       if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
       if (!state.players.some((p) => p.id === action.playerId)) return fail(state, "Player not in room");
-      const name = action.name.slice(0, 20);
+      const name = cleanName(action.name);
+      if (!name) return fail(state, "Pick a name");
       return succeed({ ...state, players: state.players.map((p) => (p.id === action.playerId ? { ...p, name } : p)) });
     }
     case "UPDATE_SETTINGS": {
@@ -448,7 +451,7 @@ export function applyBouillotteAction(state: BouillotteState, action: Bouillotte
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
       if (state.players.length < BOUILLOTTE_MIN_PLAYERS) return fail(state, "Bouillotte needs three players");
       const s = structuredClone(resetToLobby(state));
-      const [, rng] = nextRandom(action.seed >>> 0);
+      const [, rng] = nextRandom(seedRng(action.seed));
       s.rngState = rng;
       for (const p of s.players) p.chips = s.settings.startingChips;
       return succeed(startHand(s));
@@ -509,8 +512,8 @@ export interface BouillotteView extends Omit<BouillotteState, "rngState" | "stub
 }
 
 /** What one player (or spectator) sees: their own hand, and other hands only once they're turned up. */
-export function getBouillotteView(state: BouillotteState, viewer: string | "god"): BouillotteView {
-  const godMode = viewer === "god";
+export function getBouillotteView(state: BouillotteState, viewer: ViewerId): BouillotteView {
+  const godMode = viewer === GOD_VIEW;
   const { rngState: _r, stub, players, ...rest } = state;
   void _r;
   const shown = state.result?.revealed ?? {};

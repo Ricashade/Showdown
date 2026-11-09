@@ -2,8 +2,9 @@
  * Texas Hold'em (no-limit) as pure state transitions, run by the host (online) or the
  * local simulator. Each action works on a copy of the state and returns the new one.
  */
+import { cleanName } from "./names";
 import type { Card } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import type {
   HandResult,
   HoldemAction,
@@ -14,7 +15,7 @@ import type {
   PotResult,
   Street,
 } from "@/types/holdem";
-import { createDeck, nextRandom, shuffle } from "./cards";
+import { createDeck, nextRandom, shuffle, seedRng } from "./cards";
 import { bestHand, compareHands, type HandValue } from "./holdem-hand";
 import { buildPots, splitPot } from "./holdem-pots";
 import type { GameDefinition } from "./multiplayer/room";
@@ -361,7 +362,7 @@ function act(state: HoldemState, playerId: string, move: "fold" | "check" | "cal
 function seat(seed: PlayerSeed, isHost: boolean, chips: number): HoldemPlayer {
   return {
     id: seed.id,
-    name: seed.name.trim() || "Player",
+    name: cleanName(seed.name) ?? "Player",
     isBot: !!seed.isBot,
     ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
     isHost,
@@ -388,7 +389,7 @@ export function createHoldemRoom(params: { roomId: string; host: PlayerSeed; set
     settings,
     players: [seat(params.host, true, settings.startingChips)],
     hostId: params.host.id,
-    rngState: 0,
+    rngState: seedRng(0),
     handNumber: 0,
     buttonId: null,
     smallBlindId: null,
@@ -438,7 +439,8 @@ export function applyHoldemAction(state: HoldemState, action: HoldemAction): Res
     case "RENAME_PLAYER": {
       if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
       if (!getPlayer(state, action.playerId)) return fail(state, "Player not in room");
-      const name = action.name.slice(0, 20);
+      const name = cleanName(action.name);
+      if (!name) return fail(state, "Pick a name");
       return succeed({ ...state, players: state.players.map((p) => (p.id === action.playerId ? { ...p, name } : p)) });
     }
     case "UPDATE_SETTINGS": {
@@ -462,7 +464,7 @@ export function applyHoldemAction(state: HoldemState, action: HoldemAction): Res
       if (state.phase !== "lobby") return fail(state, "Game already started");
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
       if (state.players.length < HOLDEM_MIN_PLAYERS) return fail(state, `Need at least ${HOLDEM_MIN_PLAYERS} players`);
-      const [r, rngState] = nextRandom(action.seed >>> 0);
+      const [r, rngState] = nextRandom(seedRng(action.seed));
       const button = state.players[Math.floor(r * state.players.length)];
       const base = resetToLobby(state);
       return succeed(startHand({ ...base, rngState }, button.id));
@@ -510,8 +512,8 @@ export interface HoldemView extends Omit<HoldemState, "players" | "rngState" | "
 }
 
 /** What one player may see. The deck order, the unturned board and the burns never leave the host. */
-export function getHoldemView(state: HoldemState, viewer: string | "god"): HoldemView {
-  const godMode = viewer === "god";
+export function getHoldemView(state: HoldemState, viewer: ViewerId): HoldemView {
+  const godMode = viewer === GOD_VIEW;
   const { rngState: _r, boardCards, burnCards: _b, players, ...rest } = state;
   void _r;
   void _b;

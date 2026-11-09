@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GOD_VIEW } from "@/types/game";
 import type { BsPokerState } from "@/types/bs-poker";
 import type { Card, Rank, Suit } from "@/types/cards";
 import { applyAction, createRoom, getLegalActions, getPlayerView } from "@/lib/bs-poker-game";
@@ -37,7 +38,7 @@ describe("game loop", () => {
     expect(s.burnCards).toHaveLength(3);
     const ids = new Set([...s.burnCards, ...s.tableCards, ...s.players.flatMap((p) => p.hand)].map((x) => x.id));
     expect(ids.size).toBe(3 + 5 + 3);
-    for (const viewer of ["p1", "god"] as const) {
+    for (const viewer of ["p1", GOD_VIEW] as const) {
       const v = getPlayerView(s, viewer);
       expect("burnCards" in v).toBe(false);
       expect(v.burnCount).toBe(3);
@@ -160,7 +161,7 @@ describe("game loop", () => {
     expect("rngState" in v).toBe(false);
     expect(v.players.find((p) => p.id === "p1")!.hand).not.toBeNull();
     expect(v.players.find((p) => p.id === "p2")!.hand).toBeNull();
-    expect(getPlayerView(s, "god").players.every((p) => p.hand !== null)).toBe(true);
+    expect(getPlayerView(s, GOD_VIEW).players.every((p) => p.hand !== null)).toBe(true);
     // Table cards are face up for everyone.
     expect(getPlayerView(s, "p2").tableCards).toEqual(s.tableCards);
   });
