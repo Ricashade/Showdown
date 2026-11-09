@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible_Next, Big_Shoulders } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MotionProvider } from "@/components/ui/MotionProvider";
 import { IdleBackground } from "@/components/IdleBackground";
+import { Telemetry } from "@/components/Telemetry";
 import { RoomTransitionProvider } from "@/components/ui/RoomTransition";
 import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -27,8 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <IdleBackground />
           <RoomTransitionProvider>{children}</RoomTransitionProvider>
         </MotionProvider>
-        <Analytics />
-        <SpeedInsights />
+        <Telemetry />
       </body>
     </html>
   );

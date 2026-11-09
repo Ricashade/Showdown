@@ -6,10 +6,11 @@
  * bounty cards and one more face up, and the higher one takes the lot. Won cards are shuffled
  * back in when your draw pile runs out, so a game can't loop forever.
  */
+import { cleanName } from "./names";
 import type { Card } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import type { Laid, WarAction, WarClash, WarPlayer, WarSettings, WarSide, WarState } from "@/types/war";
-import { createDeck, nextRandom, shuffle } from "./cards";
+import { createDeck, nextRandom, shuffle, seedRng } from "./cards";
 import type { GameDefinition } from "./multiplayer/room";
 
 export const WAR_MIN_PLAYERS = 2;
@@ -37,7 +38,7 @@ export function sanitizeWarSettings(s: Partial<WarSettings>): WarSettings {
 
 const seat = (seed: PlayerSeed, isHost: boolean): WarPlayer => ({
   id: seed.id,
-  name: seed.name.trim() || "Player",
+  name: cleanName(seed.name) ?? "Player",
   isBot: !!seed.isBot,
   ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
   isHost,
@@ -52,7 +53,7 @@ export function createWarRoom(params: { roomId: string; host: PlayerSeed; settin
     settings: sanitizeWarSettings({ ...WAR_DEFAULTS, ...params.settings }),
     players: [seat(params.host, true)],
     hostId: params.host.id,
-    rngState: 0,
+    rngState: seedRng(0),
     sides: null,
     stage: "battle",
     table: {},
@@ -231,7 +232,8 @@ export function applyWarAction(state: WarState, action: WarAction): Result {
     case "RENAME_PLAYER": {
       if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
       if (!state.players.some((p) => p.id === action.playerId)) return fail(state, "Player not in room");
-      const name = action.name.slice(0, 20);
+      const name = cleanName(action.name);
+      if (!name) return fail(state, "Pick a name");
       return succeed({ ...state, players: state.players.map((p) => (p.id === action.playerId ? { ...p, name } : p)) });
     }
     case "UPDATE_SETTINGS": {
@@ -244,7 +246,7 @@ export function applyWarAction(state: WarState, action: WarAction): Result {
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
       if (state.players.length < WAR_MIN_PLAYERS) return fail(state, "War needs two players");
       const s = structuredClone(resetToLobby(state));
-      const [, rng] = nextRandom(action.seed >>> 0);
+      const [, rng] = nextRandom(seedRng(action.seed));
       const { result, rngState } = shuffle(createDeck(s.settings.jokers), rng);
       s.rngState = rngState;
       const half = result.length / 2;
@@ -293,8 +295,8 @@ export interface WarView extends Omit<WarState, "rngState" | "sides" | "table"> 
 }
 
 /** What one player (or spectator) sees: no deck order, no other hand, no face-down bounties. */
-export function getWarView(state: WarState, viewer: string | "god"): WarView {
-  const godMode = viewer === "god";
+export function getWarView(state: WarState, viewer: ViewerId): WarView {
+  const godMode = viewer === GOD_VIEW;
   const { rngState: _r, sides, table, ...rest } = state;
   void _r;
   const pub = (x: WarSide): WarPublicSide => ({

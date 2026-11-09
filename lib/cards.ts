@@ -1,4 +1,4 @@
-import type { Card, Rank, StandardCard, Suit } from "@/types/cards";
+import type { Card, Rank, RngState, Seed, StandardCard, Suit } from "@/types/cards";
 
 export const SUITS: readonly Suit[] = ["S", "H", "D", "C"];
 export const RANKS: readonly Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
@@ -47,31 +47,82 @@ export function createDeck(includeJokers: boolean): Card[] {
 
 export const deckSize = (includeJokers: boolean) => (includeJokers ? 54 : 52);
 
-/**
- * Seeded PRNG (mulberry32). State is a plain uint32 so it lives inside the
- * serializable GameState and reducers stay pure + replayable.
- */
-export function nextRandom(state: number): [value: number, nextState: number] {
-  const a = (state + 0x6d2b79f5) | 0;
-  let t = Math.imul(a ^ (a >>> 15), 1 | a);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return [((t ^ (t >>> 14)) >>> 0) / 4294967296, a >>> 0];
+// ---------------------------------------------------------------------------
+// The deck's randomness: ChaCha20 as a keystream (RFC 8439 block function)
+// ---------------------------------------------------------------------------
+//
+// Every shuffle comes from here. Its state is plain JSON inside the GameState (so reducers stay
+// pure and replayable) and never leaves the host. A cryptographic stream with a 256-bit key means
+// the cards a player sees can't be used to work out the seed, and with it everyone else's cards
+// or the next deal, which a small seed (2^32 possibilities) would allow.
+
+const rotl = (x: number, n: number) => (x << n) | (x >>> (32 - n));
+
+/** One ChaCha20 block (16 words) for a key, block counter and stream. */
+export function chachaBlock(key: readonly number[], counter: number, nonce: readonly [number, number, number]): number[] {
+  const init = [0x61707865, 0x3320646e, 0x79622d32, 0x6b206574, ...key.map((w) => w | 0), counter | 0, ...nonce.map((w) => w | 0)];
+  const x = init.slice();
+  const qr = (a: number, b: number, c: number, d: number) => {
+    x[a] = (x[a] + x[b]) | 0; x[d] = rotl(x[d] ^ x[a], 16);
+    x[c] = (x[c] + x[d]) | 0; x[b] = rotl(x[b] ^ x[c], 12);
+    x[a] = (x[a] + x[b]) | 0; x[d] = rotl(x[d] ^ x[a], 8);
+    x[c] = (x[c] + x[d]) | 0; x[b] = rotl(x[b] ^ x[c], 7);
+  };
+  for (let i = 0; i < 10; i++) {
+    qr(0, 4, 8, 12); qr(1, 5, 9, 13); qr(2, 6, 10, 14); qr(3, 7, 11, 15);
+    qr(0, 5, 10, 15); qr(1, 6, 11, 12); qr(2, 7, 8, 13); qr(3, 4, 9, 14);
+  }
+  return x.map((w, i) => (w + init[i]) >>> 0);
 }
 
-/** A repeatable random-number function (0 ≤ x < 1) from a seed, for bots and tests. */
+/**
+ * The stream for a seed. Online seeds are 8 random words (the key); a 9th word, if given, picks
+ * the stream (one per table). A plain number gives a fixed key, for tests and replays.
+ */
+export function seedRng(seed: Seed): RngState {
+  const words = typeof seed === "number" ? [seed >>> 0] : seed.map((w) => (Number.isFinite(w) ? w >>> 0 : 0));
+  const k = Array.from({ length: 8 }, (_, i) => words[i] ?? 0);
+  return { k, s: words[8] ?? 0, c: 0 };
+}
+
+/** Accept a host snapshot saved before the stream existed (a bare number), so a refresh can't crash a game. */
+const asRng = (state: RngState | number): RngState => (typeof state === "number" ? seedRng(state) : state);
+
+/** The next number (0 ≤ x < 1) from the deck's stream, and the stream moved on. */
+export function nextRandom(state: RngState | number): [value: number, nextState: RngState] {
+  const st = asRng(state);
+  const word = chachaBlock(st.k, Math.floor(st.c / 16), [st.s, 0, 0])[st.c % 16];
+  return [word / 4294967296, { k: st.k, s: st.s, c: st.c + 1 }];
+}
+
+/** A fresh online seed: 256 bits from the browser's secure random source. */
+export const randomSeed = (): number[] => [...globalThis.crypto.getRandomValues(new Uint32Array(8))];
+
+/** The seed for one table of several, each with its own stream. */
+export function tableSeed(seed: Seed, table: number): Seed {
+  return typeof seed === "number" ? (seed + table * 7919) >>> 0 : [...seed.slice(0, 8), table];
+}
+
+// ---------------------------------------------------------------------------
+// Bots' and tests' randomness: fast, repeatable, not secret (mulberry32)
+// ---------------------------------------------------------------------------
+
+/** A repeatable random-number function (0 ≤ x < 1) from a seed, for bots and tests. Never for dealing. */
 export function seededRandom(seed: number): () => number {
   let s = seed >>> 0;
   return () => {
-    const [r, next] = nextRandom(s);
-    s = next;
-    return r;
+    const a = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    s = a >>> 0;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-/** Fisher–Yates shuffle driven by the seeded PRNG. */
-export function shuffle<T>(items: readonly T[], rngState: number): { result: T[]; rngState: number } {
+/** Fisher–Yates shuffle driven by the deck's stream. */
+export function shuffle<T>(items: readonly T[], rngState: RngState | number): { result: T[]; rngState: RngState } {
   const result = items.slice();
-  let s = rngState;
+  let s = asRng(rngState);
   for (let i = result.length - 1; i > 0; i--) {
     const [r, next] = nextRandom(s);
     s = next;

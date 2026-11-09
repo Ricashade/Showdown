@@ -16,3 +16,17 @@ export interface JokerCard {
 }
 
 export type Card = StandardCard | JokerCard;
+
+/**
+ * What a deal is shuffled from. Online, the host passes 8 random 32-bit words (256 bits) from
+ * `crypto`, so nobody can work the deck out from the cards they see. A plain number is for
+ * tests and replays only.
+ */
+export type Seed = number | readonly number[];
+
+/** The deck's random stream: a ChaCha20 key, which stream, and how far into it we are. Host only. */
+export interface RngState {
+  k: number[];
+  s: number;
+  c: number;
+}

@@ -23,6 +23,11 @@ const GUEST_MESSAGES: Partial<Record<GuestStatus, { title: string; body: string;
     body: "Nobody is hosting this room right now. Check the code with your host.",
     retry: true,
   },
+  "wrong-host": {
+    title: "That's not your host",
+    body: "Someone else is answering on this code. Ask your host to send their invite link again.",
+    retry: true,
+  },
   removed: { title: "You were removed from this room", body: "The host took you off the seat list." },
   closed: { title: "This room is closed", body: "Ask the host for a new code to play again." },
 };
@@ -47,6 +52,9 @@ export interface ReadyRoom<V, A, S = unknown> {
   postAsBot: (botId: string, text: string) => void;
   /** Whether this player is in touch with the room right now. */
   live: boolean;
+  /** Host only: whether newcomers are turned away, and the switch for it. */
+  locked: boolean;
+  setLocked?: (locked: boolean) => void;
 }
 
 interface ShellProps<S extends RoomState & { version: number }, A extends RoomAction, V extends { phase: string }> {
@@ -74,7 +82,7 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
 }: ShellProps<S, A, V>) {
   const rooms = useRoomTransition();
   const roomKey = info.roomKey(code);
-  const { room, setSession, act, removePlayer, leave, say, postAsBot } = useOnlineRoom(game, { roomKey, code, createState });
+  const { room, setSession, act, removePlayer, setLocked, leave, say, postAsBot } = useOnlineRoom(game, { roomKey, code, createState });
   // Bots are played by the host's tab only, from the full state it holds.
   const hostState = room.phase === "ready" ? room.hostState : null;
   useBotDriver(hostState, bots, act);
@@ -127,7 +135,11 @@ export function OnlineRoomShell<S extends RoomState & { version: number }, A ext
   };
 
   const live = status === "hosting" || status === "seated";
-  return <>{children({ view, me, isHost, act, removePlayer, addBot, connectedIds, error, exit, notices, chat: room.chat, say, hostState, postAsBot, live })}</>;
+  return (
+    <>
+      {children({ view, me, isHost, act, removePlayer, addBot, connectedIds, error, exit, notices, chat: room.chat, say, hostState, postAsBot, live, locked: room.locked, setLocked: isHost ? setLocked : undefined })}
+    </>
+  );
 }
 
 function StatusScreen({

@@ -1,3 +1,4 @@
+import type { Seed } from "./cards";
 import type { BlackjackAction, BlackjackState } from "./blackjack";
 import type { BsPokerAction, BsPokerState } from "./bs-poker";
 import type { BasePlayer, GameMode, PlayerSeed } from "./game";
@@ -66,7 +67,7 @@ export type PartyAction =
   /** Host: put another game on the table, with its default house rules, back in the lobby. */
   | { type: "SWITCH_GAME"; playerId: string; newGameType: GameMode }
   /** Host, after a match: deal the same game and house rules again. */
-  | { type: "PLAY_AGAIN"; playerId: string; seed: number }
+  | { type: "PLAY_AGAIN"; playerId: string; seed: Seed }
   /** Host: back to the lobby, ending a match in progress. */
   | { type: "RETURN_TO_LOBBY"; playerId: string }
   /** Take a seat at another table (the host can also seat someone else, a bot say). Lobby only. */

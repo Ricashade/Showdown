@@ -26,3 +26,10 @@ export interface BasePlayer {
 export type ActionResult<S> =
   | { ok: true; state: S }
   | { ok: false; error: string; state: S };
+
+/**
+ * Ask a view function for everything (every hand, the whole board): solo tables and tests only.
+ * A symbol, so it can never arrive over the network the way a player id can.
+ */
+export const GOD_VIEW: unique symbol = Symbol("god-view");
+export type ViewerId = string | typeof GOD_VIEW;

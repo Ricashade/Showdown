@@ -33,7 +33,8 @@ types/
   game.ts                   Mode-agnostic: PlayerSeed, BasePlayer (isBot, botDifficulty), ActionResult
   bs-poker.ts               Bid, Settings, BsPokerState, BsPokerAction, ShowdownResult
 lib/
-  cards.ts                  Deck, seeded PRNG (mulberry32), shuffle, labels
+  cards.ts                  Deck, the deck's ChaCha20 stream (seedRng, shuffle), bots' seeded PRNG, labels
+  names.ts                  cleanName: the one rule for player names
   bs-poker-engine.ts        isBidHigher, evaluateBid / doesHandExistInPool, hand rules, bid ladder
   holdem-hand.ts            Best 5 of 7 cards, full kicker comparison
   holdem-pots.ts            Side pots (layered by contribution) and split pots with odd chips
@@ -355,11 +356,27 @@ Without the keys, online rooms fall back to a test mode that connects tabs in th
 `GameState`. Guests announce themselves (name + public key) through Presence and send moves over Broadcast.
 After every change, the host sends each player *their own* `getPlayerView`, encrypted with a key only that player
 shares (ECDH P-256 → AES-GCM), so nobody can read anyone else's cards off the wire. The same keys authenticate
-moves, so a player can't act in someone else's name, and recorded messages can't be replayed. The shuffle seed
-never leaves the host.
+moves, so a player can't act in someone else's name, and recorded messages can't be replayed. Each message is
+sealed under a label saying what it is and whose it is, so nothing recorded can be sent back as something else.
+
+**Security (as implemented):**
+
+- **The host is who the link says.** The host's tab adds `#h=…` to its address: a fingerprint of its public key.
+  Browsers never send what follows `#` to any server. A guest who opens the link only trusts the host with that
+  key, and a guest who typed the code trusts the first host they find and nobody after. The room code stays 4 letters.
+- **Lock room** (host, in the lobby): newcomers are turned away; anyone who already had a seat can come back.
+- **The deal can't be worked out.** Every shuffle comes from ChaCha20 keyed with 256 random bits from `crypto`
+  (`lib/cards.ts`), never sent anywhere. Bots use a separate fast generator, since their choices aren't secret.
+- **Nothing from the network is trusted as typed.** Player ids, public keys, names (`lib/names.ts`: text only,
+  20 characters, no invisible or direction-flipping characters), message sizes and bet amounts are all checked.
+  The all-seeing view is a JavaScript symbol (`GOD_VIEW`), which can't arrive over the wire.
+- **Headers** (`next.config.ts`): a Content Security Policy (this site, Supabase and Vercel analytics only), no
+  framing, no referrer path to other sites, HSTS. Analytics get `/room/[code]`, never the code or the `#h=` key.
+- `tests/security.test.ts` tries each attack.
 
 Shared rooms seat newcomers at any time (`GameDefinition.seatsOpen`); other games only in the lobby.
 
 **Limits:** the host's tab is the server. If the host closes it, the game pauses until they reopen the room
 link in the same tab. A player who loses connection mid-game stays seated, but the game waits on their turn.
-The anon key lets anyone who knows a room code join its lobby; the room code is the invite.
+The anon key lets anyone who knows a room code join its lobby; the room code is the invite, so lock the room once
+everyone's in.

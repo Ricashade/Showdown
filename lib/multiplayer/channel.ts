@@ -1,3 +1,6 @@
+import { cleanName } from "@/lib/names";
+import { isPlayerId } from "./room-code";
+
 /**
  * The small slice of a realtime channel the room protocol needs. Supabase Realtime is the
  * real backend; a BroadcastChannel version lets you test between tabs without Supabase, and
@@ -29,6 +32,9 @@ export interface RoomChannel {
 
 export type RoomChannelFactory = (roomCode: string) => RoomChannel;
 
+/** A raw P-256 public key, base64: 65 bytes, so 87 characters and one "=". */
+const isPublicKey = (x: unknown): x is string => typeof x === "string" && /^[A-Za-z0-9+/]{87}=$/.test(x);
+
 /**
  * Keep only well-formed presence entries (presence payloads come from other clients).
  * Entries are NOT merged by playerId: someone else can announce your id, and the real
@@ -39,10 +45,10 @@ export function cleanMembers(raw: unknown[]): PresenceMeta[] {
   for (const m of raw) {
     if (!m || typeof m !== "object") continue;
     const { playerId, name, role, publicKey, joinedAt } = m as Record<string, unknown>;
-    if (typeof playerId !== "string" || typeof publicKey !== "string" || (role !== "host" && role !== "guest")) continue;
+    if (!isPlayerId(playerId) || !isPublicKey(publicKey) || (role !== "host" && role !== "guest")) continue;
     out.push({
       playerId,
-      name: typeof name === "string" ? name.slice(0, 20) : "Player",
+      name: cleanName(name) ?? "Player",
       role,
       publicKey,
       joinedAt: typeof joinedAt === "number" ? joinedAt : 0,

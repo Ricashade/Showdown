@@ -5,10 +5,11 @@
  * A turn: draw (stock or discard pile), meld and lay off as you like, then discard. Empty your
  * hand and the round ends. Meld rules live in rummy-melds.ts.
  */
+import { cleanName } from "./names";
 import type { Card } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import type { Meld, RummyAction, RummyPlayer, RummySettings, RummyState, RummyVariant } from "@/types/rummy";
-import { createDeck, nextRandom, rankName, shuffle } from "./cards";
+import { createDeck, nextRandom, rankName, shuffle, seedRng } from "./cards";
 import { cardPoints, handPoints, isPlayable, layOffShape, meldCardPoints, validateMeld } from "./rummy-melds";
 import type { GameDefinition } from "./multiplayer/room";
 
@@ -49,7 +50,7 @@ export function sanitizeRummySettings(s: Partial<RummySettings>): RummySettings 
 function seat(seed: PlayerSeed, isHost: boolean): RummyPlayer {
   return {
     id: seed.id,
-    name: seed.name.trim() || "Player",
+    name: cleanName(seed.name) ?? "Player",
     isBot: !!seed.isBot,
     ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
     isHost,
@@ -69,7 +70,7 @@ export function createRummyRoom(params: { roomId: string; host: PlayerSeed; sett
     settings: sanitizeRummySettings({ ...RUMMY_DEFAULTS, ...params.settings }),
     players: [seat(params.host, true)],
     hostId: params.host.id,
-    rngState: 0,
+    rngState: seedRng(0),
     stock: [],
     discard: [],
     melds: [],
@@ -306,7 +307,8 @@ export function applyRummyAction(state: RummyState, action: RummyAction): Result
     case "RENAME_PLAYER": {
       if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
       if (!getPlayer(state, action.playerId)) return fail(state, "Player not in room");
-      const name = action.name.slice(0, 20);
+      const name = cleanName(action.name);
+      if (!name) return fail(state, "Pick a name");
       return succeed({ ...state, players: state.players.map((p) => (p.id === action.playerId ? { ...p, name } : p)) });
     }
     case "UPDATE_SETTINGS": {
@@ -321,7 +323,7 @@ export function applyRummyAction(state: RummyState, action: RummyAction): Result
       if (state.phase !== "lobby") return fail(state, "Game already started");
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
       if (state.players.length < RUMMY_MIN_PLAYERS) return fail(state, `Need at least ${RUMMY_MIN_PLAYERS} players`);
-      const [r, rngState] = nextRandom(action.seed >>> 0);
+      const [r, rngState] = nextRandom(seedRng(action.seed));
       const s = structuredClone(resetToLobby(state));
       s.rngState = rngState;
       return succeed(deal(s, s.players[Math.floor(r * s.players.length)].id));
@@ -367,8 +369,8 @@ export interface RummyView extends Omit<RummyState, "players" | "rngState" | "st
 }
 
 /** What one player may see: their own hand only. The discard pile and melds are public. */
-export function getRummyView(state: RummyState, viewer: string | "god"): RummyView {
-  const godMode = viewer === "god";
+export function getRummyView(state: RummyState, viewer: ViewerId): RummyView {
+  const godMode = viewer === GOD_VIEW;
   const { rngState: _r, stock, players, ...rest } = state;
   void _r;
   const roundOver = state.phase === "round_over" || state.phase === "game_over";

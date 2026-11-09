@@ -6,8 +6,9 @@
  * card that was there, and keep going until you hold one you can't use. Clear your board and
  * you get one fewer slot next round; the first to clear a one-slot board wins.
  */
+import { cleanName } from "./names";
 import type { Card } from "@/types/cards";
-import type { ActionResult, PlayerSeed } from "@/types/game";
+import { GOD_VIEW, type ActionResult, type PlayerSeed, type ViewerId } from "@/types/game";
 import type {
   FaceCard,
   FaceCardPreset,
@@ -18,7 +19,7 @@ import type {
   GarbageSlot,
   GarbageState,
 } from "@/types/garbage";
-import { createDeck, nextRandom, shuffle } from "./cards";
+import { createDeck, nextRandom, shuffle, seedRng } from "./cards";
 import type { GameDefinition } from "./multiplayer/room";
 
 export const GARBAGE_MIN_PLAYERS = 2;
@@ -121,7 +122,7 @@ export function sanitizeGarbageSettings(s: Partial<GarbageSettings>): GarbageSet
 function seat(seed: PlayerSeed, isHost: boolean): GarbagePlayer {
   return {
     id: seed.id,
-    name: seed.name.trim() || "Player",
+    name: cleanName(seed.name) ?? "Player",
     isBot: !!seed.isBot,
     ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
     isHost,
@@ -141,7 +142,7 @@ export function createGarbageRoom(params: { roomId: string; host: PlayerSeed; se
     settings: sanitizeGarbageSettings({ ...GARBAGE_DEFAULTS, ...params.settings }),
     players: [seat(params.host, true)],
     hostId: params.host.id,
-    rngState: 0,
+    rngState: seedRng(0),
     stock: [],
     discard: [],
     round: 0,
@@ -387,7 +388,8 @@ export function applyGarbageAction(state: GarbageState, action: GarbageAction): 
     case "RENAME_PLAYER": {
       if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
       if (!getPlayer(state, action.playerId)) return fail(state, "Player not in room");
-      const name = action.name.slice(0, 20);
+      const name = cleanName(action.name);
+      if (!name) return fail(state, "Pick a name");
       return succeed({ ...state, players: state.players.map((p) => (p.id === action.playerId ? { ...p, name } : p)) });
     }
     case "UPDATE_SETTINGS": {
@@ -403,7 +405,7 @@ export function applyGarbageAction(state: GarbageState, action: GarbageAction): 
       if (state.phase !== "lobby") return fail(state, "Game already started");
       if (action.playerId !== state.hostId) return fail(state, "Only the host can start the game");
       if (state.players.length < GARBAGE_MIN_PLAYERS) return fail(state, `Need at least ${GARBAGE_MIN_PLAYERS} players`);
-      const [r, rngState] = nextRandom(action.seed >>> 0);
+      const [r, rngState] = nextRandom(seedRng(action.seed));
       const s = structuredClone(resetToLobby(state));
       s.rngState = rngState;
       return succeed(dealRound(s, s.players[Math.floor(r * s.players.length)].id));
@@ -467,13 +469,13 @@ export interface GarbageView extends Omit<GarbageState, "players" | "rngState" |
 }
 
 /** What one player may see. Face-down slots stay face down for everyone, the owner included. */
-export function getGarbageView(state: GarbageState, viewer: string | "god"): GarbageView {
+export function getGarbageView(state: GarbageState, viewer: ViewerId): GarbageView {
   const { rngState: _r, stock, players, ...rest } = state;
   void _r;
   return {
     ...rest,
-    viewerId: viewer === "god" ? null : viewer,
-    godMode: viewer === "god",
+    viewerId: viewer === GOD_VIEW ? null : viewer,
+    godMode: viewer === GOD_VIEW,
     stockCount: stock.length,
     players: players.map((p) => ({ ...p, slots: publicSlots(p.slots) })),
   };

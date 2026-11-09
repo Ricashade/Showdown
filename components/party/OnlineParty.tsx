@@ -26,7 +26,7 @@ import { RoomChat } from "@/components/RoomChat";
 import { mergeChat } from "@/lib/chat";
 import { useBanterSetting, useBotBanter, useRoomEvents } from "@/lib/hooks/use-room-chat";
 
-const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
+import { randomSeed } from "@/lib/cards";
 
 /** One room code for the night: the host switches games and nobody reconnects. */
 export default function OnlineParty({ code, initialGame }: { code: string; initialGame?: GameId }) {
@@ -47,7 +47,7 @@ export default function OnlineParty({ code, initialGame }: { code: string; initi
 }
 
 function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, PartyAction, PartyState> }) {
-  const { view, me, isHost, act, removePlayer, addBot, connectedIds, error, exit, notices, chat, say, hostState, postAsBot, live } = room;
+  const { view, me, isHost, act, removePlayer, addBot, connectedIds, error, exit, notices, chat, say, hostState, postAsBot, live, locked, setLocked } = room;
   const [dialog, setDialog] = useState<"picker" | "howto" | null>(null);
   const [switched, setSwitched] = useState<{ message: string; id: number } | null>(null);
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "The host";
@@ -86,6 +86,7 @@ function PartyScreen({ code, room }: { code: string; room: ReadyRoom<PartyView, 
   const tableLabel = (id: string) => `Table ${view.tables.findIndex((t) => t.id === id) + 1}`;
   const lobby: LobbyOptions = {
     roomCode: code,
+    lock: setLocked ? { locked, onChange: setLocked } : undefined,
     canRename: (id) => id === me,
     canRemove: (id) => isHost && id !== me,
     onRemove: removePlayer,

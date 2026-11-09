@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { ArrowLeftRight, Bot, Check, ChevronDown, Crown, Link2, Minus, Plus, X } from "lucide-react";
+import { ArrowLeftRight, Bot, Check, ChevronDown, Crown, Link2, Lock, LockOpen, Minus, Plus, X } from "lucide-react";
 import type { BotDifficulty } from "@/types/game";
 import { DIFFICULTY_LABEL } from "@/lib/bot-ai";
 import { ROOM_PATH } from "@/lib/games";
@@ -10,6 +10,8 @@ import { ROOM_PATH } from "@/lib/games";
 export interface LobbyOptions {
   /** Online rooms show their code and an invite link. */
   roomCode?: string;
+  /** Online, host only: turn newcomers away (anyone who already had a seat can come back). */
+  lock?: { locked: boolean; onChange: (locked: boolean) => void };
   canRename: (playerId: string) => boolean;
   canRemove: (playerId: string) => boolean;
   onRemove: (playerId: string) => void;
@@ -67,7 +69,7 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
   const canStart = players.length >= minPlayers && !blocked;
   return (
     <section aria-labelledby="seats-heading" className="felt self-start rounded-[2rem] p-6 sm:p-8">
-      {options.roomCode && <RoomCode code={options.roomCode} />}
+      {options.roomCode && <RoomCode code={options.roomCode} lock={options.lock} />}
 
       <h2 id="seats-heading" className="font-display text-4xl font-bold text-bone">
         Seats
@@ -193,11 +195,12 @@ export function SeatsPanel({ players, viewerId, hostId, isHost, options, connect
   );
 }
 
-function RoomCode({ code }: { code: string }) {
+function RoomCode({ code, lock }: { code: string; lock?: LobbyOptions["lock"] }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}${ROOM_PATH}/${code}`);
+      // The "#h=…" part names the host's key, so whoever follows the link reaches this host and no one else.
+      await navigator.clipboard.writeText(`${window.location.origin}${ROOM_PATH}/${code}${window.location.hash}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -212,13 +215,28 @@ function RoomCode({ code }: { code: string }) {
           {code}
         </p>
       </div>
-      <button
-        onClick={copy}
-        className="flex min-h-11 items-center gap-2 rounded-full border border-bone/40 px-4 text-sm font-bold text-bone transition hover:border-bone"
-      >
-        {copied ? <Check className="size-4" /> : <Link2 className="size-4" />}
-        <span aria-live="polite">{copied ? "Link copied" : "Copy invite link"}</span>
-      </button>
+      <div className="flex flex-wrap gap-2">
+        {lock && (
+          <button
+            onClick={() => lock.onChange(!lock.locked)}
+            aria-pressed={lock.locked}
+            className={clsx(
+              "flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-bold transition",
+              lock.locked ? "border-brass bg-brass text-smoke hover:bg-brass-lit" : "border-bone/40 text-bone hover:border-bone",
+            )}
+          >
+            {lock.locked ? <Lock className="size-4" /> : <LockOpen className="size-4" />}
+            <span aria-live="polite">{lock.locked ? "Room locked" : "Lock room"}</span>
+          </button>
+        )}
+        <button
+          onClick={copy}
+          className="flex min-h-11 items-center gap-2 rounded-full border border-bone/40 px-4 text-sm font-bold text-bone transition hover:border-bone"
+        >
+          {copied ? <Check className="size-4" /> : <Link2 className="size-4" />}
+          <span aria-live="polite">{copied ? "Link copied" : "Copy invite link"}</span>
+        </button>
+      </div>
     </div>
   );
 }

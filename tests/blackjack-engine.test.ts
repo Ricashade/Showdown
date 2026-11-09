@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GOD_VIEW } from "@/types/game";
 import type { BlackjackAction, BlackjackState } from "@/types/blackjack";
 import {
   applyBlackjackAction,
@@ -299,7 +300,7 @@ describe("rounds and the end of the game", () => {
 describe("what players see", () => {
   it("never shows the hole card or the shoe until the dealer turns it", () => {
     const s = dealt(table(["a"]), "TS 9H 8D 7C", { a: 10 });
-    for (const viewer of ["a", "god"]) {
+    for (const viewer of ["a", GOD_VIEW] as const) {
       const v = getBlackjackView(s, viewer);
       expect(v.dealer.cards[0]?.id).toBe("9H");
       expect(v.dealer.cards[1]).toBeNull();

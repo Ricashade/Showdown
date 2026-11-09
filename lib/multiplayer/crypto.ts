@@ -4,6 +4,10 @@
  * Broadcast messages reach everyone on the channel, so the host seals each player's
  * redacted view with a key only that player shares (ECDH P-256 → AES-GCM). The same key
  * authenticates guest moves: a move that doesn't decrypt with your key isn't from you.
+ *
+ * Every message is sealed under a label naming what it is, which way it goes and whose it is
+ * (`Label` below). It only opens under the same label, so a message recorded off the wire
+ * can't be sent back as a different kind of message, or to someone else.
  */
 const subtle = () => globalThis.crypto.subtle;
 
@@ -69,18 +73,43 @@ export async function deriveSharedKey(own: Identity, peerPublicKey: string): Pro
   ]);
 }
 
-export async function seal(key: CryptoKey, data: unknown): Promise<Sealed> {
+/** What a sealed message is: its kind and direction, and the guest it's from or for. */
+export type Label = `${"state" | "chat-out" | "action" | "chat-in"}:${string}`;
+
+const aad = (label: Label) => new TextEncoder().encode(`showdown/v2/${label}`);
+
+export async function seal(key: CryptoKey, data: unknown, label: Label): Promise<Sealed> {
   const iv = globalThis.crypto.getRandomValues(new Uint8Array(12));
   const plain = new TextEncoder().encode(JSON.stringify(data));
-  const ct = new Uint8Array(await subtle().encrypt({ name: "AES-GCM", iv }, key, plain));
+  const ct = new Uint8Array(await subtle().encrypt({ name: "AES-GCM", iv, additionalData: aad(label) }, key, plain));
   return { iv: toBase64(iv), ct: toBase64(ct) };
 }
 
-/** Throws if the message was not sealed with this key (wrong sender, or tampered). */
-export async function open<T>(key: CryptoKey, sealed: Sealed): Promise<T> {
-  const plain = await subtle().decrypt({ name: "AES-GCM", iv: fromBase64(sealed.iv) }, key, fromBase64(sealed.ct));
+/** Throws if the message was not sealed with this key under this label (wrong sender, wrong kind, or tampered). */
+export async function open<T>(key: CryptoKey, sealed: Sealed, label: Label): Promise<T> {
+  const plain = await subtle().decrypt({ name: "AES-GCM", iv: fromBase64(sealed.iv), additionalData: aad(label) }, key, fromBase64(sealed.ct));
   return JSON.parse(new TextDecoder().decode(plain)) as T;
 }
 
+/**
+ * A short, unguessable name for a host's public key (SHA-256, first 128 bits, base64url). It goes
+ * in invite links after the "#", which browsers never send to any server, so a guest who follows
+ * the link only trusts the host who made it.
+ */
+export async function fingerprint(publicKey: string): Promise<string> {
+  const hash = new Uint8Array(await subtle().digest("SHA-256", fromBase64(publicKey)));
+  return toBase64(hash.subarray(0, 16)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+export const isFingerprint = (x: unknown): x is string => typeof x === "string" && /^[A-Za-z0-9_-]{22}$/.test(x);
+
+/** Biggest sealed message accepted (base64 characters): a full table's view is far smaller. */
+const MAX_SEALED = 512 * 1024;
+
 export const isSealed = (x: unknown): x is Sealed =>
-  !!x && typeof x === "object" && typeof (x as Sealed).iv === "string" && typeof (x as Sealed).ct === "string";
+  !!x &&
+  typeof x === "object" &&
+  typeof (x as Sealed).iv === "string" &&
+  (x as Sealed).iv.length === 16 &&
+  typeof (x as Sealed).ct === "string" &&
+  (x as Sealed).ct.length <= MAX_SEALED;

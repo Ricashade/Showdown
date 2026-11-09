@@ -18,7 +18,7 @@ type LobbyAction =
   | { type: "JOIN_ROOM"; player: PlayerSeed }
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   | { type: "RETURN_TO_LOBBY"; playerId: string };
 
 interface SoloState {
@@ -27,7 +27,8 @@ interface SoloState {
   players: BasePlayer[];
 }
 
-const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
+import { randomSeed } from "@/lib/cards";
+import type { Seed } from "@/types/cards";
 
 /**
  * You and the bots you seat, on this screen: the whole game runs here, bots and table timers included.

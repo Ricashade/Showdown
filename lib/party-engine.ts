@@ -7,6 +7,9 @@
  * seat sits that one out and watches.
  */
 import type { ActionResult, GameMode, PlayerSeed } from "@/types/game";
+import type { Seed } from "@/types/cards";
+import { tableSeed } from "./cards";
+import { cleanName } from "./names";
 import type { ActiveGameAction, ActiveGameState, PartyAction, PartyPlayer, PartyState, PartyTable, RoomPhase } from "@/types/party";
 import type { BlackjackState } from "@/types/blackjack";
 import type { GameDefinition, RoomAction, RoomState } from "./multiplayer/room";
@@ -129,7 +132,7 @@ const succeed = (state: PartyState): Result => ({ ok: true, state: { ...state, v
 
 const member = (seed: PlayerSeed, isHost: boolean, sessionWins = 0): PartyPlayer => ({
   id: seed.id,
-  name: seed.name.trim().slice(0, 20) || "Player",
+  name: cleanName(seed.name) ?? "Player",
   isBot: !!seed.isBot,
   ...(seed.botDifficulty ? { botDifficulty: seed.botDifficulty } : {}),
   isHost,
@@ -236,12 +239,12 @@ export function tablesNotReady(s: { hostId: string; players: PartyPlayer[]; sele
 }
 
 /** Deal every table, one seed each. */
-function startTables(s: PartyState, seed: number): string | null {
+function startTables(s: PartyState, seed: Seed): string | null {
   const notReady = tablesNotReady(s);
   if (notReady) return notReady;
   s.lastWinnerIds = [];
   for (const [i, t] of s.tables.entries()) {
-    const r = kit(s.selectedGame).def.applyAction(t.state, { type: "START_GAME", playerId: s.hostId, seed: (seed + i * 7919) >>> 0 } as never);
+    const r = kit(s.selectedGame).def.applyAction(t.state, { type: "START_GAME", playerId: s.hostId, seed: tableSeed(seed, i) } as never);
     if (!r.ok) return r.error;
     t.state = r.state;
   }
@@ -361,6 +364,7 @@ export function applyPartyAction(state: PartyState, action: PartyAction): Result
     }
     case "GAME": {
       const move = action.action;
+      if (!move || typeof move !== "object" || typeof move.type !== "string") return fail(state, "That isn't a move");
       if (move.type === "JOIN_ROOM" || move.type === "LEAVE_ROOM") return fail(state, "The room seats players");
       // Wrapped moves act for the sender only; the room has already checked the sender.
       if (!("playerId" in move) || move.playerId !== action.playerId) return fail(state, "That move isn't yours to make.");
@@ -388,7 +392,8 @@ export function applyPartyAction(state: PartyState, action: PartyAction): Result
       if (move.type === "RENAME_PLAYER") {
         if (state.phase !== "lobby") return fail(state, "Names are locked once the game starts");
         const s = structuredClone(state);
-        const name = move.name.slice(0, 20);
+        const name = cleanName(move.name);
+        if (!name) return fail(state, "Pick a name");
         s.players = s.players.map((p) => (p.id === move.playerId ? { ...p, name } : p));
         for (const t of s.tables) t.state = tryApply(t.state, { ...move, name });
         return succeed(s);

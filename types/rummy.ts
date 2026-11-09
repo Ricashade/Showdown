@@ -1,4 +1,4 @@
-import type { Card } from "./cards";
+import type { Card, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 export type RummyVariant = "classic" | "rummy500";
@@ -60,7 +60,7 @@ export interface RummyState {
   players: RummyPlayer[];
   hostId: string;
   /** SECRET: PRNG state. */
-  rngState: number;
+  rngState: RngState;
   /** SECRET: the draw pile, top card first. */
   stock: Card[];
   /** Face up, oldest first; the last card is the top. */
@@ -84,7 +84,7 @@ export type RummyAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<RummySettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   | { type: "DRAW_STOCK"; playerId: string }
   /** Take the discard at `index` and everything above it (Classic: only the top card). */
   | { type: "DRAW_DISCARD"; playerId: string; index: number }

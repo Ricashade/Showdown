@@ -1,4 +1,4 @@
-import type { Card, Rank, Suit } from "./cards";
+import type { Card, Rank, Suit, RngState, Seed } from "./cards";
 import type { BasePlayer, PlayerSeed } from "./game";
 
 /**
@@ -81,7 +81,7 @@ export interface ThirteenState {
   players: ThirteenPlayer[];
   hostId: string;
   /** SECRET: PRNG state. */
-  rngState: number;
+  rngState: RngState;
   /** The three at the table, in turn order. */
   seats: ThirteenSeat[] | null;
   currentTurnId: string | null;
@@ -102,7 +102,7 @@ export type ThirteenAction =
   | { type: "LEAVE_ROOM"; playerId: string }
   | { type: "RENAME_PLAYER"; playerId: string; name: string }
   | { type: "UPDATE_SETTINGS"; playerId: string; settings: Partial<ThirteenSettings> }
-  | { type: "START_GAME"; playerId: string; seed: number }
+  | { type: "START_GAME"; playerId: string; seed: Seed }
   /** Play these cards. `read` picks how Jokers count (a `comboKey`); left out, the strongest reading that's allowed. */
   | { type: "PLAY"; playerId: string; cardIds: string[]; read?: string }
   | { type: "PASS"; playerId: string }
