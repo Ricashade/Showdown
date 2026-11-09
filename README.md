@@ -1,6 +1,6 @@
 # Showdown
 
-A card table in your browser. Open a room, send the code to your friends, and play poker, rummy, war and more together, or deal yourself in against bots when nobody's around. No accounts, no downloads, nothing to install.
+Play cards with your friends right in your browser. Start a room and drop the code in the group chat to play Poker, Rummy, War, and more, or practice solo against bots. No accounts or downloads required.
 
 **[Play now at showdowncards.vercel.app](https://showdowncards.vercel.app)**
 
@@ -15,15 +15,15 @@ A card table in your browser. Open a room, send the code to your friends, and pl
 - Speed
 - Bouillotte
 
-## What's at the table
+## Features
 
-- **One code for the whole night.** A room isn't tied to a game. The host can switch from Hold'em to Go Fish to Speed and everyone stays put.
+- **Switch games on the fly.** You don't need a new link to change games. The host can swap from Hold'em to Go Fish to Speed and keep the whole lobby together.
 - **Play with friends or bots.** Fill empty seats with Easy, Medium or Hard bots, mixed in with real players however you like. Every game can also be played solo.
-- **Big groups.** A room holds up to 9 people. If the game has fewer seats, the host can split the room into as many as 4 tables, and you can watch the other tables from the side while you play.
-- **House rules.** Each game has its own settings: starting chips, wild cards, win conditions, variants and more.
-- **Chat and reactions** at the table, plus a crown next to your name for every match you win that night.
-- **Learn as you go.** Every game has a rules guide and a short interactive demo you can open without leaving the room.
-- **Fair deals.** Shuffles use a cryptographic random source, and your cards are encrypted so only you can see them. Bots only see what a real player in their seat would see.
+- **Multi-table lobbies.** Fit up to 9 people in a room. If a game has a lower player limit, the host can split the lobby into up to 4 tables with live side-view spectating.
+- **House rules.** Customize starting stacks, wild cards, win conditions, and variants per game.
+- **Chat & Crowns.** Talk and send reactions at the table, and stack crowns next to your name for every win you rack up that night.
+- **Built-in interactive demos.** Don't know a game? Pull up a quick rules guide or play through a short tutorial without leaving your seat.
+- **No rigged hands.** Shuffles are cryptographically randomized, opponent hands aren't sent to your browser, and bots play strictly off public table info.
 
 ## The games
 
