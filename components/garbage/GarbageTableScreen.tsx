@@ -10,7 +10,7 @@ import type { LobbyOptions } from "@/components/table/SeatsPanel";
 import { RoomLink, RoomStage } from "@/components/ui/RoomTransition";
 import { TableLoader } from "@/components/table/TableLoader";
 import { GarbageLobby } from "./GarbageLobby";
-import { GarbageTable } from "./GarbageTable";
+import { GarbageTable, LAST_CARD_MS } from "./GarbageTable";
 import { says } from "@/lib/grammar";
 
 export interface GarbageTableScreenProps {
@@ -29,6 +29,21 @@ export interface GarbageTableScreenProps {
   headerExtra?: React.ReactNode;
   /** Shared rooms: the host's choices once a match is over, in place of Play again. */
   postGameActions?: React.ReactNode;
+}
+
+/** The last card's turn in hand, then its glide to the discard pile. */
+const RESULT_DELAY_MS = LAST_CARD_MS + 700;
+
+/** True once `on` has held for `ms`. */
+function useAfter(on: boolean, ms: number) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setReady(false);
+    if (!on) return;
+    const t = setTimeout(() => setReady(true), ms);
+    return () => clearTimeout(t);
+  }, [on, ms]);
+  return on && ready;
 }
 
 const names = (list: string[]) => (list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`);
@@ -69,8 +84,10 @@ export function GarbageTableScreen({ view, actingId, isHost, onAction, onStartGa
   const focusId = view.viewerId ?? view.currentTurnId ?? view.players[0]?.id ?? null;
   const hostName = view.players.find((p) => p.id === view.hostId)?.name ?? "the host";
 
-  const showRound = view.phase === "round_over" && !!view.result && closedRound !== view.result.round;
-  const showWinner = view.phase === "game_over";
+  // The end-of-round screens wait for the last card to land on the discard pile.
+  const roundOver = useAfter(view.phase === "round_over", RESULT_DELAY_MS);
+  const showRound = roundOver && !!view.result && closedRound !== view.result.round;
+  const showWinner = useAfter(view.phase === "game_over", RESULT_DELAY_MS);
 
   const me = view.players.find((p) => p.id === actingId);
   const stillArranging = view.players.filter((p) => !p.revealDone);

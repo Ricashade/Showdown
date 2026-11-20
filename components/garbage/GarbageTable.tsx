@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import type { Card } from "@/types/cards";
@@ -86,43 +86,48 @@ export function GarbageTable({ view, focusId, legal, actingId, onAction, connect
   );
 }
 
+/** How long the card picked up from a board's last slot shows in hand before it goes on the discard pile. */
+export const LAST_CARD_MS = 900;
+
 /** Draw pile, the card in hand, and the discard pile. */
 function Middle({ view, legal, canAct, actingId, onAction }: { view: GarbageView; legal: GarbageLegal; canAct: boolean; actingId: string | null; onAction: (a: GarbageAction) => void }) {
-  const top = view.discard[view.discard.length - 1];
-  const under = view.discard[view.discard.length - 2];
   const faceCards = view.settings.faceCards;
   const drawable = canAct && legal.mustDraw;
   const takeable = drawable && legal.canTakeDiscard;
   const dumpable = canAct && legal.mustDiscard;
-  const active = view.active;
   const flipIn = view.activeFrom?.source === "stock" || view.activeFrom?.source === "slot";
   const holder = view.players.find((p) => p.id === view.currentTurnId);
 
+  // Filling a board's last slot picks up the card under it, which goes straight on the discard
+  // pile in the same move. Turn it over in hand first, so it's seen going there.
+  const lastCard = useLastCard(view);
+  const active = view.active ?? lastCard;
+  const pile = lastCard ? view.discard.slice(0, -1) : view.discard;
+  const top = pile[pile.length - 1];
+  const under = pile[pile.length - 2];
+
   return (
-    <div className="flex items-end justify-center gap-5 sm:gap-10">
-      <div className="flex flex-col items-center gap-1.5">
-        <button
-          onClick={() => onAction({ type: "DRAW", playerId: actingId!, source: "stock" })}
-          disabled={!drawable}
-          aria-label={`Draw from the stock, ${view.stockCount} cards`}
-          className={clsx("relative h-28 w-20 rounded-xl transition", drawable && "ring-3 ring-brass-lit shadow-[0_0_18px_rgba(214,182,127,0.6)] hover:-translate-y-0.5")}
-        >
-          <span className="card-back absolute inset-0 translate-x-1 translate-y-1 rounded-xl ring-1 ring-black/40" />
-          <span className="card-back absolute inset-0 rounded-xl shadow-md ring-1 ring-black/40" />
-        </button>
-        <span className="text-xs text-bone tabular-nums">Stock {view.stockCount}</span>
-      </div>
+    <div className="flex items-start justify-center gap-5 sm:gap-10">
+      <button
+        onClick={() => onAction({ type: "DRAW", playerId: actingId!, source: "stock" })}
+        disabled={!drawable}
+        aria-label={`Draw from the stock, ${view.stockCount} cards`}
+        className={clsx("relative h-28 w-20 rounded-xl transition", drawable && "ring-3 ring-brass-lit shadow-[0_0_18px_rgba(214,182,127,0.6)] hover:-translate-y-0.5")}
+      >
+        <span className="card-back absolute inset-0 translate-x-1 translate-y-1 rounded-xl ring-1 ring-black/40" />
+        <span className="card-back absolute inset-0 rounded-xl shadow-md ring-1 ring-black/40" />
+      </button>
 
       {/* The card in hand: everyone watches the chain. */}
       <div className="flex flex-col items-center gap-1.5">
         <div className="grid h-28 w-20 place-items-center rounded-xl border border-dashed border-bone/30">
           {active && (
             <motion.div key={active.id} layoutId={cardKey(active)} className={clsx("rounded-xl", isWildCard(active, faceCards) ? "shadow-[0_0_24px_rgba(214,182,127,0.85)]" : "shadow-[0_0_18px_rgba(242,235,221,0.35)]")}>
-              <PlayingCard card={active} size="lg" entrance={false} startFaceDown={flipIn} revealDelay={0.15} isWild={isWildCard(active, faceCards)} />
+              <PlayingCard card={active} size="lg" entrance={false} startFaceDown={flipIn || active === lastCard} revealDelay={0.15} isWild={isWildCard(active, faceCards)} />
             </motion.div>
           )}
         </div>
-        <span className="text-xs text-bone">{active && holder ? `${holder.name}'s card` : "In hand"}</span>
+        <span className="text-xs text-bone">{view.active && holder ? `${holder.name}'s card` : "In hand"}</span>
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
@@ -153,6 +158,31 @@ function Middle({ view, legal, canAct, actingId, onAction }: { view: GarbageView
   );
 }
 
+/**
+ * The card a move put on the discard pile without it ever being in hand: the one picked up from a
+ * board's last slot. Held back for LAST_CARD_MS (or until the next card is in hand), else null.
+ */
+function useLastCard(view: GarbageView): Card | null {
+  const [before, setBefore] = useState(view);
+  const [card, setCard] = useState<Card | null>(null);
+  // Worked out while rendering the new view, so the card never shows on the pile first.
+  if (before !== view) {
+    setBefore(view);
+    const top = view.discard[view.discard.length - 1];
+    const wasTop = before.discard[before.discard.length - 1];
+    // The card in hand went into a slot and a different card landed on the pile.
+    const landed = before.phase === "playing" && !!before.active && !view.active && !!top && top.id !== wasTop?.id && top.id !== before.active.id;
+    if (landed) setCard(top);
+    else if (view.active) setCard(null);
+  }
+  useEffect(() => {
+    if (!card) return;
+    const t = setTimeout(() => setCard(null), LAST_CARD_MS);
+    return () => clearTimeout(t);
+  }, [card]);
+  return card;
+}
+
 /** A player's slots: face-down cards, or what's been placed face up. */
 function Board({
   player,
@@ -172,6 +202,16 @@ function Board({
 }) {
   const n = player.slots.length;
   const faceCards = view.settings.faceCards;
+  // Turned-over cards flip once, at the reveal; one swapped into another slot arrives face up.
+  const flipped = useRef(new Set<string>());
+  const flipRound = useRef(view.round);
+  if (flipRound.current !== view.round) {
+    flipRound.current = view.round;
+    flipped.current = new Set();
+  }
+  useEffect(() => {
+    for (const slot of player.slots) if (slot.revealed) flipped.current.add(slot.revealed.id);
+  });
   // Ace to 5 on top, 6 to 10 below.
   const cols = Math.min(5, n);
   const box = size === "lg" ? "h-28 w-20 rounded-xl" : size === "md" ? "h-20 w-14 rounded-lg" : "h-14 w-10 rounded-md";
@@ -201,15 +241,26 @@ function Board({
                 box,
                 target && "ring-3 ring-brass-lit shadow-[0_0_20px_rgba(214,182,127,0.75)] hover:-translate-y-1",
                 movable && "hover:-translate-y-1",
+                movable && !picked && !fits && "outline-2 outline-offset-2 outline-dashed outline-bone/60",
                 picked && "-translate-y-2 ring-3 ring-bone shadow-[0_0_20px_rgba(242,235,221,0.6)]",
               )}
             >
+              {/* Keyed by card: a slot whose card changes gets a new element, so each card keeps its own layout id. */}
               {loose ? (
-                <motion.div layoutId={cardKey(loose)} className="absolute inset-0">
-                  <PlayingCard key={`rev-${loose.id}`} card={loose} size={size} entrance={false} startFaceDown revealDelay={i * 0.06} isWild={isWildCard(loose, faceCards)} highlight={fits ? "match" : null} dimmed={!fits} />
+                <motion.div key={cardKey(loose)} layoutId={cardKey(loose)} className="absolute inset-0">
+                  <PlayingCard
+                    card={loose}
+                    size={size}
+                    entrance={false}
+                    startFaceDown={!flipped.current.has(loose.id)}
+                    revealDelay={i * 0.06}
+                    isWild={isWildCard(loose, faceCards)}
+                    highlight={fits ? "match" : null}
+                    dimmed={!fits && !movable}
+                  />
                 </motion.div>
               ) : slot.shown ? (
-                <motion.div layoutId={cardKey(slot.shown)} className="absolute inset-0">
+                <motion.div key={cardKey(slot.shown)} layoutId={cardKey(slot.shown)} className="absolute inset-0">
                   <PlayingCard card={slot.shown} size={size} entrance={false} isWild={isWildCard(slot.shown, faceCards)} />
                 </motion.div>
               ) : slot.faceDown ? (
